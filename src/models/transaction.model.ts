@@ -34,6 +34,10 @@ const transactionSchema = new Schema<ITransaction>(
       type: String,
       required: false,
     },
+    remarks: {
+      type: String,
+      required: false,
+    },
   },
   {
     timestamps: true,

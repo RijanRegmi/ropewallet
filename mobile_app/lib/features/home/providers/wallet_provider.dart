@@ -124,6 +124,7 @@ class WalletProvider with ChangeNotifier {
     required String receiverQrData,
     required double amount,
     required AuthProvider authProvider,
+    String? remarks,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -135,6 +136,7 @@ class WalletProvider with ChangeNotifier {
         {
           'receiverQrData': receiverQrData,
           'amount': amount,
+          'remarks': remarks,
         },
       );
 

@@ -8,6 +8,7 @@ export interface ITransaction extends Document {
   fee: number;                  // 15% for transfers, 0 for deposits
   netAmount: number;            // amount - fee
   stripePaymentIntentId?: string; // for deposits
+  remarks?: string;              // optional message
   createdAt: Date;
   updatedAt: Date;
 }

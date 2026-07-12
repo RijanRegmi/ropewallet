@@ -16,6 +16,7 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _recipientController = TextEditingController();
+  final _remarksController = TextEditingController();
   double _amount = 0.00;
 
   @override
@@ -32,6 +33,7 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
     _amountController.removeListener(_onAmountChanged);
     _amountController.dispose();
     _recipientController.dispose();
+    _remarksController.dispose();
     super.dispose();
   }
 
@@ -48,10 +50,12 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final String receiverQr = _recipientController.text.trim();
+    final String remarks = _remarksController.text.trim();
 
     final success = await walletProvider.transfer(
       receiverQrData: receiverQr,
       amount: _amount,
+      remarks: remarks.isNotEmpty ? remarks : null,
       authProvider: authProvider,
     );
 
@@ -71,7 +75,8 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
             content: Text(
               'Successfully sent \$${_amount.toStringAsFixed(2)}!\n\n'
               'Recipient receives: \$${(_amount * 0.85).toStringAsFixed(2)}\n'
-              'Platform Fee (15%): \$${(_amount * 0.15).toStringAsFixed(2)}',
+              'Platform Fee (15%): \$${(_amount * 0.15).toStringAsFixed(2)}'
+              '${remarks.isNotEmpty ? "\n\nRemarks: $remarks" : ""}',
             ),
             actions: [
               TextButton(
@@ -103,7 +108,10 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
     final authProvider = Provider.of<AuthProvider>(context);
 
     final user = authProvider.user ?? {};
-    final double userBalance = user['walletBalance'] ?? 0.00;
+    // Parse userBalance safely to prevent type 'int' is not a subtype of type 'double' TypeError
+    final double userBalance = user['walletBalance'] is num 
+        ? (user['walletBalance'] as num).toDouble() 
+        : 0.00;
 
     // Calculate live pricing breakdown
     final double fee = _amount * 0.15;
@@ -173,7 +181,7 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                         return null;
                       },
                     ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
 
               // Wallet Balance indicator
               Row(
@@ -195,7 +203,7 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
                 ],
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 decoration: InputDecoration(
                   labelText: 'Enter Amount to Send (USD)',
                   prefixIcon: const Icon(Icons.attach_money_rounded, size: 28),
@@ -214,6 +222,19 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                   }
                   return null;
                 },
+              ),
+              const SizedBox(height: 20),
+
+              // Remarks Input
+              TextFormField(
+                controller: _remarksController,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: InputDecoration(
+                  labelText: 'Remarks / Note (Optional)',
+                  prefixIcon: const Icon(Icons.note_alt_outlined),
+                  hintText: 'e.g. Lunch split, gift, rent',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                ),
               ),
               const SizedBox(height: 28),
 

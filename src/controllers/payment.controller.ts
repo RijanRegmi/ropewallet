@@ -81,7 +81,7 @@ export class PaymentController {
 
   static async transfer(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { receiverQrData, amount } = req.body;
+      const { receiverQrData, amount, remarks } = req.body;
       const senderId = (req as any).user?.id;
 
       if (!amount || amount <= 0) {
@@ -135,6 +135,7 @@ export class PaymentController {
         amount: amount,
         fee: fee,
         netAmount: netAmount,
+        remarks: remarks || undefined,
       });
 
       res.status(200).json({
