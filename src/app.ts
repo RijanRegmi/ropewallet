@@ -5,8 +5,20 @@ import mongoSanitize from 'express-mongo-sanitize';
 import { rateLimit } from 'express-rate-limit';
 import authRoutes from './routes/auth.routes.js';
 import { errorHandler } from './middlewares/error.middleware.js';
+import { connectDB } from './config/db.js';
 
 const app = express();
+
+// Ensure DB is connected for every request (critical for serverless)
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error('Database connection middleware error:', error);
+    res.status(500).json({ success: false, error: 'Database connection failed' });
+  }
+});
 
 // Security Middlewares
 app.use(helmet()); // Set secure HTTP headers

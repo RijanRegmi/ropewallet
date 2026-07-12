@@ -2,15 +2,25 @@ import 'dart:io';
 
 class ApiConstants {
   // ================= CONFIGURATION FOR RUNNING THE APP =================
-  // 1. Set this to true if you are running on a physical device.
-  // 2. Update 'localComputerIp' with your computer's IP address (find it by running 'ipconfig' in PowerShell).
-  // 3. Or, if you use a tunnel like ngrok, paste the ngrok URL in 'ngrokUrl'.
+  // 1. Set 'useProduction' to true and update 'productionUrl' with your Vercel URL once deployed.
+  // 2. Otherwise, for local development, configure the local settings below.
+  static const bool useProduction = false;
+  static const String productionUrl = 'https://your-vercel-backend.vercel.app'; // Update with Vercel deployment URL
+
+  // Local development settings:
+  // - Set 'isTestingOnPhysicalDevice' to true if you are running on a physical device.
+  // - Update 'localComputerIp' with your computer's IP address.
+  // - Or, paste your ngrok URL in 'ngrokUrl'.
   static const bool isTestingOnPhysicalDevice = true;
   static const String localComputerIp = '192.168.1.7'; // Change to your local IP address
   static const String ngrokUrl = 'https://your-ngrok-tunnel-url.ngrok-free.app'; // Change to your ngrok URL
   // ====================================================================
 
   static String get baseUrl {
+    if (useProduction && !productionUrl.contains('your-vercel-backend')) {
+      return '$productionUrl/api';
+    }
+
     if (ngrokUrl.contains('ngrok-free.app')) {
       return '$ngrokUrl/api';
     }
