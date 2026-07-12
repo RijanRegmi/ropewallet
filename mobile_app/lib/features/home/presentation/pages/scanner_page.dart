@@ -149,7 +149,7 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
-                        side: Border.all(
+                        side: BorderSide(
                           color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
                         ),
                       ),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ropewallet/core/theme/theme_provider.dart';
 import 'package:ropewallet/features/auth/providers/auth_provider.dart';
-import '../providers/wallet_provider.dart';
+import '../../providers/wallet_provider.dart';
 import 'deposit_page.dart';
 import 'scanner_page.dart';
 import 'send_money_page.dart';
