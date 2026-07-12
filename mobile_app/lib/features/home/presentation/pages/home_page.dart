@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:ropewallet/core/theme/theme_provider.dart';
 import 'package:ropewallet/features/auth/providers/auth_provider.dart';
 import '../../providers/wallet_provider.dart';
@@ -460,23 +461,23 @@ class _HomePageState extends State<HomePage> {
                   ),
                   child: Column(
                     children: [
-                      // Mock QR Visual Design using simple borders & icons
+                      // Professional black & white QR code
                       Container(
-                        width: 180,
-                        height: 180,
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          border: Border.all(
-                            color: theme.primaryColor.withOpacity(0.3),
-                            width: 2,
-                          ),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            Icons.qr_code_2_rounded,
-                            size: 140,
-                            color: theme.primaryColor,
+                          border: Border.all(
+                            color: Colors.grey.withOpacity(0.2),
+                            width: 1.5,
                           ),
+                        ),
+                        child: QrImageView(
+                          data: qrData,
+                          version: QrVersions.auto,
+                          size: 156.0,
+                          foregroundColor: Colors.black,
+                          backgroundColor: Colors.white,
                         ),
                       ),
                       const SizedBox(height: 16),

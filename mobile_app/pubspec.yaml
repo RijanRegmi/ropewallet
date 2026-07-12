@@ -39,6 +39,9 @@ dependencies:
   google_fonts: ^6.2.1
   shared_preferences: ^2.2.3
   flutter_secure_storage: ^9.0.0
+  mobile_scanner: ^5.1.1
+  image_picker: ^1.1.2
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:
