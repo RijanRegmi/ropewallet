@@ -4,8 +4,8 @@ class ApiConstants {
   // ================= CONFIGURATION FOR RUNNING THE APP =================
   // 1. Set 'useProduction' to true and update 'productionUrl' with your Vercel URL once deployed.
   // 2. Otherwise, for local development, configure the local settings below.
-  static const bool useProduction = false;
-  static const String productionUrl = 'https://your-vercel-backend.vercel.app'; // Update with Vercel deployment URL
+  static const bool useProduction = true;
+  static const String productionUrl = 'https://ropewallet.vercel.app'; // Update with Vercel deployment URL
 
   // Local development settings:
   // - Set 'isTestingOnPhysicalDevice' to true if you are running on a physical device.
@@ -21,7 +21,7 @@ class ApiConstants {
       return '$productionUrl/api';
     }
 
-    if (ngrokUrl.contains('ngrok-free.app')) {
+    if (ngrokUrl.contains('ngrok-free.app') && !ngrokUrl.contains('your-ngrok-tunnel-url')) {
       return '$ngrokUrl/api';
     }
     

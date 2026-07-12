@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
 import { rateLimit } from 'express-rate-limit';
 import authRoutes from './routes/auth.routes.js';
+import paymentRoutes from './routes/payment.routes.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import { connectDB } from './config/db.js';
 
@@ -57,6 +58,7 @@ app.get('/', (req, res) => {
 
 // Routes
 app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Catch 404 routes
 app.use((req, res) => {
