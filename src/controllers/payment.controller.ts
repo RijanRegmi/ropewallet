@@ -9,7 +9,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 export class PaymentController {
   static async deposit(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { amount, paymentMethodId } = req.body;
+      const { amount, paymentMethodId, remarks } = req.body;
       const userId = (req as any).user?.id;
 
       if (!amount || amount <= 0) {
@@ -79,7 +79,7 @@ export class PaymentController {
         fee: 0,
         netAmount: amount,
         stripePaymentIntentId: paymentIntent.id,
-        remarks: `Deposit from Debit Card ending in ${last4}`,
+        remarks: remarks ? remarks.trim() : `Deposit from Debit Card ending in ${last4}`,
       });
 
       res.status(200).json({
@@ -276,7 +276,7 @@ export class PaymentController {
 
   static async withdraw(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { amount, method, cardNumber, expMonth, expYear, cvc, routingNumber, accountNumber, bankName, accountHolderName } = req.body;
+      const { amount, method, cardNumber, expMonth, expYear, cvc, routingNumber, accountNumber, bankName, accountHolderName, remarks } = req.body;
       const userId = (req as any).user?.id;
 
       if (!amount || amount <= 0) {
@@ -416,7 +416,7 @@ export class PaymentController {
         fee: 0,
         netAmount: amount,
         stripePaymentIntentId: stripePayoutId,
-        remarks: remarksText,
+        remarks: remarks ? remarks.trim() : remarksText,
       });
 
       res.status(200).json({

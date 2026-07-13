@@ -259,13 +259,20 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
               // Remarks Input
               TextFormField(
                 controller: _remarksController,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 textCapitalization: TextCapitalization.sentences,
                 decoration: InputDecoration(
-                  labelText: 'Remarks / Note (Optional)',
+                  labelText: 'Remarks / Note',
                   prefixIcon: const Icon(Icons.note_alt_outlined),
                   hintText: 'e.g. Lunch split, gift, rent',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                 ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Remarks are required';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 28),
 

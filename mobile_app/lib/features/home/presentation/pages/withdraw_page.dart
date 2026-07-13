@@ -28,6 +28,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
   final _accountController = TextEditingController();
   final _holderNameController = TextEditingController();
   String _selectedBankName = 'Chime';
+  final _remarksController = TextEditingController();
 
   @override
   void dispose() {
@@ -38,6 +39,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
     _routingController.dispose();
     _accountController.dispose();
     _holderNameController.dispose();
+    _remarksController.dispose();
     super.dispose();
   }
 
@@ -117,17 +119,25 @@ class _WithdrawPageState extends State<WithdrawPage> {
     }
 
     bool success = false;
+    final String customRemarks = _remarksController.text.trim();
+    String remarksText = '';
+    String receiverName = '';
 
     if (method == 'bank') {
+      final routing = _routingController.text.trim();
+      remarksText = customRemarks.isNotEmpty ? customRemarks : 'Withdrawal to $_selectedBankName Bank Account (routing: ...${routing.length >= 4 ? routing.substring(routing.length - 4) : ''})';
+      receiverName = '$_selectedBankName Bank Account';
+
       success = await walletProvider.withdraw(
         amount: amount!,
         method: 'bank',
         authProvider: authProvider,
-        routingNumber: _routingController.text.trim(),
+        routingNumber: routing,
         accountNumber: _accountController.text.trim(),
         bankName: _selectedBankName,
         accountHolderName: _holderNameController.text.trim(),
         pin: pin,
+        remarks: remarksText,
       );
     } else {
       // Parse card expiry
@@ -148,30 +158,32 @@ class _WithdrawPageState extends State<WithdrawPage> {
         return;
       }
 
+      final cardNumber = _cardNumberController.text.trim();
+      final last4 = cardNumber.replaceAll(' ', '');
+      String cardBrand = 'Debit Card';
+      if (last4.startsWith('4')) {
+        cardBrand = 'Chime Debit Card';
+      } else if (last4.startsWith('5')) {
+        cardBrand = 'Venmo Debit Card';
+      }
+      remarksText = customRemarks.isNotEmpty ? customRemarks : 'Withdrawal to $cardBrand ending in ${last4.length >= 4 ? last4.substring(last4.length - 4) : '4242'}';
+      receiverName = cardBrand;
+
       success = await walletProvider.withdraw(
         amount: amount!,
         method: 'card',
         authProvider: authProvider,
-        cardNumber: _cardNumberController.text.trim(),
+        cardNumber: cardNumber,
         expMonth: expMonth,
         expYear: expYear,
         cvc: _cvcController.text.trim(),
         pin: pin,
+        remarks: remarksText,
       );
     }
 
     if (mounted) {
       if (success) {
-        String remarksText = '';
-        if (method == 'bank') {
-          final routing = _routingController.text.trim();
-          remarksText = 'Withdrawal to $_selectedBankName Bank Account (routing: ...${routing.length >= 4 ? routing.substring(routing.length - 4) : ''})';
-        } else {
-          final cardNumber = _cardNumberController.text.trim();
-          final last4 = cardNumber.replaceAll(' ', '');
-          remarksText = 'Withdrawal to Chime Card ending in ${last4.length >= 4 ? last4.substring(last4.length - 4) : '4242'}';
-        }
-
         final newTx = {
           '_id': walletProvider.transactions.isNotEmpty
               ? (walletProvider.transactions.first['_id'] ?? 'TX-${DateTime.now().millisecondsSinceEpoch}')
@@ -183,7 +195,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
           'remarks': remarksText,
           'createdAt': DateTime.now().toIso8601String(),
           'sender': {'fullName': authProvider.user?['fullName'] ?? 'You'},
-          'receiver': {'fullName': method == 'bank' ? _selectedBankName : 'Debit Card'},
+          'receiver': {'fullName': receiverName},
         };
 
         Navigator.pushReplacement(
@@ -403,6 +415,24 @@ class _WithdrawPageState extends State<WithdrawPage> {
                               ),
                             ],
                           ),
+                          const SizedBox(height: 18),
+                          TextFormField(
+                            controller: _remarksController,
+                            autovalidateMode: AutovalidateMode.onUserInteraction,
+                            textCapitalization: TextCapitalization.sentences,
+                            decoration: InputDecoration(
+                              labelText: 'Remarks',
+                              prefixIcon: const Icon(Icons.edit_note_rounded, size: 24),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                              hintText: 'e.g. Cash out to card',
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Remarks are required';
+                              }
+                              return null;
+                            },
+                          ),
                           const SizedBox(height: 36),
                           SizedBox(
                             width: double.infinity,
@@ -520,6 +550,24 @@ class _WithdrawPageState extends State<WithdrawPage> {
                                 ),
                               ),
                             ],
+                          ),
+                          const SizedBox(height: 18),
+                          TextFormField(
+                            controller: _remarksController,
+                            autovalidateMode: AutovalidateMode.onUserInteraction,
+                            textCapitalization: TextCapitalization.sentences,
+                            decoration: InputDecoration(
+                              labelText: 'Remarks',
+                              prefixIcon: const Icon(Icons.edit_note_rounded, size: 24),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                              hintText: 'e.g. Cash out to bank',
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Remarks are required';
+                              }
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 28),
                           SizedBox(

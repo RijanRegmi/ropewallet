@@ -422,7 +422,7 @@ class _HomePageState extends State<HomePage> {
                       : ListView.separated(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: transactions.length > 5 ? 5 : transactions.length,
+                          itemCount: transactions.length > 2 ? 2 : transactions.length,
                           separatorBuilder: (context, index) => const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final tx = transactions[index];

@@ -59,6 +59,7 @@ class WalletProvider with ChangeNotifier {
     required String expYear,
     required String cvc,
     required AuthProvider authProvider,
+    String? remarks,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -107,6 +108,7 @@ class WalletProvider with ChangeNotifier {
           'amount': amount,
           'paymentMethodId': paymentMethodId,
           'cardNumber': cleanCard,
+          'remarks': remarks,
         },
       );
 
@@ -185,6 +187,7 @@ class WalletProvider with ChangeNotifier {
     String? accountHolderName,
     String? recipientTag,
     String? pin,
+    String? remarks,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -206,6 +209,7 @@ class WalletProvider with ChangeNotifier {
           'accountHolderName': accountHolderName,
           'recipientTag': recipientTag,
           'pin': pin,
+          'remarks': remarks,
         },
       );
 

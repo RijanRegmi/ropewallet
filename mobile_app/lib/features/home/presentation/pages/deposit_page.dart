@@ -21,6 +21,7 @@ class _DepositPageState extends State<DepositPage> {
   final _cardNumberController = TextEditingController();
   final _expiryController = TextEditingController();
   final _cvcController = TextEditingController();
+  final _remarksController = TextEditingController();
 
   // Share Request Link Fields
   bool _launchedPayment = false;
@@ -32,6 +33,7 @@ class _DepositPageState extends State<DepositPage> {
     _cardNumberController.dispose();
     _expiryController.dispose();
     _cvcController.dispose();
+    _remarksController.dispose();
     super.dispose();
   }
 
@@ -92,6 +94,18 @@ class _DepositPageState extends State<DepositPage> {
     final String expMonth = expiryParts[0].trim();
     final String expYear = '20${expiryParts[1].trim()}'; // Convert YY to YYYY
 
+    final cleanCard = cardNumber.replaceAll(' ', '');
+    final cardLast4 = cleanCard.length >= 4 ? cleanCard.substring(cleanCard.length - 4) : '4242';
+    String cardBrand = 'Debit Card';
+    if (cleanCard.startsWith('4')) {
+      cardBrand = 'Chime Debit Card';
+    } else if (cleanCard.startsWith('5')) {
+      cardBrand = 'Venmo Debit Card';
+    }
+
+    final String customRemarks = _remarksController.text.trim();
+    final String finalRemarks = customRemarks.isNotEmpty ? customRemarks : 'Deposit from $cardBrand ending in $cardLast4';
+
     final success = await walletProvider.deposit(
       amount: amount!,
       cardNumber: cardNumber,
@@ -99,12 +113,11 @@ class _DepositPageState extends State<DepositPage> {
       expYear: expYear,
       cvc: cvc,
       authProvider: authProvider,
+      remarks: finalRemarks,
     );
 
     if (mounted) {
       if (success) {
-        final cleanCard = cardNumber.replaceAll(' ', '');
-        final cardLast4 = cleanCard.length >= 4 ? cleanCard.substring(cleanCard.length - 4) : '4242';
         final newTx = {
           '_id': walletProvider.transactions.isNotEmpty
               ? (walletProvider.transactions.first['_id'] ?? 'TX-${DateTime.now().millisecondsSinceEpoch}')
@@ -113,9 +126,9 @@ class _DepositPageState extends State<DepositPage> {
           'amount': amount,
           'fee': 0.0,
           'netAmount': amount,
-          'remarks': 'Deposit from Debit Card ending in $cardLast4',
+          'remarks': finalRemarks,
           'createdAt': DateTime.now().toIso8601String(),
-          'sender': {'fullName': 'Stripe'},
+          'sender': {'fullName': cardBrand},
           'receiver': {'fullName': authProvider.user?['fullName'] ?? 'You'},
         };
 
@@ -401,6 +414,24 @@ class _DepositPageState extends State<DepositPage> {
                                 ),
                               ),
                             ],
+                          ),
+                          const SizedBox(height: 18),
+                          TextFormField(
+                            controller: _remarksController,
+                            autovalidateMode: AutovalidateMode.onUserInteraction,
+                            textCapitalization: TextCapitalization.sentences,
+                            decoration: InputDecoration(
+                              labelText: 'Remarks',
+                              prefixIcon: const Icon(Icons.edit_note_rounded, size: 24),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                              hintText: 'e.g. Load money',
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Remarks are required';
+                              }
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 36),
                           SizedBox(
