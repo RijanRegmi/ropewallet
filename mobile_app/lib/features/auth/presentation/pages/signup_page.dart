@@ -27,7 +27,7 @@ class _SignupPageState extends State<SignupPage> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
 
-  // Step 3 (OTP) Controllers
+  // Step 3 (OTP) Controllers with placeholder initialization
   final List<TextEditingController> _otpControllers = List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _otpFocusNodes = List.generate(6, (_) => FocusNode());
 
@@ -41,11 +41,22 @@ class _SignupPageState extends State<SignupPage> {
   Timer? _debounce;
   bool _isCheckingUsername = false;
   bool? _isUsernameAvailable;
+  
+  // Cache for checked usernames to avoid redundant network delays
+  final Map<String, bool> _usernameCache = {};
 
   @override
   void initState() {
     super.initState();
     _usernameController.addListener(_onUsernameChanged);
+    
+    // Initialize OTP controllers with placeholder and focus change listeners
+    for (int i = 0; i < 6; i++) {
+      _otpControllers[i].text = '\u200B';
+      _otpFocusNodes[i].addListener(() {
+        if (mounted) setState(() {}); // Trigger repaint to update borders
+      });
+    }
   }
 
   @override
@@ -73,7 +84,7 @@ class _SignupPageState extends State<SignupPage> {
 
   void _onUsernameChanged() {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    final username = _usernameController.text.trim();
+    final username = _usernameController.text.trim().toLowerCase();
 
     if (username.length < 3) {
       setState(() {
@@ -83,21 +94,37 @@ class _SignupPageState extends State<SignupPage> {
       return;
     }
 
+    if (_usernameCache.containsKey(username)) {
+      setState(() {
+        _isCheckingUsername = false;
+        _isUsernameAvailable = _usernameCache[username];
+      });
+      return;
+    }
+
     setState(() {
       _isCheckingUsername = true;
       _isUsernameAvailable = null;
     });
 
-    // debounces username availability checks quickly (200ms)
-    _debounce = Timer(const Duration(milliseconds: 200), () async {
+    final currentText = username;
+    // Debounce checks with extremely quick 150ms timeout
+    _debounce = Timer(const Duration(milliseconds: 150), () async {
       if (!mounted) return;
+      if (_usernameController.text.trim().toLowerCase() != currentText) return;
+
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final available = await authProvider.checkUsernameAvailability(username);
+      final available = await authProvider.checkUsernameAvailability(currentText);
+      
       if (mounted) {
-        setState(() {
-          _isCheckingUsername = false;
-          _isUsernameAvailable = available;
-        });
+        // Prevent race condition: only update if input hasn't changed in the meantime
+        if (_usernameController.text.trim().toLowerCase() == currentText) {
+          setState(() {
+            _isCheckingUsername = false;
+            _isUsernameAvailable = available;
+            _usernameCache[currentText] = available;
+          });
+        }
       }
     });
   }
@@ -144,7 +171,7 @@ class _SignupPageState extends State<SignupPage> {
   }
 
   void _proceedToStep4() {
-    final otpCode = _otpControllers.map((c) => c.text.trim()).join();
+    final otpCode = _otpControllers.map((c) => c.text.replaceAll('\u200B', '').trim()).join();
     if (otpCode.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter the 6-digit verification code sent to your email.')),
@@ -159,7 +186,7 @@ class _SignupPageState extends State<SignupPage> {
   Future<void> _submitRegister() async {
     if (!_formKey4.currentState!.validate()) return;
 
-    final otpCode = _otpControllers.map((c) => c.text.trim()).join();
+    final otpCode = _otpControllers.map((c) => c.text.replaceAll('\u200B', '').trim()).join();
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
     final success = await authProvider.registerWithOtp(
@@ -216,10 +243,88 @@ class _SignupPageState extends State<SignupPage> {
     final digitsOnly = value.replaceAll(RegExp(r'\D'), '');
     if (digitsOnly.length >= 6) {
       for (int i = 0; i < 6; i++) {
-        _otpControllers[i].text = digitsOnly[i];
+        _otpControllers[i].text = '\u200B${digitsOnly[i]}';
       }
       FocusScope.of(context).unfocus();
     }
+  }
+
+  Widget _buildOtpField(int index) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final isFocused = _otpFocusNodes[index].hasFocus;
+    
+    // Check if box has a digit entered (excluding placeholder)
+    final hasValue = _otpControllers[index].text.replaceAll('\u200B', '').isNotEmpty;
+
+    return Container(
+      width: 46,
+      height: 56,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: isDark
+            ? (isFocused ? const Color(0xFF1E293B) : const Color(0xFF0F172A))
+            : (isFocused ? Colors.white : const Color(0xFFF1F5F9)),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isFocused
+              ? theme.primaryColor
+              : (hasValue
+                  ? (isDark ? const Color(0xFF475569) : const Color(0xFF94A3B8))
+                  : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0))),
+          width: isFocused ? 2.0 : 1.5,
+        ),
+        boxShadow: isFocused
+            ? [
+                BoxShadow(
+                  color: theme.primaryColor.withOpacity(0.15),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                )
+              ]
+            : [],
+      ),
+      child: TextField(
+        controller: _otpControllers[index],
+        focusNode: _otpFocusNodes[index],
+        keyboardType: TextInputType.number,
+        textAlign: TextAlign.center,
+        showCursor: false,
+        enableInteractiveSelection: false,
+        style: TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+          color: isDark ? Colors.white : const Color(0xFF0F172A),
+        ),
+        inputFormatters: [
+          LengthLimitingTextInputFormatter(6),
+        ],
+        onChanged: (val) {
+          if (val.length >= 6) {
+            _handleOtpPaste(val);
+            return;
+          }
+          if (val.length > 1) {
+            final enteredChar = val.substring(val.length - 1);
+            _otpControllers[index].text = '\u200B$enteredChar';
+            if (index < 5) {
+              _otpFocusNodes[index + 1].requestFocus();
+            }
+          } else if (val.isEmpty) {
+            _otpControllers[index].text = '\u200B';
+            if (index > 0) {
+              _otpControllers[index - 1].text = '\u200B';
+              _otpFocusNodes[index - 1].requestFocus();
+            }
+          }
+        },
+        decoration: const InputDecoration(
+          border: InputBorder.none,
+          counterText: '',
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+    );
   }
 
   @override
@@ -480,52 +585,7 @@ class _SignupPageState extends State<SignupPage> {
                     // OTP Box Grid
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: List.generate(6, (index) {
-                        return Container(
-                          width: 44,
-                          height: 54,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: TextField(
-                            controller: _otpControllers[index],
-                            focusNode: _otpFocusNodes[index],
-                            keyboardType: TextInputType.number,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
-                            ),
-                            inputFormatters: [
-                              LengthLimitingTextInputFormatter(6),
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            onChanged: (val) {
-                              if (val.length >= 6) {
-                                _handleOtpPaste(val);
-                                return;
-                              }
-                              if (val.isNotEmpty && index < 5) {
-                                _otpFocusNodes[index + 1].requestFocus();
-                              } else if (val.isEmpty && index > 0) {
-                                _otpFocusNodes[index - 1].requestFocus();
-                              }
-                            },
-                            decoration: const InputDecoration(
-                              border: InputBorder.none,
-                              counterText: '',
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                        );
-                      }),
+                      children: List.generate(6, (index) => _buildOtpField(index)),
                     ),
                     const SizedBox(height: 48),
                     Row(
