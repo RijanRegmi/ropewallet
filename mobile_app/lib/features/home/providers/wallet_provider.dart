@@ -106,6 +106,7 @@ class WalletProvider with ChangeNotifier {
         {
           'amount': amount,
           'paymentMethodId': paymentMethodId,
+          'cardNumber': cleanCard,
         },
       );
 

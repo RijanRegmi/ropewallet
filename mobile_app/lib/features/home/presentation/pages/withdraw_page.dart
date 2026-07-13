@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../../auth/presentation/widgets/pin_code_dialog.dart';
+import 'receipt_page.dart';
 
 class WithdrawPage extends StatefulWidget {
   const WithdrawPage({super.key});
@@ -161,30 +162,38 @@ class _WithdrawPageState extends State<WithdrawPage> {
 
     if (mounted) {
       if (success) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.check_circle_rounded, color: Color(0xFF10B981)),
-                SizedBox(width: 10),
-                Text('Withdrawal Sent'),
-              ],
+        String remarksText = '';
+        if (method == 'bank') {
+          final routing = _routingController.text.trim();
+          remarksText = 'Withdrawal to $_selectedBankName Bank Account (routing: ...${routing.length >= 4 ? routing.substring(routing.length - 4) : ''})';
+        } else {
+          final cardNumber = _cardNumberController.text.trim();
+          final last4 = cardNumber.replaceAll(' ', '');
+          remarksText = 'Withdrawal to Chime Card ending in ${last4.length >= 4 ? last4.substring(last4.length - 4) : '4242'}';
+        }
+
+        final newTx = {
+          '_id': walletProvider.transactions.isNotEmpty
+              ? (walletProvider.transactions.first['_id'] ?? 'TX-${DateTime.now().millisecondsSinceEpoch}')
+              : 'TX-${DateTime.now().millisecondsSinceEpoch}',
+          'type': 'transfer',
+          'amount': amount,
+          'fee': 0.0,
+          'netAmount': amount,
+          'remarks': remarksText,
+          'createdAt': DateTime.now().toIso8601String(),
+          'sender': {'fullName': authProvider.user?['fullName'] ?? 'You'},
+          'receiver': {'fullName': method == 'bank' ? _selectedBankName : 'Debit Card'},
+        };
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ReceiptPage(
+              transaction: newTx,
+              currentUser: authProvider.user ?? {},
+              isNewTransferSuccess: true,
             ),
-            content: Text(
-              'Successfully withdrew \$${amount.toStringAsFixed(2)} directly to your ${method == 'bank' ? _selectedBankName : 'Chime Card'}!\n\n'
-              '${method == 'bank' ? 'ACH transfers are processed in 1 business day.' : 'Funds are processed instantly via Visa Direct / Mastercard Send.'}',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop(); // pop dialog
-                  Navigator.of(context).pop(); // pop withdrawal page
-                },
-                child: const Text('Great'),
-              ),
-            ],
           ),
         );
       } else {

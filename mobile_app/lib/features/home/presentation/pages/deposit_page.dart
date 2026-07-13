@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../providers/wallet_provider.dart';
+import 'receipt_page.dart';
 
 class DepositPage extends StatefulWidget {
   const DepositPage({super.key});
@@ -102,27 +103,30 @@ class _DepositPageState extends State<DepositPage> {
 
     if (mounted) {
       if (success) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.check_circle_rounded, color: Color(0xFF10B981)),
-                SizedBox(width: 10),
-                Text('Success'),
-              ],
+        final cleanCard = cardNumber.replaceAll(' ', '');
+        final cardLast4 = cleanCard.length >= 4 ? cleanCard.substring(cleanCard.length - 4) : '4242';
+        final newTx = {
+          '_id': walletProvider.transactions.isNotEmpty
+              ? (walletProvider.transactions.first['_id'] ?? 'TX-${DateTime.now().millisecondsSinceEpoch}')
+              : 'TX-${DateTime.now().millisecondsSinceEpoch}',
+          'type': 'deposit',
+          'amount': amount,
+          'fee': 0.0,
+          'netAmount': amount,
+          'remarks': 'Deposit from Debit Card ending in $cardLast4',
+          'createdAt': DateTime.now().toIso8601String(),
+          'sender': {'fullName': 'Stripe'},
+          'receiver': {'fullName': authProvider.user?['fullName'] ?? 'You'},
+        };
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ReceiptPage(
+              transaction: newTx,
+              currentUser: authProvider.user ?? {},
+              isNewTransferSuccess: true,
             ),
-            content: Text('Successfully loaded \$${amount.toStringAsFixed(2)} directly to your wallet!'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop(); // pop dialog
-                  Navigator.of(context).pop(); // pop deposit page
-                },
-                child: const Text('OK'),
-              ),
-            ],
           ),
         );
       } else {

@@ -71,6 +71,7 @@ export class PaymentController {
       await user.save();
 
       // 3. Create Transaction history log
+      const last4 = req.body.cardNumber ? req.body.cardNumber.toString().slice(-4) : '4242';
       const transaction = await Transaction.create({
         receiver: user._id,
         type: 'deposit',
@@ -78,6 +79,7 @@ export class PaymentController {
         fee: 0,
         netAmount: amount,
         stripePaymentIntentId: paymentIntent.id,
+        remarks: `Deposit from Debit Card ending in ${last4}`,
       });
 
       res.status(200).json({
@@ -495,7 +497,17 @@ export class PaymentController {
         return;
       }
 
-      const recipient = await User.findOne({ qrCodeData: to as string });
+      const cleanTo = (to as string).trim();
+      const escapedTo = cleanTo.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      
+      const recipient = await User.findOne({
+        $or: [
+          { qrCodeData: { $regex: new RegExp(`^${escapedTo}$`, 'i') } },
+          { username: { $regex: new RegExp(`^${escapedTo}$`, 'i') } },
+          { email: { $regex: new RegExp(`^${escapedTo}$`, 'i') } }
+        ]
+      });
+
       if (!recipient) {
         res.status(404).send('Recipient not found in RopeWallet.');
         return;
@@ -504,7 +516,7 @@ export class PaymentController {
       if (amount && parseFloat(amount as string) > 0) {
         const depositAmount = parseFloat(amount as string);
         const session = await stripe.checkout.sessions.create({
-          payment_method_types: ['card', 'cashapp', 'link'],
+          payment_method_types: ['card', 'cashapp', 'link', 'venmo'],
           line_items: [
             {
               price_data: {
