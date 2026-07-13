@@ -15,6 +15,7 @@ class _SignupPageState extends State<SignupPage> {
   int _currentStep = 0;
   final _formKey1 = GlobalKey<FormState>();
   final _formKey2 = GlobalKey<FormState>();
+  final _formKey4 = GlobalKey<FormState>();
 
   // Step 1 Controllers
   final _firstNameController = TextEditingController();
@@ -25,11 +26,16 @@ class _SignupPageState extends State<SignupPage> {
   // Step 2 Controllers
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _passwordController = TextEditingController();
 
   // Step 3 (OTP) Controllers
   final List<TextEditingController> _otpControllers = List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _otpFocusNodes = List.generate(6, (_) => FocusNode());
+
+  // Step 4 (Security) Controllers
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _pinController = TextEditingController();
+  final _confirmPinController = TextEditingController();
 
   // Username checking states
   Timer? _debounce;
@@ -52,6 +58,9 @@ class _SignupPageState extends State<SignupPage> {
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _pinController.dispose();
+    _confirmPinController.dispose();
     for (var c in _otpControllers) {
       c.dispose();
     }
@@ -79,7 +88,8 @@ class _SignupPageState extends State<SignupPage> {
       _isUsernameAvailable = null;
     });
 
-    _debounce = Timer(const Duration(milliseconds: 600), () async {
+    // debounces username availability checks quickly (200ms)
+    _debounce = Timer(const Duration(milliseconds: 200), () async {
       if (!mounted) return;
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final available = await authProvider.checkUsernameAvailability(username);
@@ -133,16 +143,25 @@ class _SignupPageState extends State<SignupPage> {
     }
   }
 
-  Future<void> _submitRegister() async {
+  void _proceedToStep4() {
     final otpCode = _otpControllers.map((c) => c.text.trim()).join();
     if (otpCode.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter the full 6-digit code.')),
+        const SnackBar(content: Text('Please enter the 6-digit verification code sent to your email.')),
       );
       return;
     }
+    setState(() {
+      _currentStep = 3;
+    });
+  }
 
+  Future<void> _submitRegister() async {
+    if (!_formKey4.currentState!.validate()) return;
+
+    final otpCode = _otpControllers.map((c) => c.text.trim()).join();
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
     final success = await authProvider.registerWithOtp(
       firstName: _firstNameController.text.trim(),
       middleName: _middleNameController.text.trim().isEmpty ? null : _middleNameController.text.trim(),
@@ -152,6 +171,7 @@ class _SignupPageState extends State<SignupPage> {
       password: _passwordController.text,
       phoneNumber: _phoneController.text.trim(),
       otpCode: otpCode,
+      transactionPin: _pinController.text.trim(),
     );
 
     if (success) {
@@ -167,7 +187,7 @@ class _SignupPageState extends State<SignupPage> {
                 Text('Success'),
               ],
             ),
-            content: const Text('Registration complete! Please log in with your new credentials.'),
+            content: const Text('Registration complete! Please log in with your credentials.'),
             actions: [
               TextButton(
                 onPressed: () {
@@ -192,7 +212,6 @@ class _SignupPageState extends State<SignupPage> {
     }
   }
 
-  // Handle clipboard paste in OTP fields
   void _handleOtpPaste(String value) {
     final digitsOnly = value.replaceAll(RegExp(r'\D'), '');
     if (digitsOnly.length >= 6) {
@@ -212,7 +231,7 @@ class _SignupPageState extends State<SignupPage> {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text('Step ${_currentStep + 1} of 3'),
+        title: Text('Step ${_currentStep + 1} of 4'),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -228,7 +247,9 @@ class _SignupPageState extends State<SignupPage> {
                     ? 'Create Account'
                     : _currentStep == 1
                         ? 'Contact Details'
-                        : 'Verify Email',
+                        : _currentStep == 2
+                            ? 'Verify Email'
+                            : 'Security Details',
                 style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -240,8 +261,10 @@ class _SignupPageState extends State<SignupPage> {
                 _currentStep == 0
                     ? 'Let\'s start with your basic profile details.'
                     : _currentStep == 1
-                        ? 'Secure your account and add email details.'
-                        : 'Enter the 6-digit OTP code sent to your email.',
+                        ? 'Enter your contact coordinates below.'
+                        : _currentStep == 2
+                            ? 'Enter the 6-digit OTP code sent to your email.'
+                            : 'Set up your secure password and transaction PIN.',
                 style: TextStyle(
                   fontSize: 14,
                   color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
@@ -249,9 +272,9 @@ class _SignupPageState extends State<SignupPage> {
               ),
               const SizedBox(height: 32),
 
-              // Horizontal Onboarding Progress Dots
+              // Onboarding Progress Dots
               Row(
-                children: List.generate(3, (index) {
+                children: List.generate(4, (index) {
                   final isActive = index == _currentStep;
                   final isDone = index < _currentStep;
                   return Expanded(
@@ -396,7 +419,7 @@ class _SignupPageState extends State<SignupPage> {
                       TextFormField(
                         controller: _phoneController,
                         keyboardType: TextInputType.phone,
-                        textInputAction: TextInputAction.next,
+                        textInputAction: TextInputAction.done,
                         decoration: InputDecoration(
                           labelText: 'Phone Number',
                           prefixIcon: const Icon(Icons.phone_outlined),
@@ -405,22 +428,6 @@ class _SignupPageState extends State<SignupPage> {
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) return 'Phone number is required';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 18),
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        textInputAction: TextInputAction.done,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          prefixIcon: const Icon(Icons.lock_outline_rounded),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) return 'Password is required';
-                          if (value.length < 6) return 'Password must be at least 6 characters';
                           return null;
                         },
                       ),
@@ -457,7 +464,7 @@ class _SignupPageState extends State<SignupPage> {
                                       width: 20,
                                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                                     )
-                                  : const Text('Send Code', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  : const Text('Send Verification Code', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                             ),
                           ),
                         ],
@@ -475,8 +482,8 @@ class _SignupPageState extends State<SignupPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(6, (index) {
                         return Container(
-                          width: 48,
-                          height: 56,
+                          width: 44,
+                          height: 54,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: isDark ? const Color(0xFF1E293B) : Colors.white,
@@ -486,14 +493,18 @@ class _SignupPageState extends State<SignupPage> {
                               width: 1.5,
                             ),
                           ),
-                          child: TextFormField(
+                          child: TextField(
                             controller: _otpControllers[index],
                             focusNode: _otpFocusNodes[index],
                             keyboardType: TextInputType.number,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            ),
                             inputFormatters: [
-                              LengthLimitingTextInputFormatter(6), // Accept up to 6 in case of paste
+                              LengthLimitingTextInputFormatter(6),
                               FilteringTextInputFormatter.digitsOnly,
                             ],
                             onChanged: (val) {
@@ -510,6 +521,7 @@ class _SignupPageState extends State<SignupPage> {
                             decoration: const InputDecoration(
                               border: InputBorder.none,
                               counterText: '',
+                              contentPadding: EdgeInsets.zero,
                             ),
                           ),
                         );
@@ -535,25 +547,144 @@ class _SignupPageState extends State<SignupPage> {
                         const SizedBox(width: 16),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: authProvider.isLoading ? null : _submitRegister,
+                            onPressed: _proceedToStep4,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: theme.primaryColor,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             ),
-                            child: authProvider.isLoading
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                  )
-                                : const Text('Verify & Register', style: TextStyle(fontWeight: FontWeight.bold)),
+                            child: const Text('Verify Code', style: TextStyle(fontWeight: FontWeight.bold)),
                           ),
                         ),
                       ],
                     ),
                   ],
+                ),
+
+              // STEP 4: SECURITY SETUP
+              if (_currentStep == 3)
+                Form(
+                  key: _formKey4,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Choose Password',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: const Icon(Icons.lock_outline_rounded),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return 'Password is required';
+                          if (value.length < 6) return 'Password must be at least 6 characters';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _confirmPasswordController,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: 'Confirm Password',
+                          prefixIcon: const Icon(Icons.lock_reset_rounded),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return 'Confirm password is required';
+                          if (value != _passwordController.text) return 'Passwords do not match';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 28),
+
+                      const Text(
+                        'Set 4-Digit Transaction PIN',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _pinController,
+                        keyboardType: TextInputType.number,
+                        obscureText: true,
+                        maxLength: 4,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        decoration: InputDecoration(
+                          labelText: 'Create 4-digit PIN',
+                          prefixIcon: const Icon(Icons.dialpad_rounded),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                          counterText: '',
+                        ),
+                        validator: (value) {
+                          if (value == null || value.length != 4) return 'PIN must be exactly 4 digits';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _confirmPinController,
+                        keyboardType: TextInputType.number,
+                        obscureText: true,
+                        maxLength: 4,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        decoration: InputDecoration(
+                          labelText: 'Confirm 4-digit PIN',
+                          prefixIcon: const Icon(Icons.dialpad_rounded),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                          counterText: '',
+                        ),
+                        validator: (value) {
+                          if (value != _pinController.text) return 'PINs do not match';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 40),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () {
+                                setState(() {
+                                  _currentStep = 2;
+                                });
+                              },
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              ),
+                              child: const Text('Back'),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: authProvider.isLoading ? null : _submitRegister,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: theme.primaryColor,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              ),
+                              child: authProvider.isLoading
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                                    )
+                                  : const Text('Complete Registration', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
             ],
           ),

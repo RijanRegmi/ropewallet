@@ -88,6 +88,7 @@ export class AuthService {
       email: emailNorm,
       password: data.password,
       phoneNumber: data.phoneNumber.trim(),
+      transactionPin: data.transactionPin.trim(),
       qrCodeData,
       walletBalance: 1000.00, // Pre-fund with $1000 for simulation / testing
     });

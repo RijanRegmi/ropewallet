@@ -147,6 +147,7 @@ class AuthProvider with ChangeNotifier {
     required String password,
     required String phoneNumber,
     required String otpCode,
+    required String transactionPin,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -164,6 +165,7 @@ class AuthProvider with ChangeNotifier {
           'password': password,
           'phoneNumber': phoneNumber,
           'otpCode': otpCode,
+          'transactionPin': transactionPin,
         },
       );
 

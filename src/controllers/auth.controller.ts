@@ -32,10 +32,10 @@ export class AuthController {
 
   static async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { firstName, middleName, lastName, username, email, password, phoneNumber, otpCode } = req.body;
+      const { firstName, middleName, lastName, username, email, password, phoneNumber, otpCode, transactionPin } = req.body;
       
-      if (!firstName || !lastName || !username || !email || !password || !phoneNumber || !otpCode) {
-        res.status(400).json({ success: false, error: 'Please provide all required fields, including the OTP code' });
+      if (!firstName || !lastName || !username || !email || !password || !phoneNumber || !otpCode || !transactionPin) {
+        res.status(400).json({ success: false, error: 'Please provide all required fields, including the OTP code and Transaction PIN' });
         return;
       }
 
@@ -48,6 +48,7 @@ export class AuthController {
         password,
         phoneNumber,
         otpCode,
+        transactionPin,
       });
 
       res.status(201).json({
