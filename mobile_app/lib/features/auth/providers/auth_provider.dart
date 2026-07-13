@@ -137,6 +137,40 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // Verify Register OTP
+  Future<bool> verifyRegisterOtp(String email, String otpCode) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post(
+        '/auth/verify-register-otp',
+        {
+          'email': email,
+          'otpCode': otpCode,
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+      _isLoading = false;
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = responseData['error'] ?? 'Invalid or expired verification code';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   // Register with OTP Verification
   Future<bool> registerWithOtp({
     required String firstName,

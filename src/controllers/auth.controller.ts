@@ -30,12 +30,35 @@ export class AuthController {
     }
   }
 
+  static async verifyRegisterOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email, otpCode } = req.body;
+      if (!email || !otpCode) {
+        res.status(400).json({ success: false, error: 'Please provide email and verification code' });
+        return;
+      }
+      const isValid = await AuthService.verifyOtp(email, otpCode);
+      if (!isValid) {
+        res.status(400).json({ success: false, error: 'Invalid or expired verification code' });
+        return;
+      }
+      res.status(200).json({ success: true, message: 'Verification code is valid' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { firstName, middleName, lastName, username, email, password, phoneNumber, otpCode, transactionPin } = req.body;
       
       if (!firstName || !lastName || !username || !email || !password || !phoneNumber || !otpCode || !transactionPin) {
         res.status(400).json({ success: false, error: 'Please provide all required fields, including the OTP code and Transaction PIN' });
+        return;
+      }
+
+      if (transactionPin.length !== 6 || isNaN(Number(transactionPin))) {
+        res.status(400).json({ success: false, error: 'Transaction PIN must be a 6-digit number' });
         return;
       }
 
@@ -115,8 +138,8 @@ export class AuthController {
         res.status(401).json({ success: false, error: 'Not authorized to access this route' });
         return;
       }
-      if (!pin || pin.length !== 4 || isNaN(Number(pin))) {
-        res.status(400).json({ success: false, error: 'PIN must be a 4-digit number' });
+      if (!pin || pin.length !== 6 || isNaN(Number(pin))) {
+        res.status(400).json({ success: false, error: 'PIN must be a 6-digit number' });
         return;
       }
       await AuthService.setPin(userId, pin);

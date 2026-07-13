@@ -167,16 +167,16 @@ class _SecuritySettingsSheetState extends State<SecuritySettingsSheet> {
                     controller: _pinController1,
                     keyboardType: TextInputType.number,
                     obscureText: true,
-                    maxLength: 4,
+                    maxLength: 6,
                     decoration: InputDecoration(
-                      labelText: 'Enter 4-digit PIN',
+                      labelText: 'Enter 6-digit PIN',
                       prefixIcon: const Icon(Icons.lock_outline_rounded),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                       counterText: '',
                     ),
                     validator: (value) {
-                      if (value == null || value.length != 4 || int.tryParse(value) == null) {
-                        return 'PIN must be exactly 4 digits';
+                      if (value == null || value.length != 6 || int.tryParse(value) == null) {
+                        return 'PIN must be exactly 6 digits';
                       }
                       return null;
                     },
@@ -186,9 +186,9 @@ class _SecuritySettingsSheetState extends State<SecuritySettingsSheet> {
                     controller: _pinController2,
                     keyboardType: TextInputType.number,
                     obscureText: true,
-                    maxLength: 4,
+                    maxLength: 6,
                     decoration: InputDecoration(
-                      labelText: 'Confirm 4-digit PIN',
+                      labelText: 'Confirm 6-digit PIN',
                       prefixIcon: const Icon(Icons.lock_outline_rounded),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                       counterText: '',

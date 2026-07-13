@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/security_provider.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -16,6 +17,7 @@ class _SignupPageState extends State<SignupPage> {
   final _formKey1 = GlobalKey<FormState>();
   final _formKey2 = GlobalKey<FormState>();
   final _formKey4 = GlobalKey<FormState>();
+  final _formKey5 = GlobalKey<FormState>();
 
   // Step 1 Controllers
   final _firstNameController = TextEditingController();
@@ -31,9 +33,13 @@ class _SignupPageState extends State<SignupPage> {
   final List<TextEditingController> _otpControllers = List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _otpFocusNodes = List.generate(6, (_) => FocusNode());
 
-  // Step 4 (Security) Controllers
+  // Step 4 (Password) Controllers & Eye Toggle state
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
+  // Step 5 (Security PIN) Controllers
   final _pinController = TextEditingController();
   final _confirmPinController = TextEditingController();
 
@@ -170,7 +176,8 @@ class _SignupPageState extends State<SignupPage> {
     }
   }
 
-  void _proceedToStep4() {
+  // Issue Fix: Verify OTP code with backend before moving forward!
+  Future<void> _verifyOtpAndProceed() async {
     final otpCode = _otpControllers.map((c) => c.text.replaceAll('\u200B', '').trim()).join();
     if (otpCode.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -178,16 +185,67 @@ class _SignupPageState extends State<SignupPage> {
       );
       return;
     }
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isValid = await authProvider.verifyRegisterOtp(
+      _emailController.text.trim(),
+      otpCode,
+    );
+
+    if (mounted) {
+      if (isValid) {
+        setState(() {
+          _currentStep = 3; // Move to Step 4 (Password Setup)
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            content: Text(authProvider.errorMessage ?? 'Invalid verification code'),
+          ),
+        );
+      }
+    }
+  }
+
+  void _proceedToStep5() {
+    if (!_formKey4.currentState!.validate()) return;
     setState(() {
-      _currentStep = 3;
+      _currentStep = 4; // Move to Step 5 (PIN Setup)
     });
   }
 
-  Future<void> _submitRegister() async {
-    if (!_formKey4.currentState!.validate()) return;
+  void _proceedToStep6() {
+    if (!_formKey5.currentState!.validate()) return;
+    setState(() {
+      _currentStep = 5; // Move to Step 6 (Biometrics Setup)
+    });
+  }
 
+  Future<void> _submitRegister(bool enableBiometrics) async {
     final otpCode = _otpControllers.map((c) => c.text.replaceAll('\u200B', '').trim()).join();
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
+
+    // Save biometrics choice locally first
+    if (enableBiometrics) {
+      final successBio = await securityProvider.authenticateBiometrically();
+      if (successBio) {
+        await securityProvider.setUseBiometrics(true);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Color(0xFFEAB308),
+              content: Text('Biometric verification failed. Skipping for now.'),
+            ),
+          );
+        }
+        await securityProvider.setUseBiometrics(false);
+      }
+    } else {
+      await securityProvider.setUseBiometrics(false);
+    }
 
     final success = await authProvider.registerWithOtp(
       firstName: _firstNameController.text.trim(),
@@ -202,6 +260,12 @@ class _SignupPageState extends State<SignupPage> {
     );
 
     if (success) {
+      // Securely store the PIN locally if biometric auth succeeded
+      final savedPin = _pinController.text.trim();
+      if (enableBiometrics) {
+        await securityProvider.setTransactionPin(savedPin);
+      }
+
       if (mounted) {
         showDialog(
           context: context,
@@ -332,11 +396,12 @@ class _SignupPageState extends State<SignupPage> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final authProvider = Provider.of<AuthProvider>(context);
+    final securityProvider = Provider.of<SecurityProvider>(context);
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text('Step ${_currentStep + 1} of 4'),
+        title: Text('Step ${_currentStep + 1} of 6'),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -354,7 +419,11 @@ class _SignupPageState extends State<SignupPage> {
                         ? 'Contact Details'
                         : _currentStep == 2
                             ? 'Verify Email'
-                            : 'Security Details',
+                            : _currentStep == 3
+                                ? 'Choose Password'
+                                : _currentStep == 4
+                                    ? 'Set Transaction PIN'
+                                    : 'Biometrics Setup',
                 style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -369,7 +438,11 @@ class _SignupPageState extends State<SignupPage> {
                         ? 'Enter your contact coordinates below.'
                         : _currentStep == 2
                             ? 'Enter the 6-digit OTP code sent to your email.'
-                            : 'Set up your secure password and transaction PIN.',
+                            : _currentStep == 3
+                                ? 'Set up a secure login password.'
+                                : _currentStep == 4
+                                    ? 'Create a 6-digit security PIN for checkouts.'
+                                    : 'Enable FaceID / Fingerprint for fast payments.',
                 style: TextStyle(
                   fontSize: 14,
                   color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
@@ -377,15 +450,15 @@ class _SignupPageState extends State<SignupPage> {
               ),
               const SizedBox(height: 32),
 
-              // Onboarding Progress Dots
+              // Onboarding Progress Dots (6 Steps)
               Row(
-                children: List.generate(4, (index) {
+                children: List.generate(6, (index) {
                   final isActive = index == _currentStep;
                   final isDone = index < _currentStep;
                   return Expanded(
                     child: Container(
                       height: 4,
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
                       decoration: BoxDecoration(
                         color: isActive
                             ? theme.primaryColor
@@ -400,7 +473,7 @@ class _SignupPageState extends State<SignupPage> {
               ),
               const SizedBox(height: 36),
 
-              // STEP 1 FORM
+              // STEP 1 FORM (Personal details)
               if (_currentStep == 0)
                 Form(
                   key: _formKey1,
@@ -497,7 +570,7 @@ class _SignupPageState extends State<SignupPage> {
                   ),
                 ),
 
-              // STEP 2 FORM
+              // STEP 2 FORM (Contact details)
               if (_currentStep == 1)
                 Form(
                   key: _formKey2,
@@ -578,7 +651,7 @@ class _SignupPageState extends State<SignupPage> {
                   ),
                 ),
 
-              // STEP 3: OTP VERIFICATION CODE
+              // STEP 3: OTP VERIFICATION
               if (_currentStep == 2)
                 Column(
                   children: [
@@ -607,14 +680,20 @@ class _SignupPageState extends State<SignupPage> {
                         const SizedBox(width: 16),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: _proceedToStep4,
+                            onPressed: authProvider.isLoading ? null : _verifyOtpAndProceed,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: theme.primaryColor,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             ),
-                            child: const Text('Verify Code', style: TextStyle(fontWeight: FontWeight.bold)),
+                            child: authProvider.isLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                  )
+                                : const Text('Verify Code', style: TextStyle(fontWeight: FontWeight.bold)),
                           ),
                         ),
                       ],
@@ -622,7 +701,7 @@ class _SignupPageState extends State<SignupPage> {
                   ],
                 ),
 
-              // STEP 4: SECURITY SETUP
+              // STEP 4: PASSWORD SELECTION (With Visibility Eye Toggle)
               if (_currentStep == 3)
                 Form(
                   key: _formKey4,
@@ -631,16 +710,26 @@ class _SignupPageState extends State<SignupPage> {
                     children: [
                       const Text(
                         'Choose Password',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                       ),
                       const SizedBox(height: 14),
                       TextFormField(
                         controller: _passwordController,
-                        obscureText: true,
+                        obscureText: _obscurePassword,
                         decoration: InputDecoration(
                           labelText: 'Password',
                           prefixIcon: const Icon(Icons.lock_outline_rounded),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                          ),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) return 'Password is required';
@@ -648,14 +737,24 @@ class _SignupPageState extends State<SignupPage> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
                       TextFormField(
                         controller: _confirmPasswordController,
-                        obscureText: true,
+                        obscureText: _obscureConfirmPassword,
                         decoration: InputDecoration(
                           labelText: 'Confirm Password',
                           prefixIcon: const Icon(Icons.lock_reset_rounded),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscureConfirmPassword = !_obscureConfirmPassword;
+                              });
+                            },
+                          ),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) return 'Confirm password is required';
@@ -663,39 +762,80 @@ class _SignupPageState extends State<SignupPage> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 40),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () {
+                                setState(() {
+                                  _currentStep = 2; // Back to OTP
+                                });
+                              },
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              ),
+                              child: const Text('Back'),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _proceedToStep5,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: theme.primaryColor,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              ),
+                              child: const Text('Next', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
 
+              // STEP 5: 6-DIGIT TRANSACTION PIN
+              if (_currentStep == 4)
+                Form(
+                  key: _formKey5,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       const Text(
-                        'Set 4-Digit Transaction PIN',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        'Set 6-Digit Transaction PIN',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                       ),
                       const SizedBox(height: 14),
                       TextFormField(
                         controller: _pinController,
                         keyboardType: TextInputType.number,
                         obscureText: true,
-                        maxLength: 4,
+                        maxLength: 6,
                         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         decoration: InputDecoration(
-                          labelText: 'Create 4-digit PIN',
+                          labelText: 'Create 6-digit PIN',
                           prefixIcon: const Icon(Icons.dialpad_rounded),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                           counterText: '',
                         ),
                         validator: (value) {
-                          if (value == null || value.length != 4) return 'PIN must be exactly 4 digits';
+                          if (value == null || value.length != 6) return 'PIN must be exactly 6 digits';
                           return null;
                         },
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
                       TextFormField(
                         controller: _confirmPinController,
                         keyboardType: TextInputType.number,
                         obscureText: true,
-                        maxLength: 4,
+                        maxLength: 6,
                         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         decoration: InputDecoration(
-                          labelText: 'Confirm 4-digit PIN',
+                          labelText: 'Confirm 6-digit PIN',
                           prefixIcon: const Icon(Icons.dialpad_rounded),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                           counterText: '',
@@ -712,7 +852,7 @@ class _SignupPageState extends State<SignupPage> {
                             child: OutlinedButton(
                               onPressed: () {
                                 setState(() {
-                                  _currentStep = 2;
+                                  _currentStep = 3; // Back to Password
                                 });
                               },
                               style: OutlinedButton.styleFrom(
@@ -725,26 +865,104 @@ class _SignupPageState extends State<SignupPage> {
                           const SizedBox(width: 16),
                           Expanded(
                             child: ElevatedButton(
-                              onPressed: authProvider.isLoading ? null : _submitRegister,
+                              onPressed: _proceedToStep6,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: theme.primaryColor,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                               ),
-                              child: authProvider.isLoading
-                                  ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                                    )
-                                  : const Text('Complete Registration', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              child: const Text('Next', style: TextStyle(fontWeight: FontWeight.bold)),
                             ),
                           ),
                         ],
                       ),
                     ],
                   ),
+                ),
+
+              // STEP 6: BIOMETRICS ENROLLMENT (Skip or Enable)
+              if (_currentStep == 5)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 16),
+                    Center(
+                      child: Icon(
+                        Icons.fingerprint_rounded,
+                        size: 80,
+                        color: theme.primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    const Text(
+                      'Enable Biometric Security',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Use Fingerprint or FaceID to authenticate transfers quickly and login securely without typing your password.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 48),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: authProvider.isLoading ? null : () => _submitRegister(true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primaryColor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 2,
+                        ),
+                        child: authProvider.isLoading
+                            ? const SizedBox(
+                                height: 22,
+                                width: 22,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                              )
+                            : const Text(
+                                'Enable FaceID / Fingerprint',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton(
+                        onPressed: authProvider.isLoading ? null : () => _submitRegister(false),
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          side: BorderSide(color: Colors.grey.withOpacity(0.4)),
+                        ),
+                        child: Text(
+                          'Skip / Set Up Later',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: isDark ? Colors.white70 : Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _currentStep = 4; // Back to PIN
+                        });
+                      },
+                      child: const Text('Back to PIN Setup'),
+                    ),
+                  ],
                 ),
             ],
           ),

@@ -22,6 +22,12 @@ export class AuthService {
     return !existing;
   }
 
+  static async verifyOtp(email: string, code: string): Promise<boolean> {
+    const emailNorm = email.toLowerCase().trim();
+    const otpRecord = await Otp.findOne({ email: emailNorm });
+    return otpRecord !== null && otpRecord.code === code.trim();
+  }
+
   static async sendRegisterOtp(email: string, username: string): Promise<void> {
     // 1. Check if email already registered
     const existingEmail = await User.findOne({ email: email.toLowerCase().trim() });

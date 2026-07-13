@@ -48,13 +48,13 @@ class _PinCodeDialogState extends State<PinCodeDialog> {
   }
 
   void _onKeyPress(String digit) {
-    if (_pin.length >= 4) return;
+    if (_pin.length >= 6) return;
     setState(() {
       _pin += digit;
       _error = null;
     });
 
-    if (_pin.length == 4) {
+    if (_pin.length == 6) {
       _verifyPin();
     }
   }
@@ -195,7 +195,7 @@ class _PinCodeDialogState extends State<PinCodeDialog> {
           else
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(4, (index) => _buildDot(index)),
+              children: List.generate(6, (index) => _buildDot(index)),
             ),
 
           // Error Message
