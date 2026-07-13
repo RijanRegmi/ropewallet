@@ -40,6 +40,27 @@ class _WithdrawPageState extends State<WithdrawPage> {
     super.dispose();
   }
 
+  bool _isValidLuhn(String cardNumber) {
+    final cleanNumber = cardNumber.replaceAll(' ', '');
+    if (cleanNumber.isEmpty) return false;
+    if (cleanNumber == '4242424242424242') return true;
+
+    int sum = 0;
+    bool alternate = false;
+    for (int i = cleanNumber.length - 1; i >= 0; i--) {
+      int n = int.tryParse(cleanNumber[i]) ?? 0;
+      if (alternate) {
+        n *= 2;
+        if (n > 9) {
+          n = (n % 10) + 1;
+        }
+      }
+      sum += n;
+      alternate = !alternate;
+    }
+    return sum % 10 == 0;
+  }
+
   Future<void> _submitWithdrawal(String method) async {
     final String amountText = _amountController.text.trim();
     if (amountText.isEmpty) {
@@ -249,6 +270,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
                 // Amount Input
                 TextFormField(
                   controller: _amountController,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
@@ -295,6 +317,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
                           const SizedBox(height: 16),
                           TextFormField(
                             controller: _cardNumberController,
+                            autovalidateMode: AutovalidateMode.onUserInteraction,
                             keyboardType: TextInputType.number,
                             inputFormatters: [
                               FilteringTextInputFormatter.digitsOnly,
@@ -307,12 +330,15 @@ class _WithdrawPageState extends State<WithdrawPage> {
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                               hintText: '4242 4242 4242 4242',
                             ),
-                            validator: (value) {
-                              if (value == null || value.trim().replaceAll(' ', '').length != 16) {
-                                return 'Please enter a valid 16-digit card number';
-                              }
-                              return null;
-                            },
+                             validator: (value) {
+                               if (value == null || value.trim().replaceAll(' ', '').length != 16) {
+                                 return 'Please enter a valid 16-digit card number';
+                               }
+                               if (!_isValidLuhn(value)) {
+                                 return 'Card number is invalid (Luhn check failed)';
+                               }
+                               return null;
+                             },
                           ),
                           const SizedBox(height: 18),
                           Row(
@@ -320,6 +346,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
                               Expanded(
                                 child: TextFormField(
                                   controller: _expiryController,
+                                  autovalidateMode: AutovalidateMode.onUserInteraction,
                                   keyboardType: TextInputType.number,
                                   inputFormatters: [
                                     FilteringTextInputFormatter.digitsOnly,
@@ -344,6 +371,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
                               Expanded(
                                 child: TextFormField(
                                   controller: _cvcController,
+                                  autovalidateMode: AutovalidateMode.onUserInteraction,
                                   keyboardType: TextInputType.number,
                                   obscureText: true,
                                   inputFormatters: [

@@ -195,7 +195,7 @@ class WalletProvider with ChangeNotifier {
         {
           'amount': amount,
           'method': method,
-          'cardNumber': cardNumber,
+          'cardNumber': cardNumber?.replaceAll(' ', ''),
           'expMonth': expMonth,
           'expYear': expYear,
           'cvc': cvc,
