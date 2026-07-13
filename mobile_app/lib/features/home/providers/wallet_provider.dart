@@ -155,14 +155,19 @@ class WalletProvider with ChangeNotifier {
     }
   }
 
-  // Withdraw to Chime Debit Card via Payouts
+  // Withdraw to Chime Debit Card or Bank Account via Payouts
   Future<bool> withdraw({
     required double amount,
-    required String cardNumber,
-    required int expMonth,
-    required int expYear,
-    required String cvc,
+    required String method,
     required AuthProvider authProvider,
+    String? cardNumber,
+    int? expMonth,
+    int? expYear,
+    String? cvc,
+    String? routingNumber,
+    String? accountNumber,
+    String? bankName,
+    String? accountHolderName,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -173,10 +178,15 @@ class WalletProvider with ChangeNotifier {
         ApiConstants.withdraw,
         {
           'amount': amount,
+          'method': method,
           'cardNumber': cardNumber,
           'expMonth': expMonth,
           'expYear': expYear,
           'cvc': cvc,
+          'routingNumber': routingNumber,
+          'accountNumber': accountNumber,
+          'bankName': bankName,
+          'accountHolderName': accountHolderName,
         },
       );
 

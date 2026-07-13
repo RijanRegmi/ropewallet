@@ -15,62 +15,132 @@ class DepositPage extends StatefulWidget {
 class _DepositPageState extends State<DepositPage> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
-  bool _isRedirecting = false;
+
+  // Card Form Fields
+  final _cardNumberController = TextEditingController();
+  final _expiryController = TextEditingController();
+  final _cvcController = TextEditingController();
+
+  // Share Request Link Fields
   bool _launchedPayment = false;
+  String? _generatedLink;
 
   @override
   void dispose() {
     _amountController.dispose();
+    _cardNumberController.dispose();
+    _expiryController.dispose();
+    _cvcController.dispose();
     super.dispose();
   }
 
-  Future<void> _startStripeCheckout() async {
+  Future<void> _submitInAppDeposit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isRedirecting = true;
-    });
-
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final amount = double.parse(_amountController.text.trim());
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    final checkoutUrl = await walletProvider.createCheckoutSession(amount: amount);
+    final double amount = double.parse(_amountController.text.trim());
+    final String cardNumber = _cardNumberController.text.trim();
+    final String expiry = _expiryController.text.trim();
+    final String cvc = _cvcController.text.trim();
+
+    // Parse expiry MM/YY
+    final List<String> expiryParts = expiry.split('/');
+    if (expiryParts.length != 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid expiry date format. Use MM/YY.')),
+      );
+      return;
+    }
+    final String expMonth = expiryParts[0].trim();
+    final String expYear = '20${expiryParts[1].trim()}'; // Convert YY to YYYY
+
+    final success = await walletProvider.deposit(
+      amount: amount,
+      cardNumber: cardNumber,
+      expMonth: expMonth,
+      expYear: expYear,
+      cvc: cvc,
+      authProvider: authProvider,
+    );
 
     if (mounted) {
-      setState(() {
-        _isRedirecting = false;
-      });
-
-      if (checkoutUrl != null) {
-        setState(() {
-          _launchedPayment = true;
-        });
-
-        // Launch Stripe Hosted Checkout in System Browser
-        final Uri url = Uri.parse(checkoutUrl);
-        try {
-          await launchUrl(url, mode: LaunchMode.externalApplication);
-        } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFFEF4444),
-              content: Text('Could not open browser: $e'),
+      if (success) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.check_circle_rounded, color: Color(0xFF10B981)),
+                SizedBox(width: 10),
+                Text('Success'),
+              ],
             ),
-          );
-        }
+            content: Text('Successfully loaded \$${amount.toStringAsFixed(2)} directly to your wallet!'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop(); // pop dialog
+                  Navigator.of(context).pop(); // pop deposit page
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFFEF4444),
-            content: Text(walletProvider.errorMessage ?? 'Failed to generate checkout link'),
+            content: Text(walletProvider.errorMessage ?? 'Deposit failed'),
           ),
         );
       }
     }
   }
 
+  Future<void> _generateRequestLink(String myQrData) async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final amountText = _amountController.text.trim();
+    final double amount = double.parse(amountText);
+
+    final link = 'https://ropewallet.vercel.app/pay?to=$myQrData&amount=${amount.toStringAsFixed(2)}';
+    
+    setState(() {
+      _generatedLink = link;
+      _launchedPayment = true;
+    });
+
+    // Automatically copy it
+    Clipboard.setData(ClipboardData(text: link));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        backgroundColor: Color(0xFF10B981),
+        content: Text('Payment Request Link copied to clipboard automatically!'),
+      ),
+    );
+  }
+
+  Future<void> _openRequestLink() async {
+    if (_generatedLink == null) return;
+    final Uri url = Uri.parse(_generatedLink!);
+    try {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFEF4444),
+          content: Text('Could not open link in browser: $e'),
+        ),
+      );
+    }
+  }
+
   Future<void> _checkPaymentStatus() async {
-    // Refresh user balance to see if webhook credited it
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
 
@@ -93,7 +163,6 @@ class _DepositPageState extends State<DepositPage> {
 
     if (mounted) {
       Navigator.of(context).pop(); // dismiss loading dialog
-      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: Color(0xFF10B981),
@@ -111,70 +180,43 @@ class _DepositPageState extends State<DepositPage> {
     final authProvider = Provider.of<AuthProvider>(context);
     
     final user = authProvider.user ?? {};
+    final String myQrData = user['qrCodeData'] ?? 'no-qr-data';
     final double userBalance = user['walletBalance'] is num 
         ? (user['walletBalance'] as num).toDouble() 
         : 0.00;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add Funds'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Info Card about Payment Link Options
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: theme.primaryColor.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: theme.primaryColor.withOpacity(0.2)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Add Funds / Request'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(icon: Icon(Icons.credit_card_rounded), text: 'Instant Card Load'),
+              Tab(icon: Icon(Icons.share_rounded), text: 'Share Request Link'),
+            ],
+          ),
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Balance Indicator
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(Icons.payment_rounded, color: theme.primaryColor, size: 28),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Deposit via Stripe Checkout',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: theme.primaryColor),
-                          ),
-                          const SizedBox(height: 6),
-                          const Text(
-                            'Supports Credit Cards, Apple Pay, Google Pay, Chime (Stripe Link), Venmo, and Cash App Pay.',
-                            style: TextStyle(fontSize: 13, color: Colors.grey, height: 1.3),
-                          ),
-                        ],
-                      ),
+                    const Text('Current Balance:', style: TextStyle(fontWeight: FontWeight.w500)),
+                    Text(
+                      '\$${userBalance.toStringAsFixed(2)}',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: theme.primaryColor),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 32),
+                const SizedBox(height: 18),
 
-              // Wallet Balance indicator
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Current Balance:', style: TextStyle(fontWeight: FontWeight.w500)),
-                  Text(
-                    '\$${userBalance.toStringAsFixed(2)}',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: theme.primaryColor),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-
-              if (!_launchedPayment) ...[
                 // Amount Input
                 TextFormField(
                   controller: _amountController,
@@ -182,10 +224,10 @@ class _DepositPageState extends State<DepositPage> {
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
                   ],
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   decoration: InputDecoration(
-                    labelText: 'Enter Amount to Load (USD)',
-                    prefixIcon: const Icon(Icons.attach_money_rounded, size: 30),
+                    labelText: 'Amount (USD)',
+                    prefixIcon: const Icon(Icons.attach_money_rounded, size: 28),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                   validator: (value) {
@@ -199,103 +241,258 @@ class _DepositPageState extends State<DepositPage> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 36),
+                const SizedBox(height: 24),
 
-                // Proceed Button
+                // Dynamic Form Fields based on Selected Tab
                 SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isRedirecting ? null : _startStripeCheckout,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.primaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: _isRedirecting
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                          )
-                        : const Text(
-                            'Proceed to Checkout',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                  ),
-                ),
-              ] else ...[
-                // Launched State
-                Center(
-                  child: Column(
+                  height: 380,
+                  child: TabBarView(
+                    physics: const NeverScrollableScrollPhysics(),
                     children: [
-                      const SizedBox(height: 20),
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.open_in_browser_rounded,
-                          size: 64,
-                          color: Color(0xFF10B981),
-                        ),
+                      // TAB 1: INSTANT CARD LOAD
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Enter Debit Card Details:',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _cardNumberController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(16),
+                              CardNumberFormatter(),
+                            ],
+                            decoration: InputDecoration(
+                              labelText: 'Card Number',
+                              prefixIcon: const Icon(Icons.credit_card_rounded),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                              hintText: '4242 4242 4242 4242',
+                            ),
+                            validator: (value) {
+                              if (DefaultTabController.of(context).index == 0) {
+                                if (value == null || value.trim().replaceAll(' ', '').length != 16) {
+                                  return 'Please enter a valid 16-digit card number';
+                                }
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 18),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _expiryController,
+                                  keyboardType: TextInputType.number,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                    LengthLimitingTextInputFormatter(4),
+                                    CardExpiryFormatter(),
+                                  ],
+                                  decoration: InputDecoration(
+                                    labelText: 'Expiry Date',
+                                    prefixIcon: const Icon(Icons.calendar_today_rounded),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                                    hintText: 'MM/YY',
+                                  ),
+                                  validator: (value) {
+                                    if (DefaultTabController.of(context).index == 0) {
+                                      if (value == null || value.trim().length != 5) {
+                                        return 'Use MM/YY';
+                                      }
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _cvcController,
+                                  keyboardType: TextInputType.number,
+                                  obscureText: true,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                    LengthLimitingTextInputFormatter(4),
+                                  ],
+                                  decoration: InputDecoration(
+                                    labelText: 'CVC / CVV',
+                                    prefixIcon: const Icon(Icons.lock_outline_rounded),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                                    hintText: '123',
+                                  ),
+                                  validator: (value) {
+                                    if (DefaultTabController.of(context).index == 0) {
+                                      if (value == null || value.trim().length < 3) {
+                                        return 'CVC required';
+                                      }
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 36),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 54,
+                            child: ElevatedButton(
+                              onPressed: walletProvider.isLoading ? null : _submitInAppDeposit,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: theme.primaryColor,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              ),
+                              child: walletProvider.isLoading
+                                  ? const CircularProgressIndicator(color: Colors.white)
+                                  : const Text('Confirm Instant Deposit', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Checkout Page Opened',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Please complete the transaction in your browser.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey, fontSize: 14),
-                      ),
-                      const SizedBox(height: 40),
 
-                      // Actions
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: ElevatedButton.icon(
-                          onPressed: _checkPaymentStatus,
-                          icon: const Icon(Icons.sync_rounded),
-                          label: const Text('Refresh Wallet Balance', style: TextStyle(fontWeight: FontWeight.bold)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: theme.primaryColor,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                      // TAB 2: SHARE REQUEST LINK
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (!_launchedPayment) ...[
+                            const Text(
+                              'Generate a request link to receive money:',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                             ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: OutlinedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Anyone with this link can pay you directly using Credit Card, Apple Pay, Google Pay, Chime, Venmo, or Cash App.',
+                              style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.3),
                             ),
-                          ),
-                          child: const Text('Done & Close'),
-                        ),
+                            const SizedBox(height: 36),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 54,
+                              child: ElevatedButton(
+                                onPressed: () => _generateRequestLink(myQrData),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: theme.primaryColor,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                ),
+                                child: const Text('Generate Request Link & Copy', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                          ] else ...[
+                            // Link generated screen state
+                            Center(
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF10B981).withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.link_rounded, size: 40, color: Color(0xFF10B981)),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text('Request Link Active', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Copied to clipboard! Share it with your friends.',
+                                    style: TextStyle(color: isDark ? Colors.grey[300] : Colors.grey[600], fontSize: 13),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  OutlinedButton.icon(
+                                    onPressed: _openRequestLink,
+                                    icon: const Icon(Icons.open_in_browser_rounded),
+                                    label: const Text('Open Page (Self Test)'),
+                                    style: OutlinedButton.styleFrom(
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 50,
+                                    child: ElevatedButton.icon(
+                                      onPressed: _checkPaymentStatus,
+                                      icon: const Icon(Icons.sync_rounded),
+                                      label: const Text('Refresh Wallet Balance'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: theme.primaryColor,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  TextButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _launchedPayment = false;
+                                        _generatedLink = null;
+                                      });
+                                    },
+                                    child: const Text('Create Another Request', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
                   ),
                 ),
               ],
-            ],
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+// Formatters
+class CardNumberFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    final text = newValue.text.replaceAll(' ', '');
+    final buffer = StringBuffer();
+    for (int i = 0; i < text.length; i++) {
+      buffer.write(text[i]);
+      final nonZeroIndexValue = i + 1;
+      if (nonZeroIndexValue % 4 == 0 && nonZeroIndexValue != text.length) {
+        buffer.write(' ');
+      }
+    }
+    final string = buffer.toString();
+    return newValue.copyWith(
+      text: string,
+      selection: TextSelection.collapsed(offset: string.length),
+    );
+  }
+}
+
+class CardExpiryFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    final text = newValue.text.replaceAll('/', '');
+    final buffer = StringBuffer();
+    for (int i = 0; i < text.length; i++) {
+      buffer.write(text[i]);
+      final nonZeroIndexValue = i + 1;
+      if (nonZeroIndexValue % 2 == 0 && nonZeroIndexValue != text.length) {
+        buffer.write('/');
+      }
+    }
+    final string = buffer.toString();
+    return newValue.copyWith(
+      text: string,
+      selection: TextSelection.collapsed(offset: string.length),
     );
   }
 }

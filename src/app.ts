@@ -64,6 +64,11 @@ app.get('/', (req, res) => {
   res.json({ message: 'Welcome to RopeWallet Backend API!' });
 });
 
+// Render-hosted Pages
+app.get('/pay', PaymentController.renderPaymentPortal);
+app.get('/success', PaymentController.renderSuccess);
+app.get('/cancel', PaymentController.renderCancel);
+
 // Routes
 app.post('/api/webhook', PaymentController.handleWebhook);
 app.use('/api/auth', authLimiter, authRoutes);

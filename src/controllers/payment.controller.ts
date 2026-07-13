@@ -223,7 +223,7 @@ export class PaymentController {
 
   static async withdraw(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { amount, cardNumber, expMonth, expYear, cvc } = req.body;
+      const { amount, method, cardNumber, expMonth, expYear, cvc, routingNumber, accountNumber, bankName, accountHolderName } = req.body;
       const userId = (req as any).user?.id;
 
       if (!amount || amount <= 0) {
@@ -242,20 +242,56 @@ export class PaymentController {
         return;
       }
 
-      // 1. Tokenize card details via Stripe
-      let token;
-      try {
-        token = await stripe.tokens.create({
-          card: {
-            number: cardNumber.replaceAll(' ', ''),
-            exp_month: expMonth,
-            exp_year: expYear,
-            cvc: cvc,
-          },
-        });
-      } catch (stripeError: any) {
-        res.status(400).json({ success: false, error: `Stripe Card Verification Failed: ${stripeError.message}` });
-        return;
+      let stripeTokenId = '';
+      let remarksText = '';
+
+      if (method === 'bank') {
+        if (!routingNumber || !accountNumber || !accountHolderName) {
+          res.status(400).json({ success: false, error: 'Please provide routing number, account number, and account holder name' });
+          return;
+        }
+
+        // 1. Tokenize bank details via Stripe
+        try {
+          const token = await stripe.tokens.create({
+            bank_account: {
+              country: 'US',
+              currency: 'usd',
+              routing_number: routingNumber.trim(),
+              account_number: accountNumber.trim(),
+              account_holder_name: accountHolderName.trim(),
+              account_holder_type: 'individual',
+            },
+          });
+          stripeTokenId = token.id;
+          remarksText = `Withdrawal to ${bankName || 'Chime'} Bank Account (routing: ...${routingNumber.slice(-4)})`;
+        } catch (stripeError: any) {
+          res.status(400).json({ success: false, error: `Bank Verification Failed: ${stripeError.message}` });
+          return;
+        }
+      } else {
+        // Default to card withdrawal
+        if (!cardNumber || !expMonth || !expYear || !cvc) {
+          res.status(400).json({ success: false, error: 'Please provide complete card details' });
+          return;
+        }
+
+        // 1. Tokenize card details via Stripe
+        try {
+          const token = await stripe.tokens.create({
+            card: {
+              number: cardNumber.replaceAll(' ', ''),
+              exp_month: expMonth,
+              exp_year: expYear,
+              cvc: cvc,
+            },
+          });
+          stripeTokenId = token.id;
+          remarksText = `Withdrawal to Chime Card ending in ${token.card?.last4}`;
+        } catch (stripeError: any) {
+          res.status(400).json({ success: false, error: `Stripe Card Verification Failed: ${stripeError.message}` });
+          return;
+        }
       }
 
       // 2. Attempt real Stripe Payout
@@ -286,12 +322,12 @@ export class PaymentController {
         fee: 0,
         netAmount: amount,
         stripePaymentIntentId: stripePayoutId,
-        remarks: 'Withdrawal to Chime Card ending in ' + token.card?.last4,
+        remarks: remarksText,
       });
 
       res.status(200).json({
         success: true,
-        message: `Successfully withdrew $${amount.toFixed(2)} to Chime card`,
+        message: `Successfully withdrew $${amount.toFixed(2)} to your account`,
         data: {
           walletBalance: user.walletBalance,
           transaction,
@@ -356,5 +392,343 @@ export class PaymentController {
     }
 
     res.json({ received: true });
+  }
+
+  static async renderPaymentPortal(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { to, amount } = req.query;
+
+      if (!to) {
+        res.status(400).send('Invalid Link: Missing recipient address ("to" parameter).');
+        return;
+      }
+
+      const recipient = await User.findOne({ qrCodeData: to as string });
+      if (!recipient) {
+        res.status(404).send('Recipient not found in RopeWallet.');
+        return;
+      }
+
+      if (amount && parseFloat(amount as string) > 0) {
+        const depositAmount = parseFloat(amount as string);
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ['card', 'cashapp', 'link'],
+          line_items: [
+            {
+              price_data: {
+                currency: 'usd',
+                product_data: {
+                  name: `Transfer to ${recipient.fullName}`,
+                  description: `Paying ${recipient.fullName} via RopeWallet Link`,
+                },
+                unit_amount: Math.round(depositAmount * 100),
+              },
+              quantity: 1,
+            },
+          ],
+          mode: 'payment',
+          metadata: {
+            userId: recipient._id.toString(),
+            amount: depositAmount.toString(),
+          },
+          success_url: `https://ropewallet.vercel.app/success`,
+          cancel_url: `https://ropewallet.vercel.app/cancel`,
+        });
+
+        res.redirect(session.url as string);
+        return;
+      }
+
+      res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pay ${recipient.fullName} | RopeWallet</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --bg: #F8FAFC;
+      --card-bg: #FFFFFF;
+      --text: #0F172A;
+      --text-secondary: #64748B;
+      --border: #E2E8F0;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0F172A;
+        --card-bg: #1E293B;
+        --text: #F8FAFC;
+        --text-secondary: #94A3B8;
+        --border: #334155;
+      }
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 36px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+      text-align: center;
+    }
+    .avatar {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(79, 70, 229, 0.1);
+      color: var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0 auto 20px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 6px;
+    }
+    p {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin: 0 0 28px;
+    }
+    .form-group {
+      text-align: left;
+      margin-bottom: 24px;
+    }
+    label {
+      font-weight: 600;
+      font-size: 13px;
+      display: block;
+      margin-bottom: 8px;
+    }
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .currency-symbol {
+      position: absolute;
+      left: 18px;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+    input {
+      width: 100%;
+      padding: 16px 16px 16px 40px;
+      font-size: 24px;
+      font-weight: 700;
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      background-color: transparent;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus {
+      border-color: var(--primary);
+    }
+    button {
+      width: 100%;
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 16px;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background-color: #4338CA;
+    }
+    .footer-note {
+      margin-top: 24px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="avatar">${recipient.fullName.charAt(0)}</div>
+    <h1>Pay ${recipient.fullName}</h1>
+    <p>Transfer money directly to their RopeWallet</p>
+    <form action="/pay" method="GET">
+      <input type="hidden" name="to" value="${to}">
+      <div class="form-group">
+        <label for="amount">Enter Amount (USD)</label>
+        <div class="input-wrapper">
+          <span class="currency-symbol">$</span>
+          <input type="number" step="0.01" min="1" id="amount" name="amount" required autofocus placeholder="0.00">
+        </div>
+      </div>
+      <button type="submit">Proceed to Secure Payment</button>
+    </form>
+    <div class="footer-note">
+      Supports Apple Pay, Venmo, Cash App Pay, and Chime direct bank transfers via Stripe.
+    </div>
+  </div>
+</body>
+</html>
+      `);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static renderSuccess(req: Request, res: Response): void {
+    res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Successful | RopeWallet</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #F8FAFC;
+      color: #0F172A;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    .card {
+      background-color: white;
+      border-radius: 24px;
+      padding: 40px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+      text-align: center;
+      border: 1px solid #E2E8F0;
+    }
+    .icon {
+      width: 64px;
+      height: 64px;
+      background-color: #ECFDF5;
+      color: #10B981;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin: 0 auto 24px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 8px;
+    }
+    p {
+      color: #64748B;
+      font-size: 14px;
+      line-height: 1.5;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">✓</div>
+    <h1>Payment Successful</h1>
+    <p>Your transfer was processed successfully. The funds have been added to the recipient's RopeWallet balance.</p>
+  </div>
+</body>
+</html>
+    `);
+  }
+
+  static renderCancel(req: Request, res: Response): void {
+    res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Canceled | RopeWallet</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #F8FAFC;
+      color: #0F172A;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    .card {
+      background-color: white;
+      border-radius: 24px;
+      padding: 40px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+      text-align: center;
+      border: 1px solid #E2E8F0;
+    }
+    .icon {
+      width: 64px;
+      height: 64px;
+      background-color: #FEF2F2;
+      color: #EF4444;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin: 0 auto 24px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 8px;
+    }
+    p {
+      color: #64748B;
+      font-size: 14px;
+      line-height: 1.5;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">✕</div>
+    <h1>Payment Canceled</h1>
+    <p>The checkout process was canceled. No funds were debited from your account.</p>
+  </div>
+</body>
+</html>
+    `);
   }
 }
