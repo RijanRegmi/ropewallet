@@ -194,8 +194,28 @@ export class AuthService {
     await Otp.deleteOne({ email: emailNorm });
   }
 
-  static async getMe(userId: string) {
+  static async setPin(userId: string, pin: string): Promise<void> {
     const user = await User.findById(userId);
+    if (!user) {
+      throw new CustomError('User not found', 404);
+    }
+    user.transactionPin = pin;
+    await user.save();
+  }
+
+  static async verifyPin(userId: string, pin: string): Promise<boolean> {
+    const user = await User.findById(userId).select('+transactionPin');
+    if (!user) {
+      throw new CustomError('User not found', 404);
+    }
+    if (!user.transactionPin) {
+      return false;
+    }
+    return user.comparePin(pin);
+  }
+
+  static async getMe(userId: string) {
+    const user = await User.findById(userId).select('+transactionPin');
     if (!user) {
       throw new CustomError('User not found', 404);
     }
@@ -211,6 +231,7 @@ export class AuthService {
       walletBalance: user.walletBalance,
       qrCodeData: user.qrCodeData,
       createdAt: user.createdAt,
+      hasPin: !!user.transactionPin,
     };
   }
 }

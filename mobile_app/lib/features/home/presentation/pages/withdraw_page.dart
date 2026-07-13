@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../providers/wallet_provider.dart';
+import '../../../auth/presentation/widgets/pin_code_dialog.dart';
 
 class WithdrawPage extends StatefulWidget {
   const WithdrawPage({super.key});
@@ -45,6 +46,30 @@ class _WithdrawPageState extends State<WithdrawPage> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final double amount = double.parse(_amountController.text.trim());
 
+    final hasPin = authProvider.user?['hasPin'] == true;
+    String? pin;
+
+    if (hasPin) {
+      pin = await showModalBottomSheet<String>(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        builder: (context) => PinCodeDialog(
+          title: 'Enter Transaction PIN',
+          subtitle: 'Confirm PIN to complete withdrawal',
+        ),
+      );
+
+      if (pin == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Withdrawal canceled')),
+        );
+        return;
+      }
+    }
+
     bool success = false;
 
     if (method == 'bank') {
@@ -56,6 +81,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
         accountNumber: _accountController.text.trim(),
         bankName: _selectedBankName,
         accountHolderName: _holderNameController.text.trim(),
+        pin: pin,
       );
     } else {
       // Parse card expiry
@@ -84,6 +110,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
         expMonth: expMonth,
         expYear: expYear,
         cvc: _cvcController.text.trim(),
+        pin: pin,
       );
     }
 

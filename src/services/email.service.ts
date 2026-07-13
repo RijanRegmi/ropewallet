@@ -7,18 +7,34 @@ export class EmailService {
     const user = process.env.SMTP_USER || '';
     const pass = process.env.SMTP_PASS || '';
 
-    // If port is 465, use secure SSL/TLS. Otherwise STARTTLS (e.g. 587)
+    const isGmail = host.toLowerCase().includes('gmail') || user.toLowerCase().includes('gmail');
     const secure = port === 465;
 
-    return nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: {
-        user,
-        pass,
-      },
-    });
+    return nodemailer.createTransport(
+      isGmail
+        ? {
+            service: 'gmail',
+            auth: {
+              user,
+              pass,
+            },
+            tls: {
+              rejectUnauthorized: false,
+            },
+          }
+        : {
+            host,
+            port,
+            secure,
+            auth: {
+              user,
+              pass,
+            },
+            tls: {
+              rejectUnauthorized: false,
+            },
+          }
+    );
   }
 
   static async sendOtpEmail(email: string, code: string): Promise<void> {

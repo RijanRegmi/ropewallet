@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../providers/wallet_provider.dart';
+import '../../../auth/presentation/widgets/pin_code_dialog.dart';
 
 class ExternalTransferPage extends StatefulWidget {
   final String provider;
@@ -43,6 +44,30 @@ class _ExternalTransferPageState extends State<ExternalTransferPage> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final double amount = double.parse(_amountController.text.trim());
 
+    final hasPin = authProvider.user?['hasPin'] == true;
+    String? pin;
+
+    if (hasPin) {
+      pin = await showModalBottomSheet<String>(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        builder: (context) => PinCodeDialog(
+          title: 'Enter Transaction PIN',
+          subtitle: 'Confirm PIN to send transfer',
+        ),
+      );
+
+      if (pin == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Transfer canceled')),
+        );
+        return;
+      }
+    }
+
     // Backend automatically creates or generates the target routing & account details based on the recipient tag
     final success = await walletProvider.withdraw(
       amount: amount,
@@ -50,6 +75,7 @@ class _ExternalTransferPageState extends State<ExternalTransferPage> {
       authProvider: authProvider,
       bankName: widget.provider,
       recipientTag: widget.recipientName,
+      pin: pin,
     );
 
     if (mounted) {

@@ -94,10 +94,23 @@ export class PaymentController {
         return;
       }
 
-      const sender = await User.findById(senderId);
+      const sender = await User.findById(senderId).select('+transactionPin');
       if (!sender) {
         res.status(404).json({ success: false, error: 'Sender not found' });
         return;
+      }
+
+      if (sender.transactionPin) {
+        const { pin } = req.body;
+        if (!pin) {
+          res.status(400).json({ success: false, error: 'Transaction PIN is required' });
+          return;
+        }
+        const isPinValid = await sender.comparePin(pin);
+        if (!isPinValid) {
+          res.status(400).json({ success: false, error: 'Invalid transaction PIN' });
+          return;
+        }
       }
 
       if (sender.walletBalance < amount) {
@@ -231,10 +244,23 @@ export class PaymentController {
         return;
       }
 
-      const user = await User.findById(userId);
+      const user = await User.findById(userId).select('+transactionPin');
       if (!user) {
         res.status(404).json({ success: false, error: 'User not found' });
         return;
+      }
+
+      if (user.transactionPin) {
+        const { pin } = req.body;
+        if (!pin) {
+          res.status(400).json({ success: false, error: 'Transaction PIN is required' });
+          return;
+        }
+        const isPinValid = await user.comparePin(pin);
+        if (!isPinValid) {
+          res.status(400).json({ success: false, error: 'Invalid transaction PIN' });
+          return;
+        }
       }
 
       if (user.walletBalance < amount) {

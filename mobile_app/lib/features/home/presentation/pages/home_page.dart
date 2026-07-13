@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:ropewallet/core/theme/theme_provider.dart';
 import 'package:ropewallet/features/auth/providers/auth_provider.dart';
 import '../../providers/wallet_provider.dart';
+import '../../../auth/presentation/widgets/security_settings_sheet.dart';
 import 'deposit_page.dart';
 import 'scanner_page.dart';
 import 'send_money_page.dart';
@@ -73,6 +74,20 @@ class _HomePageState extends State<HomePage> {
             tooltip: 'Toggle Theme',
             onPressed: () {
               themeProvider.toggleTheme();
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.security_rounded),
+            tooltip: 'Security Settings',
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                builder: (context) => SecuritySettingsSheet(),
+              );
             },
           ),
           IconButton(

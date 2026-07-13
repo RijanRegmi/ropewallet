@@ -169,6 +169,7 @@ class WalletProvider with ChangeNotifier {
     String? bankName,
     String? accountHolderName,
     String? recipientTag,
+    String? pin,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -189,6 +190,7 @@ class WalletProvider with ChangeNotifier {
           'bankName': bankName,
           'accountHolderName': accountHolderName,
           'recipientTag': recipientTag,
+          'pin': pin,
         },
       );
 
@@ -222,6 +224,7 @@ class WalletProvider with ChangeNotifier {
     required double amount,
     required AuthProvider authProvider,
     String? remarks,
+    String? pin,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -234,6 +237,7 @@ class WalletProvider with ChangeNotifier {
           'receiverQrData': receiverQrData,
           'amount': amount,
           'remarks': remarks,
+          'pin': pin,
         },
       );
 

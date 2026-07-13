@@ -9,9 +9,11 @@ export interface IUser extends Document {
   email: string;
   password?: string;
   phoneNumber: string;
+  transactionPin?: string;
   walletBalance: number;
   qrCodeData: string;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(password: string): Promise<boolean>;
+  comparePin(pin: string): Promise<boolean>;
 }

@@ -106,6 +106,44 @@ export class AuthController {
     }
   }
 
+  static async setPin(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id;
+      const { pin } = req.body;
+      if (!userId) {
+        res.status(401).json({ success: false, error: 'Not authorized to access this route' });
+        return;
+      }
+      if (!pin || pin.length !== 4 || isNaN(Number(pin))) {
+        res.status(400).json({ success: false, error: 'PIN must be a 4-digit number' });
+        return;
+      }
+      await AuthService.setPin(userId, pin);
+      res.status(200).json({ success: true, message: 'Transaction PIN set successfully' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async verifyPin(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id;
+      const { pin } = req.body;
+      if (!userId) {
+        res.status(401).json({ success: false, error: 'Not authorized to access this route' });
+        return;
+      }
+      if (!pin) {
+        res.status(400).json({ success: false, error: 'PIN is required' });
+        return;
+      }
+      const isValid = await AuthService.verifyPin(userId, pin);
+      res.status(200).json({ success: true, valid: isValid });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async getMe(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = (req as any).user?.id;

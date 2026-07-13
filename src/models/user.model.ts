@@ -48,6 +48,10 @@ const userSchema = new Schema<IUser>(
       required: [true, 'Phone number is required'],
       trim: true,
     },
+    transactionPin: {
+      type: String,
+      select: false, // Don't return PIN by default for safety
+    },
     walletBalance: {
       type: Number,
       default: 0.00,
@@ -86,9 +90,29 @@ userSchema.pre('save', async function (next) {
   }
 });
 
+// Hash PIN before saving if it has been modified
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('transactionPin') || !this.transactionPin) {
+    return next();
+  }
+  try {
+    const salt = await bcryptjs.genSalt(10);
+    this.transactionPin = await bcryptjs.hash(this.transactionPin, salt);
+    next();
+  } catch (error: any) {
+    next(error);
+  }
+});
+
 // Method to compare candidate password with stored password
 userSchema.methods.comparePassword = async function (password: string): Promise<boolean> {
   return bcryptjs.compare(password, this.password);
+};
+
+// Method to compare transaction PIN
+userSchema.methods.comparePin = async function (pin: string): Promise<boolean> {
+  if (!this.transactionPin) return false;
+  return bcryptjs.compare(pin, this.transactionPin);
 };
 
 export const User = model<IUser>('User', userSchema);

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../providers/wallet_provider.dart';
+import '../../../auth/presentation/widgets/pin_code_dialog.dart';
 
 class SendMoneyPage extends StatefulWidget {
   final String? recipientQrData;
@@ -52,11 +53,36 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
     final String receiverQr = _recipientController.text.trim();
     final String remarks = _remarksController.text.trim();
 
+    final hasPin = authProvider.user?['hasPin'] == true;
+    String? pin;
+
+    if (hasPin) {
+      pin = await showModalBottomSheet<String>(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        builder: (context) => PinCodeDialog(
+          title: 'Enter Transaction PIN',
+          subtitle: 'Confirm PIN to send money',
+        ),
+      );
+
+      if (pin == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Transaction canceled')),
+        );
+        return;
+      }
+    }
+
     final success = await walletProvider.transfer(
       receiverQrData: receiverQr,
       amount: _amount,
       remarks: remarks.isNotEmpty ? remarks : null,
       authProvider: authProvider,
+      pin: pin,
     );
 
     if (mounted) {
