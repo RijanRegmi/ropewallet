@@ -43,6 +43,8 @@ class ApiConstants {
   static const String profile = '/auth/me';
   
   static const String deposit = '/payments/deposit';
+  static const String checkout = '/payments/checkout';
   static const String transfer = '/payments/transfer';
+  static const String withdraw = '/payments/withdraw';
   static const String transactions = '/payments/transactions';
 }

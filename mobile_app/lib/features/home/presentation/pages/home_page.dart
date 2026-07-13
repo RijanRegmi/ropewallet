@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:ropewallet/core/theme/theme_provider.dart';
@@ -7,6 +8,7 @@ import '../../providers/wallet_provider.dart';
 import 'deposit_page.dart';
 import 'scanner_page.dart';
 import 'send_money_page.dart';
+import 'withdraw_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -26,6 +28,23 @@ class _HomePageState extends State<HomePage> {
       Provider.of<WalletProvider>(context, listen: false).fetchTransactions();
       _isInit = true;
     }
+  }
+
+  void _copyPaymentLink(String qrData) {
+    final link = 'https://ropewallet.vercel.app/pay?to=$qrData';
+    Clipboard.setData(ClipboardData(text: link));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: Theme.of(context).primaryColor,
+        content: const Row(
+          children: [
+            Icon(Icons.link_rounded, color: Colors.white),
+            SizedBox(width: 10),
+            Text('Payment link copied to clipboard!'),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -202,111 +221,200 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 28),
 
-              // Action Cards (Scan, Send, Deposit)
-              Row(
+              // Action Cards (Scan, Send, Deposit, Withdraw)
+              Column(
                 children: [
-                  // Scan
-                  Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const ScannerPage()),
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        decoration: BoxDecoration(
-                          color: theme.primaryColor.withOpacity(0.1),
+                  Row(
+                    children: [
+                      // Scan
+                      Expanded(
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const ScannerPage()),
+                            );
+                          },
                           borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(Icons.qr_code_scanner_rounded, color: theme.primaryColor, size: 28),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Scan',
-                              style: TextStyle(
-                                color: theme.primaryColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            decoration: BoxDecoration(
+                              color: theme.primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                          ],
+                            child: Column(
+                              children: [
+                                Icon(Icons.qr_code_scanner_rounded, color: theme.primaryColor, size: 28),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Scan',
+                                  style: TextStyle(
+                                    color: theme.primaryColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      // Send
+                      Expanded(
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const SendMoneyPage()),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
+                              children: [
+                                const Icon(Icons.send_rounded, color: Color(0xFF10B981), size: 28),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Send',
+                                  style: TextStyle(
+                                    color: Color(0xFF10B981),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  // Send
-                  Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const SendMoneyPage()),
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withOpacity(0.1),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      // Deposit
+                      Expanded(
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const DepositPage()),
+                            );
+                          },
                           borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Column(
-                          children: [
-                            const Icon(Icons.send_rounded, color: Color(0xFF10B981), size: 28),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Send',
-                              style: TextStyle(
-                                color: Color(0xFF10B981),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF3B82F6).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                          ],
+                            child: Column(
+                              children: [
+                                const Icon(Icons.add_circle_rounded, color: Color(0xFF3B82F6), size: 28),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Deposit',
+                                  style: TextStyle(
+                                    color: Color(0xFF3B82F6),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Deposit
-                  Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const DepositPage()),
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF3B82F6).withOpacity(0.1),
+                      const SizedBox(width: 12),
+                      // Withdraw
+                      Expanded(
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const WithdrawPage()),
+                            );
+                          },
                           borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Column(
-                          children: [
-                            const Icon(Icons.add_circle_rounded, color: Color(0xFF3B82F6), size: 28),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Deposit',
-                              style: TextStyle(
-                                color: Color(0xFF3B82F6),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF59E0B).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                          ],
+                            child: Column(
+                              children: [
+                                const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFFF59E0B), size: 28),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Withdraw',
+                                  style: TextStyle(
+                                    color: Color(0xFFF59E0B),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
+              ),
+              const SizedBox(height: 20),
+
+              // Request Payment Link Card
+              InkWell(
+                onTap: () => _copyPaymentLink(qrData),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: theme.primaryColor.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.share_rounded, color: theme.primaryColor, size: 20),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Share Your Request Link',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Accepts Apple Pay, Venmo, Cash App, Chime',
+                              style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.copy_all_rounded, color: theme.primaryColor, size: 20),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 32),
 

@@ -119,6 +119,91 @@ class WalletProvider with ChangeNotifier {
     }
   }
 
+  // Create Stripe Checkout Session link
+  Future<String?> createCheckoutSession({
+    required double amount,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post(
+        ApiConstants.checkout,
+        {
+          'amount': amount,
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        _isLoading = false;
+        notifyListeners();
+        return responseData['checkoutUrl'] as String?;
+      } else {
+        _errorMessage = responseData['error'] ?? 'Checkout link creation failed';
+        _isLoading = false;
+        notifyListeners();
+        return null;
+      }
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return null;
+    }
+  }
+
+  // Withdraw to Chime Debit Card via Payouts
+  Future<bool> withdraw({
+    required double amount,
+    required String cardNumber,
+    required int expMonth,
+    required int expYear,
+    required String cvc,
+    required AuthProvider authProvider,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post(
+        ApiConstants.withdraw,
+        {
+          'amount': amount,
+          'cardNumber': cardNumber,
+          'expMonth': expMonth,
+          'expYear': expYear,
+          'cvc': cvc,
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        // Refresh User profile to get updated balance
+        await authProvider.tryAutoLogin();
+        // Refresh transaction log
+        await fetchTransactions();
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = responseData['error'] ?? 'Withdrawal failed';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   // Transfer wallet balance with 15% fee cut
   Future<bool> transfer({
     required String receiverQrData,

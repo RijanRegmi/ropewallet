@@ -5,6 +5,7 @@ import mongoSanitize from 'express-mongo-sanitize';
 import { rateLimit } from 'express-rate-limit';
 import authRoutes from './routes/auth.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
+import { PaymentController } from './controllers/payment.controller.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import { connectDB } from './config/db.js';
 
@@ -28,8 +29,15 @@ app.use(mongoSanitize()); // Prevent NoSQL Injection
 // CORS configuration
 app.use(cors());
 
-// Limit JSON payload size to prevent DOS
-app.use(express.json({ limit: '10kb' }));
+// Limit JSON payload size to prevent DOS (with rawBody capture for Stripe webhooks)
+app.use(express.json({
+  limit: '10kb',
+  verify: (req: any, res, buf) => {
+    if (req.originalUrl.startsWith('/api/webhook')) {
+      req.rawBody = buf;
+    }
+  }
+}));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // Global Rate Limiter (Max 100 requests per 15 mins)
@@ -57,6 +65,7 @@ app.get('/', (req, res) => {
 });
 
 // Routes
+app.post('/api/webhook', PaymentController.handleWebhook);
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/payments', paymentRoutes);
 
