@@ -1,7 +1,12 @@
 export interface RegisterDTO {
-  fullName: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  username: string;
   email: string;
   password: string;
+  phoneNumber: string;
+  otpCode: string;
 }
 
 export interface LoginDTO {
@@ -13,8 +18,13 @@ export interface AuthResponse {
   token: string;
   user: {
     id: string;
+    firstName: string;
+    middleName?: string;
+    lastName: string;
+    username: string;
     fullName: string;
     email: string;
+    phoneNumber: string;
     walletBalance: number;
     qrCodeData: string;
     createdAt: Date;

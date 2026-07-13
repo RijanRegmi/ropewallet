@@ -4,9 +4,29 @@ import { IUser } from '../types/user.interface.js';
 
 const userSchema = new Schema<IUser>(
   {
+    firstName: {
+      type: String,
+      required: [true, 'First name is required'],
+      trim: true,
+    },
+    middleName: {
+      type: String,
+      trim: true,
+    },
+    lastName: {
+      type: String,
+      required: [true, 'Last name is required'],
+      trim: true,
+    },
+    username: {
+      type: String,
+      required: [true, 'Username is required'],
+      unique: true,
+      trim: true,
+      lowercase: true,
+    },
     fullName: {
       type: String,
-      required: [true, 'Full name is required'],
       trim: true,
     },
     email: {
@@ -23,6 +43,11 @@ const userSchema = new Schema<IUser>(
       minlength: [6, 'Password must be at least 6 characters long'],
       select: false, // Don't return password by default
     },
+    phoneNumber: {
+      type: String,
+      required: [true, 'Phone number is required'],
+      trim: true,
+    },
     walletBalance: {
       type: Number,
       default: 0.00,
@@ -37,6 +62,15 @@ const userSchema = new Schema<IUser>(
     timestamps: true,
   }
 );
+
+// Auto-compile fullName before validation/save
+userSchema.pre('save', function (next) {
+  if (this.isModified('firstName') || this.isModified('lastName') || this.isModified('middleName')) {
+    const middle = this.middleName ? ` ${this.middleName}` : '';
+    this.fullName = `${this.firstName}${middle} ${this.lastName}`;
+  }
+  next();
+});
 
 // Hash password before saving if it has been modified
 userSchema.pre('save', async function (next) {

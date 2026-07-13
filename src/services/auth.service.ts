@@ -1,6 +1,9 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import bcryptjs from 'bcryptjs';
 import { User } from '../models/user.model.js';
+import { Otp } from '../models/otp.model.js';
+import { EmailService } from './email.service.js';
 import { RegisterDTO, LoginDTO, AuthResponse } from '../types/auth.dto.js';
 import { CustomError } from '../middlewares/error.middleware.js';
 
@@ -14,19 +17,77 @@ const generateToken = (userId: string): string => {
 };
 
 export class AuthService {
-  static async register(data: RegisterDTO): Promise<AuthResponse> {
-    const existingUser = await User.findOne({ email: data.email.toLowerCase() });
-    if (existingUser) {
+  static async checkUsernameAvailability(username: string): Promise<boolean> {
+    const existing = await User.findOne({ username: username.toLowerCase().trim() });
+    return !existing;
+  }
+
+  static async sendRegisterOtp(email: string, username: string): Promise<void> {
+    // 1. Check if email already registered
+    const existingEmail = await User.findOne({ email: email.toLowerCase().trim() });
+    if (existingEmail) {
       throw new CustomError('Email already registered', 400);
     }
 
-    // Generate unique wallet QR data
+    // 2. Check if username already exists
+    const existingUsername = await User.findOne({ username: username.toLowerCase().trim() });
+    if (existingUsername) {
+      throw new CustomError('Username already taken', 400);
+    }
+
+    // 3. Generate 6-digit OTP code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // 4. Save to OTP collection (TTL auto-expires in 5 mins)
+    await Otp.findOneAndUpdate(
+      { email: email.toLowerCase().trim() },
+      { code, createdAt: new Date() },
+      { upsert: true, new: true }
+    );
+
+    // 5. Send email via SMTP
+    try {
+      await EmailService.sendOtpEmail(email.toLowerCase().trim(), code);
+    } catch (err: any) {
+      console.error('SMTP Delivery error:', err);
+      throw new CustomError(`Failed to send verification email: ${err.message}`, 500);
+    }
+  }
+
+  static async register(data: RegisterDTO): Promise<AuthResponse> {
+    const emailNorm = data.email.toLowerCase().trim();
+
+    // 1. Verify OTP code
+    const otpRecord = await Otp.findOne({ email: emailNorm });
+    if (!otpRecord || otpRecord.code !== data.otpCode.trim()) {
+      throw new CustomError('Invalid or expired OTP verification code', 400);
+    }
+
+    // 2. Double check availability
+    const existingUser = await User.findOne({ email: emailNorm });
+    if (existingUser) {
+      throw new CustomError('Email already registered', 400);
+    }
+    const existingUsername = await User.findOne({ username: data.username.toLowerCase().trim() });
+    if (existingUsername) {
+      throw new CustomError('Username already taken', 400);
+    }
+
+    // 3. Delete OTP record so it can't be re-used
+    await Otp.deleteOne({ email: emailNorm });
+
+    // 4. Generate unique wallet QR data
     const qrCodeData = `wallet-uid-${crypto.randomUUID()}`;
 
+    // 5. Create user
     const newUser = await User.create({
-      fullName: data.fullName,
-      email: data.email,
+      firstName: data.firstName.trim(),
+      middleName: data.middleName?.trim() || undefined,
+      lastName: data.lastName.trim(),
+      username: data.username.toLowerCase().trim(),
+      email: emailNorm,
       password: data.password,
+      phoneNumber: data.phoneNumber.trim(),
       qrCodeData,
       walletBalance: 1000.00, // Pre-fund with $1000 for simulation / testing
     });
@@ -37,8 +98,13 @@ export class AuthService {
       token,
       user: {
         id: newUser._id.toString(),
+        firstName: newUser.firstName,
+        middleName: newUser.middleName,
+        lastName: newUser.lastName,
+        username: newUser.username,
         fullName: newUser.fullName,
         email: newUser.email,
+        phoneNumber: newUser.phoneNumber,
         walletBalance: newUser.walletBalance,
         qrCodeData: newUser.qrCodeData,
         createdAt: newUser.createdAt,
@@ -47,8 +113,7 @@ export class AuthService {
   }
 
   static async login(data: LoginDTO): Promise<AuthResponse> {
-    // Select password field explicitly since select: false
-    const user = await User.findOne({ email: data.email.toLowerCase() }).select('+password');
+    const user = await User.findOne({ email: data.email.toLowerCase().trim() }).select('+password');
     if (!user) {
       throw new CustomError('Invalid email or password', 401);
     }
@@ -64,13 +129,69 @@ export class AuthService {
       token,
       user: {
         id: user._id.toString(),
+        firstName: user.firstName,
+        middleName: user.middleName,
+        lastName: user.lastName,
+        username: user.username,
         fullName: user.fullName,
         email: user.email,
+        phoneNumber: user.phoneNumber,
         walletBalance: user.walletBalance,
         qrCodeData: user.qrCodeData,
         createdAt: user.createdAt,
       },
     };
+  }
+
+  static async sendForgotPasswordOtp(email: string): Promise<void> {
+    const emailNorm = email.toLowerCase().trim();
+
+    // 1. Check if user exists
+    const user = await User.findOne({ email: emailNorm });
+    if (!user) {
+      throw new CustomError('No account found with this email address', 404);
+    }
+
+    // 2. Generate 6-digit OTP code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // 3. Save to OTP collection
+    await Otp.findOneAndUpdate(
+      { email: emailNorm },
+      { code, createdAt: new Date() },
+      { upsert: true, new: true }
+    );
+
+    // 4. Send email
+    try {
+      await EmailService.sendForgotPasswordEmail(emailNorm, code);
+    } catch (err: any) {
+      console.error('SMTP Delivery error:', err);
+      throw new CustomError(`Failed to send verification email: ${err.message}`, 500);
+    }
+  }
+
+  static async resetPassword(email: string, otpCode: string, newPassword: string): Promise<void> {
+    const emailNorm = email.toLowerCase().trim();
+
+    // 1. Verify OTP code
+    const otpRecord = await Otp.findOne({ email: emailNorm });
+    if (!otpRecord || otpRecord.code !== otpCode.trim()) {
+      throw new CustomError('Invalid or expired verification code', 400);
+    }
+
+    // 2. Find user
+    const user = await User.findOne({ email: emailNorm });
+    if (!user) {
+      throw new CustomError('User not found', 404);
+    }
+
+    // 3. Update password
+    user.password = newPassword;
+    await user.save();
+
+    // 4. Delete OTP record
+    await Otp.deleteOne({ email: emailNorm });
   }
 
   static async getMe(userId: string) {
@@ -80,8 +201,13 @@ export class AuthService {
     }
     return {
       id: user._id.toString(),
+      firstName: user.firstName,
+      middleName: user.middleName,
+      lastName: user.lastName,
+      username: user.username,
       fullName: user.fullName,
       email: user.email,
+      phoneNumber: user.phoneNumber,
       walletBalance: user.walletBalance,
       qrCodeData: user.qrCodeData,
       createdAt: user.createdAt,

@@ -43,7 +43,6 @@ class AuthProvider with ChangeNotifier {
         await logout();
       }
     } catch (e) {
-      // Offline or server down; keep stored state or log out? We keep it for offline visual check but we don't block.
       _errorMessage = 'Could not reach server. Working offline.';
       notifyListeners();
     }
@@ -88,7 +87,67 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> register(String fullName, String email, String password) async {
+  // Check Username Availability
+  Future<bool> checkUsernameAvailability(String username) async {
+    try {
+      final response = await _apiClient.get(
+        '${ApiConstants.checkUsername}?username=${Uri.encodeComponent(username)}',
+      );
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return responseData['available'] == true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Send Register OTP Email
+  Future<bool> sendRegisterOtp(String email, String username) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post(
+        ApiConstants.sendRegisterOtp,
+        {
+          'email': email,
+          'username': username,
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      _isLoading = false;
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = responseData['error'] ?? 'Failed to send OTP';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Register with OTP Verification
+  Future<bool> registerWithOtp({
+    required String firstName,
+    String? middleName,
+    required String lastName,
+    required String username,
+    required String email,
+    required String password,
+    required String phoneNumber,
+    required String otpCode,
+  }) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -97,9 +156,14 @@ class AuthProvider with ChangeNotifier {
       final response = await _apiClient.post(
         ApiConstants.register,
         {
-          'fullName': fullName,
+          'firstName': firstName,
+          'middleName': middleName,
+          'lastName': lastName,
+          'username': username,
           'email': email,
           'password': password,
+          'phoneNumber': phoneNumber,
+          'otpCode': otpCode,
         },
       );
 
@@ -117,6 +181,78 @@ class AuthProvider with ChangeNotifier {
       } else {
         _errorMessage = responseData['error'] ?? 'Failed to register';
         _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Send Forgot Password OTP
+  Future<bool> sendForgotPasswordOtp(String email) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post(
+        ApiConstants.forgotPassword,
+        {
+          'email': email,
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      _isLoading = false;
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = responseData['error'] ?? 'Failed to send OTP';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Reset Password using OTP Verification
+  Future<bool> resetPasswordWithOtp({
+    required String email,
+    required String otpCode,
+    required String newPassword,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post(
+        ApiConstants.resetPassword,
+        {
+          'email': email,
+          'otpCode': otpCode,
+          'newPassword': newPassword,
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      _isLoading = false;
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = responseData['error'] ?? 'Failed to reset password';
         notifyListeners();
         return false;
       }

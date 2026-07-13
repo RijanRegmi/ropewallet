@@ -1,9 +1,14 @@
 import { Document } from 'mongoose';
 
 export interface IUser extends Document {
-  fullName: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  username: string;
+  fullName: string; // Maintain this as virtual or saved string for backward compatibility
   email: string;
   password?: string;
+  phoneNumber: string;
   walletBalance: number;
   qrCodeData: string;
   createdAt: Date;
