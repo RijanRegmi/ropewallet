@@ -30,9 +30,9 @@ class _PinCodeDialogState extends State<PinCodeDialog> {
     });
   }
 
-  Future<void> _checkBiometricBypass() async {
+  Future<void> _checkBiometricBypass({bool force = false}) async {
     final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
-    if (securityProvider.useBiometrics && securityProvider.isBiometricSupported) {
+    if (securityProvider.isBiometricSupported && (force || securityProvider.useBiometrics)) {
       final authenticated = await securityProvider.authenticateBiometrically();
       if (authenticated && mounted) {
         final savedPin = await securityProvider.getSavedPin();
@@ -239,14 +239,14 @@ class _PinCodeDialogState extends State<PinCodeDialog> {
                 children: [
                   // Left button: Biometric Auth trigger if supported & enabled
                   Expanded(
-                    child: securityProvider.isBiometricSupported && securityProvider.useBiometrics
+                    child: securityProvider.isBiometricSupported
                         ? IconButton(
                             icon: Icon(
                               Icons.fingerprint_rounded,
                               size: 32,
                               color: theme.primaryColor,
                             ),
-                            onPressed: _checkBiometricBypass,
+                            onPressed: () => _checkBiometricBypass(force: true),
                           )
                         : const SizedBox(),
                   ),
