@@ -168,6 +168,7 @@ class WalletProvider with ChangeNotifier {
     String? accountNumber,
     String? bankName,
     String? accountHolderName,
+    String? recipientTag,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -187,6 +188,7 @@ class WalletProvider with ChangeNotifier {
           'accountNumber': accountNumber,
           'bankName': bankName,
           'accountHolderName': accountHolderName,
+          'recipientTag': recipientTag,
         },
       );
 
