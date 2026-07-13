@@ -265,7 +265,7 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
     final user = authProvider.user ?? {};
     final String myQrData = user['qrCodeData'] ?? 'no-qr-data';
     final String myName = user['fullName'] ?? 'User';
-    final String myUsername = user['username'] ?? 'user';
+    final String myUserTag = user['userTag'] ?? user['username'] ?? 'user';
 
     return DefaultTabController(
       length: 3,
@@ -374,7 +374,7 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
                               child: TextFormField(
                                 controller: _manualInputController,
                                 decoration: InputDecoration(
-                                  hintText: '\$username (tag)',
+                                  hintText: '\$tag',
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                                 ),
@@ -458,15 +458,6 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
                                 fontSize: 20, 
                                 fontWeight: FontWeight.bold, 
                                 color: Colors.black,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              myUsername.startsWith('\$') ? myUsername : '\$$myUsername',
-                              style: const TextStyle(
-                                color: Color(0xFF4F46E5), 
-                                fontSize: 13, 
-                                fontWeight: FontWeight.bold,
                               ),
                             ),
                             const SizedBox(height: 12),

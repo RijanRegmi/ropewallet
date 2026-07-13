@@ -17,8 +17,8 @@ const generateToken = (userId: string): string => {
 };
 
 export class AuthService {
-  static async checkUsernameAvailability(username: string): Promise<boolean> {
-    const existing = await User.findOne({ username: username.toLowerCase().trim() });
+  static async checkUserTagAvailability(userTag: string): Promise<boolean> {
+    const existing = await User.findOne({ userTag: userTag.toLowerCase().trim() });
     return !existing;
   }
 
@@ -84,7 +84,7 @@ export class AuthService {
       const randomNum = Math.floor(100 + Math.random() * 900); // 3 digits
       const cleanFirst = data.firstName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
       generatedTag = `$${cleanFirst}${randomNum}`;
-      const existing = await User.findOne({ username: generatedTag });
+      const existing = await User.findOne({ userTag: generatedTag });
       if (!existing) {
         isUnique = true;
       }
@@ -102,7 +102,7 @@ export class AuthService {
       firstName: data.firstName.trim(),
       middleName: data.middleName?.trim() || undefined,
       lastName: data.lastName.trim(),
-      username: generatedTag,
+      userTag: generatedTag,
       email: emailNorm,
       password: data.password,
       phoneNumber: data.phoneNumber.trim(),
@@ -120,7 +120,7 @@ export class AuthService {
         firstName: newUser.firstName,
         middleName: newUser.middleName,
         lastName: newUser.lastName,
-        username: newUser.username,
+        userTag: newUser.userTag,
         fullName: newUser.fullName,
         email: newUser.email,
         phoneNumber: newUser.phoneNumber,
@@ -153,7 +153,7 @@ export class AuthService {
         firstName: user.firstName,
         middleName: user.middleName,
         lastName: user.lastName,
-        username: user.username,
+        userTag: user.userTag,
         fullName: user.fullName,
         email: user.email,
         phoneNumber: user.phoneNumber,
@@ -247,7 +247,7 @@ export class AuthService {
       firstName: user.firstName,
       middleName: user.middleName,
       lastName: user.lastName,
-      username: user.username,
+      userTag: user.userTag,
       fullName: user.fullName,
       email: user.email,
       phoneNumber: user.phoneNumber,

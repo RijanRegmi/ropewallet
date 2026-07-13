@@ -138,7 +138,7 @@ export class PaymentController {
       if (!receiver) {
         const cleanTag = receiverQrData.trim().toLowerCase();
         const tagToSearch = cleanTag.startsWith('$') ? cleanTag : `$${cleanTag}`;
-        receiver = await User.findOne({ username: tagToSearch });
+        receiver = await User.findOne({ userTag: tagToSearch });
       }
       
       if (!receiver) {
@@ -503,7 +503,7 @@ export class PaymentController {
       const recipient = await User.findOne({
         $or: [
           { qrCodeData: { $regex: new RegExp(`^${escapedTo}$`, 'i') } },
-          { username: { $regex: new RegExp(`^${escapedTo}$`, 'i') } },
+          { userTag: { $regex: new RegExp(`^${escapedTo}$`, 'i') } },
           { email: { $regex: new RegExp(`^${escapedTo}$`, 'i') } }
         ]
       });

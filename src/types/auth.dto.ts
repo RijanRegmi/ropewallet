@@ -2,7 +2,7 @@ export interface RegisterDTO {
   firstName: string;
   middleName?: string;
   lastName: string;
-  username: string;
+  userTag: string;
   email: string;
   password: string;
   phoneNumber: string;
@@ -22,7 +22,7 @@ export interface AuthResponse {
     firstName: string;
     middleName?: string;
     lastName: string;
-    username: string;
+    userTag: string;
     fullName: string;
     email: string;
     phoneNumber: string;

@@ -99,11 +99,11 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Check Username Availability
-  Future<bool> checkUsernameAvailability(String username) async {
+  // Check User Tag Availability
+  Future<bool> checkUserTagAvailability(String userTag) async {
     try {
       final response = await _apiClient.get(
-        '${ApiConstants.checkUsername}?username=${Uri.encodeComponent(username)}',
+        '${ApiConstants.checkUserTag}?userTag=${Uri.encodeComponent(userTag)}',
       );
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -187,7 +187,7 @@ class AuthProvider with ChangeNotifier {
     required String firstName,
     String? middleName,
     required String lastName,
-    required String username,
+    required String userTag,
     required String email,
     required String password,
     required String phoneNumber,
@@ -205,7 +205,7 @@ class AuthProvider with ChangeNotifier {
           'firstName': firstName,
           'middleName': middleName,
           'lastName': lastName,
-          'username': username,
+          'userTag': userTag,
           'email': email,
           'password': password,
           'phoneNumber': phoneNumber,

@@ -2,14 +2,14 @@ import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service.js';
 
 export class AuthController {
-  static async checkUsername(req: Request, res: Response, next: NextFunction): Promise<void> {
+  static async checkUserTag(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { username } = req.query;
-      if (!username) {
-        res.status(400).json({ success: false, error: 'Please provide a username to check' });
+      const { userTag } = req.query;
+      if (!userTag) {
+        res.status(400).json({ success: false, error: 'Please provide a user tag to check' });
         return;
       }
-      const available = await AuthService.checkUsernameAvailability(username as string);
+      const available = await AuthService.checkUserTagAvailability(userTag as string);
       res.status(200).json({ success: true, available });
     } catch (error) {
       next(error);
@@ -50,9 +50,9 @@ export class AuthController {
 
   static async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { firstName, middleName, lastName, username, email, password, phoneNumber, otpCode, transactionPin } = req.body;
+      const { firstName, middleName, lastName, userTag, email, password, phoneNumber, otpCode, transactionPin } = req.body;
       
-      if (!firstName || !lastName || !username || !email || !password || !phoneNumber || !otpCode || !transactionPin) {
+      if (!firstName || !lastName || !userTag || !email || !password || !phoneNumber || !otpCode || !transactionPin) {
         res.status(400).json({ success: false, error: 'Please provide all required fields, including the OTP code and Transaction PIN' });
         return;
       }
@@ -66,7 +66,7 @@ export class AuthController {
         firstName,
         middleName,
         lastName,
-        username,
+        userTag,
         email,
         password,
         phoneNumber,

@@ -4,7 +4,7 @@ export interface IUser extends Document {
   firstName: string;
   middleName?: string;
   lastName: string;
-  username: string;
+  userTag: string;
   fullName: string; // Maintain this as virtual or saved string for backward compatibility
   email: string;
   password?: string;

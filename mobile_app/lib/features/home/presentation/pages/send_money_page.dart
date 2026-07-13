@@ -186,9 +186,9 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                   : TextFormField(
                       controller: _recipientController,
                       decoration: InputDecoration(
-                        labelText: 'Recipient Username (Tag)',
+                        labelText: 'Recipient User Tag',
                         prefixIcon: const Icon(Icons.qr_code_2_rounded),
-                        hintText: '\$username (tag)',
+                        hintText: '\$tag',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                       validator: (value) {

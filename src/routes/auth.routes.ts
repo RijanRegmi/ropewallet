@@ -4,7 +4,7 @@ import { protect } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
-router.get('/check-username', AuthController.checkUsername);
+router.get('/check-usertag', AuthController.checkUserTag);
 router.post('/send-register-otp', AuthController.sendRegisterOtp);
 router.post('/verify-register-otp', AuthController.verifyRegisterOtp);
 router.post('/register', AuthController.register);

@@ -187,7 +187,7 @@ class _SignupPageState extends State<SignupPage> {
       firstName: _firstNameController.text.trim(),
       middleName: _middleNameController.text.trim().isEmpty ? null : _middleNameController.text.trim(),
       lastName: _lastNameController.text.trim(),
-      username: 'auto_generate',
+      userTag: 'auto_generate',
       email: _emailController.text.trim(),
       password: _passwordController.text,
       phoneNumber: _phoneController.text.trim(),

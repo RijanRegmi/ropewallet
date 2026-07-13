@@ -244,7 +244,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final user = authProvider.user ?? {};
     final fullName = user['fullName'] ?? 'RopeWallet User';
-    final username = user['username'] ?? '';
+    final userTag = user['userTag'] ?? user['username'] ?? '';
     final email = user['email'] ?? '';
     final phone = user['phoneNumber'] ?? '';
     final profileImage = user['profileImage'] ?? '';
@@ -347,7 +347,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: 4),
             Text(
-              username.startsWith('\$') ? username : '\$$username',
+              userTag.startsWith('\$') ? userTag : '\$$userTag',
               style: TextStyle(
                 fontSize: 15,
                 color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
@@ -377,8 +377,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 16),
                   _buildProfileRow(
                     Icons.alternate_email_rounded,
-                    'Unique Tag',
-                    username,
+                    'User Tag',
+                    userTag,
                     isDark,
                   ),
                   const SizedBox(height: 16),

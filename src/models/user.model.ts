@@ -18,9 +18,9 @@ const userSchema = new Schema<IUser>(
       required: [true, 'Last name is required'],
       trim: true,
     },
-    username: {
+    userTag: {
       type: String,
-      required: [true, 'Username is required'],
+      required: [true, 'User tag is required'],
       unique: true,
       trim: true,
       lowercase: true,
