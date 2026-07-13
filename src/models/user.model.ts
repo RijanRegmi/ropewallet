@@ -46,6 +46,7 @@ const userSchema = new Schema<IUser>(
     phoneNumber: {
       type: String,
       required: [true, 'Phone number is required'],
+      unique: true,
       trim: true,
     },
     transactionPin: {

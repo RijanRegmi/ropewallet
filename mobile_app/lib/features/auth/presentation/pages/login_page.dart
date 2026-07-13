@@ -119,7 +119,7 @@ class _LoginPageState extends State<LoginPage> {
     final securityProvider = Provider.of<SecurityProvider>(context);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(

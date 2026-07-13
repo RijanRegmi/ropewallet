@@ -18,10 +18,138 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isUploading = false;
   final ImagePicker _picker = ImagePicker();
 
-  Future<void> _pickAndUploadImage() async {
+  Future<void> _showImageSourceBottomSheet(String profileImage) async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Profile Photo',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildSourceOption(
+                      icon: Icons.camera_alt_rounded,
+                      label: 'Camera',
+                      color: theme.primaryColor,
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        _pickAndUploadImage(ImageSource.camera);
+                      },
+                    ),
+                    _buildSourceOption(
+                      icon: Icons.photo_library_rounded,
+                      label: 'Gallery',
+                      color: theme.primaryColor,
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        _pickAndUploadImage(ImageSource.gallery);
+                      },
+                    ),
+                    if (profileImage.isNotEmpty)
+                      _buildSourceOption(
+                        icon: Icons.delete_outline_rounded,
+                        label: 'Remove',
+                        color: const Color(0xFFEF4444),
+                        onTap: () {
+                          Navigator.of(ctx).pop();
+                          _removeProfileImage();
+                        },
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSourceOption({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: color.withOpacity(0.1),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _removeProfileImage() async {
+    setState(() {
+      _isUploading = true;
+    });
+
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final success = await authProvider.updateProfileImage('');
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Color(0xFF047857),
+            content: Text('Profile image removed successfully!'),
+          ),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            content: Text(authProvider.errorMessage ?? 'Failed to remove profile image'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            content: Text('Error: $e'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _pickAndUploadImage(ImageSource source) async {
     try {
       final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         imageQuality: 75,
       );
 
@@ -35,7 +163,7 @@ class _ProfilePageState extends State<ProfilePage> {
       final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       final apiSecret = 'MFRebbkEeGtYMg9LmbDwjaQYz4s';
       final apiKey = '936327183722823';
-      final cloudName = 'ropewallet';
+      final cloudName = 'v41le7lh';
       
       final signatureStr = 'timestamp=$timestamp$apiSecret';
       final signature = sha1.convert(utf8.encode(signatureStr)).toString();
@@ -61,7 +189,7 @@ class _ProfilePageState extends State<ProfilePage> {
         if (success && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              backgroundColor: Color(0xFF10B981),
+              backgroundColor: Color(0xFF047857),
               content: Text('Profile image updated successfully!'),
             ),
           );
@@ -74,11 +202,18 @@ class _ProfilePageState extends State<ProfilePage> {
           );
         }
       } else {
+        String errorMsg = response.reasonPhrase ?? 'Unauthorized';
+        try {
+          final decoded = jsonDecode(response.body);
+          if (decoded['error'] != null && decoded['error']['message'] != null) {
+            errorMsg = decoded['error']['message'];
+          }
+        } catch (_) {}
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               backgroundColor: const Color(0xFFEF4444),
-              content: Text('Cloudinary upload failed: ${response.reasonPhrase}'),
+              content: Text('Cloudinary upload failed: $errorMsg'),
             ),
           );
         }
@@ -115,7 +250,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final profileImage = user['profileImage'] ?? '';
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('My Profile'),
         backgroundColor: Colors.transparent,
@@ -193,7 +328,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       radius: 20,
                       child: IconButton(
                         icon: const Icon(Icons.camera_alt_rounded, size: 18, color: Colors.white),
-                        onPressed: _isUploading ? null : _pickAndUploadImage,
+                        onPressed: _isUploading ? null : () => _showImageSourceBottomSheet(profileImage),
                       ),
                     ),
                   ),
@@ -212,7 +347,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: 4),
             Text(
-              '@$username',
+              username.startsWith('\$') ? username : '\$$username',
               style: TextStyle(
                 fontSize: 15,
                 color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
@@ -239,21 +374,21 @@ class _ProfilePageState extends State<ProfilePage> {
                     fullName,
                     isDark,
                   ),
-                  const Divider(height: 24),
+                  const SizedBox(height: 16),
                   _buildProfileRow(
                     Icons.alternate_email_rounded,
-                    'Username',
+                    'Unique Tag',
                     username,
                     isDark,
                   ),
-                  const Divider(height: 24),
+                  const SizedBox(height: 16),
                   _buildProfileRow(
                     Icons.email_outlined,
                     'Email Address',
                     email,
                     isDark,
                   ),
-                  const Divider(height: 24),
+                  const SizedBox(height: 16),
                   _buildProfileRow(
                     Icons.phone_outlined,
                     'Phone Number',

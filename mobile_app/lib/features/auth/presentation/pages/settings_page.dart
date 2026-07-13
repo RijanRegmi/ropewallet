@@ -77,7 +77,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('Settings'),
         backgroundColor: Colors.transparent,
@@ -130,7 +130,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         : null,
                   ),
                 ),
-                const Divider(height: 1),
+
                 
                 // Change Password
                 ListTile(
@@ -140,7 +140,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
                   onTap: () => _navigateToVerificationFlow(false),
                 ),
-                const Divider(height: 1),
+
 
                 // Change Pin
                 ListTile(
@@ -170,12 +170,12 @@ class _SettingsPageState extends State<SettingsPage> {
                     style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
                   ),
                 ),
-                Divider(height: 1),
+
                 ListTile(
                   leading: Icon(Icons.verified_user_outlined, color: Color(0xFF4F46E5)),
                   title: Text('Developer', style: TextStyle(fontWeight: FontWeight.bold)),
                   trailing: Text(
-                    'RopeWallet Team',
+                    'RJN',
                     style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
                   ),
                 ),
@@ -451,7 +451,7 @@ class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerif
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Text(widget.isPinChange ? 'Change PIN' : 'Change Password'),
         backgroundColor: Colors.transparent,

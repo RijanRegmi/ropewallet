@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:gal/gal.dart';
 import '../../../auth/providers/auth_provider.dart';
 import 'send_money_page.dart';
 import 'external_transfer_page.dart';
@@ -51,7 +52,7 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
     String recipientName = '';
 
     final lowerData = qrCodeData.toLowerCase();
-    if (lowerData.contains('cash.app') || qrCodeData.startsWith('\$')) {
+    if (lowerData.contains('cash.app') || (qrCodeData.startsWith('\$') && (lowerData.contains('/') || lowerData.contains('.')))) {
       isExternal = true;
       provider = 'Cash App';
       recipientName = qrCodeData.contains('/') 
@@ -148,26 +149,91 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
     }
   }
 
-  Future<void> _downloadAndShareQr() async {
+  Future<Uint8List?> _captureQrPng() async {
+    try {
+      await Future.delayed(const Duration(milliseconds: 200));
+      final boundary = _qrBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return null;
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      return byteData?.buffer.asUint8List();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _downloadQr() async {
     setState(() {
       _isSavingQr = true;
     });
 
     try {
-      // Small delay to ensure rendering completes
-      await Future.delayed(const Duration(milliseconds: 200));
+      final bytes = await _captureQrPng();
+      if (bytes == null) throw Exception('Failed to capture QR code image');
 
-      final boundary = _qrBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) throw Exception('Boundary not found');
+      File? savedFile;
+      if (Platform.isAndroid) {
+        final dir = Directory('/storage/emulated/0/Download');
+        if (await dir.exists()) {
+          savedFile = File('${dir.path}/RopeWallet_QR_${DateTime.now().millisecondsSinceEpoch}.png');
+        } else {
+          final tempDir = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
+          savedFile = File('${tempDir.path}/RopeWallet_QR.png');
+        }
+      } else {
+        final tempDir = await getApplicationDocumentsDirectory();
+        savedFile = File('${tempDir.path}/RopeWallet_QR.png');
+      }
 
-      final image = await boundary.toImage(pixelRatio: 3.0);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) throw Exception('Failed to get byte data');
-      final pngBytes = byteData.buffer.asUint8List();
+      await savedFile.writeAsBytes(bytes);
+      await Gal.putImage(savedFile.path);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF047857),
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle_rounded, color: Colors.white),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text('QR Code successfully saved to Gallery!'),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            content: Text('Failed to download: $e'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSavingQr = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _shareQr() async {
+    setState(() {
+      _isSavingQr = true;
+    });
+
+    try {
+      final bytes = await _captureQrPng();
+      if (bytes == null) throw Exception('Failed to capture QR code image');
 
       final tempDir = await getTemporaryDirectory();
       final file = File('${tempDir.path}/RopeWallet_QR_Code.png');
-      await file.writeAsBytes(pngBytes);
+      await file.writeAsBytes(bytes);
 
       await Share.shareXFiles(
         [XFile(file.path)],
@@ -178,7 +244,7 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFFEF4444),
-            content: Text('Failed to share/download QR Code: $e'),
+            content: Text('Failed to share: $e'),
           ),
         );
       }
@@ -204,7 +270,7 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+        backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC),
         appBar: AppBar(
           title: const Text('Payments & Scanner'),
           bottom: const TabBar(
@@ -308,7 +374,7 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
                               child: TextFormField(
                                 controller: _manualInputController,
                                 decoration: InputDecoration(
-                                  hintText: 'wallet-uid-...',
+                                  hintText: '\$username (tag)',
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                                 ),
@@ -396,7 +462,7 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '@$myUsername',
+                              myUsername.startsWith('\$') ? myUsername : '\$$myUsername',
                               style: const TextStyle(
                                 color: Color(0xFF4F46E5), 
                                 fontSize: 13, 
@@ -427,28 +493,44 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
                   ),
                   const SizedBox(height: 24),
                   
-                  // Download/Share Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton.icon(
-                      onPressed: _isSavingQr ? null : _downloadAndShareQr,
-                      icon: _isSavingQr
-                          ? const SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                            )
-                          : const Icon(Icons.download_rounded, color: Colors.white),
-                      label: const Text(
-                        'Download / Share QR Code',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 52,
+                          child: ElevatedButton.icon(
+                            onPressed: _isSavingQr ? null : _downloadQr,
+                            icon: const Icon(Icons.download_rounded, color: Colors.white, size: 20),
+                            label: const Text(
+                              'Download QR',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: theme.primaryColor,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            ),
+                          ),
+                        ),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.primaryColor,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: SizedBox(
+                          height: 52,
+                          child: OutlinedButton.icon(
+                            onPressed: _isSavingQr ? null : _shareQr,
+                            icon: Icon(Icons.share_rounded, color: theme.primaryColor, size: 20),
+                            label: Text(
+                              'Share',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: theme.primaryColor),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: theme.primaryColor, width: 1.5),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),

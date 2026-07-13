@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../../auth/presentation/widgets/pin_code_dialog.dart';
+import 'receipt_page.dart';
 
 class SendMoneyPage extends StatefulWidget {
   final String? recipientQrData;
@@ -82,32 +83,27 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
 
     if (mounted) {
       if (success) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.check_circle_rounded, color: Color(0xFF10B981)),
-                SizedBox(width: 10),
-                Text('Transfer Sent'),
-              ],
+        final newTx = walletProvider.transactions.isNotEmpty
+            ? walletProvider.transactions.first
+            : {
+                'type': 'transfer',
+                'amount': _amount,
+                'fee': _amount * 0.15,
+                'netAmount': _amount * 0.85,
+                'remarks': remarks,
+                'createdAt': DateTime.now().toIso8601String(),
+                'sender': {'fullName': authProvider.user?['fullName'] ?? 'You'},
+                'receiver': {'fullName': _recipientController.text.isNotEmpty ? _recipientController.text : 'Recipient'},
+              };
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ReceiptPage(
+              transaction: newTx,
+              currentUser: authProvider.user ?? {},
+              isNewTransferSuccess: true,
             ),
-            content: Text(
-              'Successfully sent \$${_amount.toStringAsFixed(2)}!\n\n'
-              'Recipient receives: \$${(_amount * 0.85).toStringAsFixed(2)}\n'
-              'Platform Fee (15%): \$${(_amount * 0.15).toStringAsFixed(2)}'
-              '${remarks.isNotEmpty ? "\n\nRemarks: $remarks" : ""}',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop(); // pop dialog
-                  Navigator.of(context).pop(); // pop transfer page
-                },
-                child: const Text('OK'),
-              ),
-            ],
           ),
         );
       } else {
@@ -190,14 +186,14 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                   : TextFormField(
                       controller: _recipientController,
                       decoration: InputDecoration(
-                        labelText: 'Recipient Wallet QR Address',
+                        labelText: 'Recipient Username (Tag)',
                         prefixIcon: const Icon(Icons.qr_code_2_rounded),
-                        hintText: 'wallet-uid-...',
+                        hintText: '\$username (tag)',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Please enter the recipient QR address';
+                          return 'Please enter the recipient tag';
                         }
                         return null;
                       },
@@ -290,7 +286,7 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                       children: [
                         const Text('Send Amount:', style: TextStyle(color: Colors.grey)),
                         Text(
-                          walletProvider.isBalanceHidden ? '\$ ••••' : '\$${_amount.toStringAsFixed(2)}',
+                          '\$${_amount.toStringAsFixed(2)}',
                           style: const TextStyle(fontWeight: FontWeight.w500),
                         ),
                       ],
@@ -307,23 +303,21 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                           ],
                         ),
                         Text(
-                          walletProvider.isBalanceHidden ? '\$ ••••' : '-\$${fee.toStringAsFixed(2)}',
+                          '-\$${fee.toStringAsFixed(2)}',
                           style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 12.0),
-                      child: Divider(),
+                      child: Divider(color: Colors.transparent, height: 1),
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Recipient Receives:', style: TextStyle(fontWeight: FontWeight.bold)),
                         Text(
-                          walletProvider.isBalanceHidden
-                              ? '\$ ••••'
-                              : '\$${(netAmount < 0 ? 0.00 : netAmount).toStringAsFixed(2)}',
+                          '\$${(netAmount < 0 ? 0.00 : netAmount).toStringAsFixed(2)}',
                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
                         ),
                       ],

@@ -3,17 +3,17 @@ import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // Brand Colors - Emerald Green Theme
-  static const Color primaryLight = Color(0xFF10B981); // Emerald Green
-  static const Color primaryDark = Color(0xFF34D399);  // Glowing Mint Green
+  static const Color primaryLight = Color(0xFF047857); // Dark Emerald Green
+  static const Color primaryDark = Color(0xFF059669);  // Medium Emerald Green
   
-  static const Color accentLight = Color(0xFF059669);  // Deep Emerald
-  static const Color accentDark = Color(0xFF5EEAD4);   // Mint Accent
+  static const Color accentLight = Color(0xFF065F46);  // Deep Forest Green
+  static const Color accentDark = Color(0xFF10B981);   // Glowing Emerald Accent
   
-  static const Color backgroundLight = Color(0xFFF4FBF7); // Soft Mint White
-  static const Color backgroundDark = Color(0xFF050B09);  // Deep Forest Black
+  static const Color backgroundLight = Color(0xFFF0FDF4); // Soft Pale Green-White
+  static const Color backgroundDark = Color(0xFF000000);  // Pure Black
 
   static const Color surfaceLight = Colors.white;
-  static const Color surfaceDark = Color(0xFF0C1915);    // Deep Emerald Slate
+  static const Color surfaceDark = Color(0xFF121212);    // Dark Slate Card
 
   static const Color textLight = Color(0xFF042F24);      // Deep Forest Text
   static const Color textLightSecondary = Color(0xFF3B5E54); // Soft Emerald-Gray
@@ -141,7 +141,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryDark,
-          foregroundColor: Colors.black, // Dark buttons look premium with black text on glowing background, or white
+          foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 18),
           shape: RoundedRectangleBorder(

@@ -118,9 +118,15 @@ export class PaymentController {
         return;
       }
 
-      const receiver = await User.findOne({ qrCodeData: receiverQrData });
+      let receiver = await User.findOne({ qrCodeData: receiverQrData });
       if (!receiver) {
-        res.status(404).json({ success: false, error: 'Recipient wallet not found' });
+        const cleanTag = receiverQrData.trim().toLowerCase();
+        const tagToSearch = cleanTag.startsWith('$') ? cleanTag : `$${cleanTag}`;
+        receiver = await User.findOne({ username: tagToSearch });
+      }
+      
+      if (!receiver) {
+        res.status(404).json({ success: false, error: 'Recipient wallet or tag not found' });
         return;
       }
 

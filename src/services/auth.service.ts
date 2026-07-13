@@ -28,30 +28,24 @@ export class AuthService {
     return otpRecord !== null && otpRecord.code === code.trim();
   }
 
-  static async sendRegisterOtp(email: string, username: string): Promise<void> {
+  static async sendRegisterOtp(email: string): Promise<void> {
     // 1. Check if email already registered
     const existingEmail = await User.findOne({ email: email.toLowerCase().trim() });
     if (existingEmail) {
       throw new CustomError('Email already registered', 400);
     }
 
-    // 2. Check if username already exists
-    const existingUsername = await User.findOne({ username: username.toLowerCase().trim() });
-    if (existingUsername) {
-      throw new CustomError('Username already taken', 400);
-    }
-
-    // 3. Generate 6-digit OTP code
+    // 2. Generate 6-digit OTP code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // 4. Save to OTP collection (TTL auto-expires in 5 mins)
+    // 3. Save to OTP collection (TTL auto-expires in 5 mins)
     await Otp.findOneAndUpdate(
       { email: email.toLowerCase().trim() },
       { code, createdAt: new Date() },
       { upsert: true, new: true }
     );
 
-    // 5. Send email via SMTP
+    // 4. Send email via SMTP
     try {
       await EmailService.sendOtpEmail(email.toLowerCase().trim(), code);
     } catch (err: any) {
@@ -74,23 +68,41 @@ export class AuthService {
     if (existingUser) {
       throw new CustomError('Email already registered', 400);
     }
-    const existingUsername = await User.findOne({ username: data.username.toLowerCase().trim() });
-    if (existingUsername) {
-      throw new CustomError('Username already taken', 400);
+    const existingPhone = await User.findOne({ phoneNumber: data.phoneNumber.trim() });
+    if (existingPhone) {
+      throw new CustomError('Phone number already registered to another user', 400);
     }
 
     // 3. Delete OTP record so it can't be re-used
     await Otp.deleteOne({ email: emailNorm });
 
-    // 4. Generate unique wallet QR data
-    const qrCodeData = `wallet-uid-${crypto.randomUUID()}`;
+    // 4. Auto-generate Chime-style unique tag ($firstName123)
+    let generatedTag = '';
+    let isUnique = false;
+    let attempts = 0;
+    while (!isUnique && attempts < 100) {
+      const randomNum = Math.floor(100 + Math.random() * 900); // 3 digits
+      const cleanFirst = data.firstName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      generatedTag = `$${cleanFirst}${randomNum}`;
+      const existing = await User.findOne({ username: generatedTag });
+      if (!existing) {
+        isUnique = true;
+      }
+      attempts++;
+    }
+    if (!isUnique) {
+      generatedTag = `$${data.firstName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}${Math.floor(1000 + Math.random() * 9000)}`;
+    }
 
-    // 5. Create user
+    // 5. Generate unique wallet QR data using this tag!
+    const qrCodeData = generatedTag;
+
+    // 6. Create user
     const newUser = await User.create({
       firstName: data.firstName.trim(),
       middleName: data.middleName?.trim() || undefined,
       lastName: data.lastName.trim(),
-      username: data.username.toLowerCase().trim(),
+      username: generatedTag,
       email: emailNorm,
       password: data.password,
       phoneNumber: data.phoneNumber.trim(),

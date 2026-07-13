@@ -19,21 +19,11 @@ class StatementPage extends StatelessWidget {
     final isBalanceHidden = walletProvider.isBalanceHidden;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('Account Statement'),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(
-              isBalanceHidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-            ),
-            onPressed: () {
-              walletProvider.toggleBalanceVisibility();
-            },
-          ),
-        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -65,7 +55,7 @@ class StatementPage extends StatelessWidget {
             : ListView.separated(
                 padding: const EdgeInsets.all(24.0),
                 itemCount: transactions.length,
-                separatorBuilder: (context, index) => const Divider(height: 1),
+                separatorBuilder: (context, index) => const SizedBox(height: 8),
                 itemBuilder: (context, index) {
                   final tx = transactions[index];
                   final String type = tx['type'] ?? 'transfer';
@@ -95,7 +85,7 @@ class StatementPage extends StatelessWidget {
                     txIcon = Icons.add_circle_outline_rounded;
                     txIconColor = const Color(0xFF3B82F6);
                     txTitle = 'Deposit via Stripe';
-                    txAmountText = isBalanceHidden ? '+\$ ••••' : '+\$${amount.toStringAsFixed(2)}';
+                    txAmountText = '+\$${amount.toStringAsFixed(2)}';
                     txAmountColor = const Color(0xFF3B82F6);
                   } else {
                     if (isSender) {
@@ -104,7 +94,7 @@ class StatementPage extends StatelessWidget {
                       final receiverObj = tx['receiver'];
                       final String receiverName = receiverObj is Map ? (receiverObj['fullName'] ?? 'User') : 'User';
                       txTitle = 'Sent to $receiverName';
-                      txAmountText = isBalanceHidden ? '-\$ ••••' : '-\$${amount.toStringAsFixed(2)}';
+                      txAmountText = '-\$${amount.toStringAsFixed(2)}';
                       txAmountColor = const Color(0xFFEF4444);
                       txSubtitle = '$formattedDate • Fee \$${fee.toStringAsFixed(2)}';
                     } else {
@@ -113,7 +103,7 @@ class StatementPage extends StatelessWidget {
                       final senderObj = tx['sender'];
                       final String senderName = senderObj is Map ? (senderObj['fullName'] ?? 'User') : 'User';
                       txTitle = 'Received from $senderName';
-                      txAmountText = isBalanceHidden ? '+\$ ••••' : '+\$${netAmount.toStringAsFixed(2)}';
+                      txAmountText = '+\$${netAmount.toStringAsFixed(2)}';
                       txAmountColor = const Color(0xFF10B981);
                       txSubtitle = '$formattedDate • Fee \$${fee.toStringAsFixed(2)}';
                     }
@@ -125,9 +115,6 @@ class StatementPage extends StatelessWidget {
                     color: isDark ? const Color(0xFF1E293B) : Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(
-                        color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                      ),
                     ),
                     child: ListTile(
                       onTap: () {

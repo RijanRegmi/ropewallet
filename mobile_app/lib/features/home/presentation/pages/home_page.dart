@@ -64,51 +64,15 @@ class _HomePageState extends State<HomePage> {
     final isBalanceHidden = walletProvider.isBalanceHidden;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text(
           'RopeWallet',
           style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: -0.5),
         ),
+        centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: [
-          // Circular Profile Avatar on Top Right
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ProfilePage()),
-              );
-            },
-            child: Padding(
-              padding: const EdgeInsets.only(right: 18.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: theme.primaryColor.withOpacity(0.3),
-                    width: 1.5,
-                  ),
-                ),
-                child: CircleAvatar(
-                  radius: 18,
-                  backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-                  backgroundImage: profileImage.isNotEmpty
-                      ? NetworkImage(profileImage)
-                      : null,
-                  child: profileImage.isEmpty
-                      ? Icon(
-                          Icons.person_rounded,
-                          size: 20,
-                          color: isDark ? Colors.white54 : Colors.grey[400],
-                        )
-                      : null,
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -121,22 +85,67 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Welcome Section
-              Text(
-                'Welcome Back,',
-                style: TextStyle(
-                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                fullName,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
-                ),
+              // Welcome Section with Avatar in front of name
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ProfilePage()),
+                      );
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: theme.primaryColor.withOpacity(0.3),
+                          width: 2,
+                        ),
+                      ),
+                      child: CircleAvatar(
+                        radius: 26,
+                        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                        backgroundImage: profileImage.isNotEmpty
+                            ? NetworkImage(profileImage)
+                            : null,
+                        child: profileImage.isEmpty
+                            ? Icon(
+                                Icons.person_rounded,
+                                size: 30,
+                                color: isDark ? Colors.white54 : Colors.grey[400],
+                              )
+                            : null,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Welcome Back,',
+                          style: TextStyle(
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          fullName,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
 
@@ -414,7 +423,7 @@ class _HomePageState extends State<HomePage> {
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: transactions.length > 5 ? 5 : transactions.length,
-                          separatorBuilder: (context, index) => const Divider(height: 1),
+                          separatorBuilder: (context, index) => const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final tx = transactions[index];
                             final String type = tx['type'] ?? 'transfer';
@@ -444,7 +453,7 @@ class _HomePageState extends State<HomePage> {
                               txIcon = Icons.add_circle_outline_rounded;
                               txIconColor = const Color(0xFF3B82F6);
                               txTitle = 'Deposit via Stripe';
-                              txAmountText = isBalanceHidden ? '+\$ ••••' : '+\$${amount.toStringAsFixed(2)}';
+                              txAmountText = '+\$${amount.toStringAsFixed(2)}';
                               txAmountColor = const Color(0xFF3B82F6);
                             } else {
                               if (isSender) {
@@ -453,7 +462,7 @@ class _HomePageState extends State<HomePage> {
                                 final receiverObj = tx['receiver'];
                                 final String receiverName = receiverObj is Map ? (receiverObj['fullName'] ?? 'User') : 'User';
                                 txTitle = 'Sent to $receiverName';
-                                txAmountText = isBalanceHidden ? '-\$ ••••' : '-\$${amount.toStringAsFixed(2)}';
+                                txAmountText = '-\$${amount.toStringAsFixed(2)}';
                                 txAmountColor = const Color(0xFFEF4444);
                                 txSubtitle = '$formattedDate • Incl. \$${fee.toStringAsFixed(2)} fee';
                               } else {
@@ -462,7 +471,7 @@ class _HomePageState extends State<HomePage> {
                                 final senderObj = tx['sender'];
                                 final String senderName = senderObj is Map ? (senderObj['fullName'] ?? 'User') : 'User';
                                 txTitle = 'Received from $senderName';
-                                txAmountText = isBalanceHidden ? '+\$ ••••' : '+\$${netAmount.toStringAsFixed(2)}';
+                                txAmountText = '+\$${netAmount.toStringAsFixed(2)}';
                                 txAmountColor = const Color(0xFF10B981);
                                 txSubtitle = '$formattedDate • \$${fee.toStringAsFixed(2)} fee cut';
                               }

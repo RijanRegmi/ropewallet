@@ -23,7 +23,6 @@ class _SignupPageState extends State<SignupPage> {
   final _firstNameController = TextEditingController();
   final _middleNameController = TextEditingController();
   final _lastNameController = TextEditingController();
-  final _usernameController = TextEditingController();
 
   // Step 2 Controllers
   final _emailController = TextEditingController();
@@ -43,18 +42,11 @@ class _SignupPageState extends State<SignupPage> {
   final _pinController = TextEditingController();
   final _confirmPinController = TextEditingController();
 
-  // Username checking states
-  Timer? _debounce;
-  bool _isCheckingUsername = false;
-  bool? _isUsernameAvailable;
-  
-  // Cache for checked usernames to avoid redundant network delays
-  final Map<String, bool> _usernameCache = {};
+
 
   @override
   void initState() {
     super.initState();
-    _usernameController.addListener(_onUsernameChanged);
     
     // Initialize OTP focus change listeners
     for (int i = 0; i < 6; i++) {
@@ -66,11 +58,9 @@ class _SignupPageState extends State<SignupPage> {
 
   @override
   void dispose() {
-    _usernameController.removeListener(_onUsernameChanged);
     _firstNameController.dispose();
     _middleNameController.dispose();
     _lastNameController.dispose();
-    _usernameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
@@ -83,65 +73,13 @@ class _SignupPageState extends State<SignupPage> {
     for (var f in _otpFocusNodes) {
       f.dispose();
     }
-    _debounce?.cancel();
     super.dispose();
   }
 
-  void _onUsernameChanged() {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
-    final username = _usernameController.text.trim().toLowerCase();
 
-    if (username.length < 3) {
-      setState(() {
-        _isCheckingUsername = false;
-        _isUsernameAvailable = null;
-      });
-      return;
-    }
-
-    if (_usernameCache.containsKey(username)) {
-      setState(() {
-        _isCheckingUsername = false;
-        _isUsernameAvailable = _usernameCache[username];
-      });
-      return;
-    }
-
-    setState(() {
-      _isCheckingUsername = true;
-      _isUsernameAvailable = null;
-    });
-
-    final currentText = username;
-    // Debounce checks with extremely quick 150ms timeout
-    _debounce = Timer(const Duration(milliseconds: 150), () async {
-      if (!mounted) return;
-      if (_usernameController.text.trim().toLowerCase() != currentText) return;
-
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final available = await authProvider.checkUsernameAvailability(currentText);
-      
-      if (mounted) {
-        // Prevent race condition: only update if input hasn't changed in the meantime
-        if (_usernameController.text.trim().toLowerCase() == currentText) {
-          setState(() {
-            _isCheckingUsername = false;
-            _isUsernameAvailable = available;
-            _usernameCache[currentText] = available;
-          });
-        }
-      }
-    });
-  }
 
   Future<void> _proceedToStep2() async {
     if (!_formKey1.currentState!.validate()) return;
-    if (_isUsernameAvailable != true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an available username.')),
-      );
-      return;
-    }
     setState(() {
       _currentStep = 1;
     });
@@ -153,7 +91,6 @@ class _SignupPageState extends State<SignupPage> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final success = await authProvider.sendRegisterOtp(
       _emailController.text.trim(),
-      _usernameController.text.trim(),
     );
 
     if (success) {
@@ -250,7 +187,7 @@ class _SignupPageState extends State<SignupPage> {
       firstName: _firstNameController.text.trim(),
       middleName: _middleNameController.text.trim().isEmpty ? null : _middleNameController.text.trim(),
       lastName: _lastNameController.text.trim(),
-      username: _usernameController.text.trim(),
+      username: 'auto_generate',
       email: _emailController.text.trim(),
       password: _passwordController.text,
       phoneNumber: _phoneController.text.trim(),
@@ -385,7 +322,7 @@ class _SignupPageState extends State<SignupPage> {
     final securityProvider = Provider.of<SecurityProvider>(context);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Text('Step ${_currentStep + 1} of 6'),
         backgroundColor: Colors.transparent,
@@ -494,7 +431,7 @@ class _SignupPageState extends State<SignupPage> {
                       TextFormField(
                         controller: _lastNameController,
                         textCapitalization: TextCapitalization.words,
-                        textInputAction: TextInputAction.next,
+                        textInputAction: TextInputAction.done,
                         decoration: InputDecoration(
                           labelText: 'Last Name',
                           prefixIcon: const Icon(Icons.person_outline_rounded),
@@ -502,39 +439,6 @@ class _SignupPageState extends State<SignupPage> {
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) return 'Last name is required';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 18),
-
-                      // Username input with debounced availability check
-                      TextFormField(
-                        controller: _usernameController,
-                        keyboardType: TextInputType.text,
-                        textInputAction: TextInputAction.done,
-                        decoration: InputDecoration(
-                          labelText: 'Unique Username',
-                          prefixIcon: const Icon(Icons.alternate_email_rounded),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                          suffixIcon: _isCheckingUsername
-                              ? const Padding(
-                                  padding: EdgeInsets.all(12.0),
-                                  child: SizedBox(
-                                    height: 16,
-                                    width: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  ),
-                                )
-                              : _isUsernameAvailable == true
-                                  ? const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981))
-                                  : _isUsernameAvailable == false
-                                      ? const Icon(Icons.cancel_rounded, color: Color(0xFFEF4444))
-                                      : null,
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) return 'Username is required';
-                          if (value.trim().length < 3) return 'Username must be at least 3 characters';
-                          if (_isUsernameAvailable == false) return 'Username is not available';
                           return null;
                         },
                       ),

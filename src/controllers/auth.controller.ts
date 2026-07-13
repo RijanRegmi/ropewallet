@@ -18,12 +18,12 @@ export class AuthController {
 
   static async sendRegisterOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, username } = req.body;
-      if (!email || !username) {
-        res.status(400).json({ success: false, error: 'Please provide email and username' });
+      const { email } = req.body;
+      if (!email) {
+        res.status(400).json({ success: false, error: 'Please provide email' });
         return;
       }
-      await AuthService.sendRegisterOtp(email, username);
+      await AuthService.sendRegisterOtp(email);
       res.status(200).json({ success: true, message: 'Verification OTP sent to your email' });
     } catch (error) {
       next(error);

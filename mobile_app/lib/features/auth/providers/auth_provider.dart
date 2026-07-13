@@ -26,24 +26,33 @@ class AuthProvider with ChangeNotifier {
 
   // Load saved token and user on startup
   Future<void> tryAutoLogin() async {
-    final token = await _secureStorage.read(key: 'auth_token');
-    if (token == null) return;
+    _isLoading = true;
+    notifyListeners();
 
-    _token = token;
-    
-    // Fetch profile from backend to verify token validity
     try {
+      final token = await _secureStorage.read(key: 'auth_token');
+      if (token == null) {
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      _token = token;
+      notifyListeners(); // Redirect immediately if token is present
+      
+      // Fetch profile from backend to verify token validity in background
       final response = await _apiClient.get(ApiConstants.profile);
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         _user = responseData['data'];
-        notifyListeners();
       } else {
         // Token is invalid/expired
         await logout();
       }
     } catch (e) {
       _errorMessage = 'Could not reach server. Working offline.';
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
   }
@@ -107,7 +116,7 @@ class AuthProvider with ChangeNotifier {
   }
 
   // Send Register OTP Email
-  Future<bool> sendRegisterOtp(String email, String username) async {
+  Future<bool> sendRegisterOtp(String email) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -117,7 +126,6 @@ class AuthProvider with ChangeNotifier {
         ApiConstants.sendRegisterOtp,
         {
           'email': email,
-          'username': username,
         },
       );
 
