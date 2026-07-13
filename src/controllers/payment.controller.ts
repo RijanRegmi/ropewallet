@@ -28,14 +28,28 @@ export class PaymentController {
         return;
       }
 
-      // 1. Process Stripe charge
+       // 1. Process Stripe charge
       let paymentIntent;
       try {
+        let finalPaymentMethodId = paymentMethodId;
+        
+        // If it's a legacy token (like tok_visa), convert it to a PaymentMethod first
+        if (paymentMethodId.startsWith('tok_')) {
+          const pm = await stripe.paymentMethods.create({
+            type: 'card',
+            card: {
+              token: paymentMethodId,
+            },
+          });
+          finalPaymentMethodId = pm.id;
+        }
+
         paymentIntent = await stripe.paymentIntents.create({
           amount: Math.round(amount * 100), // convert to cents
           currency: 'usd',
-          payment_method: paymentMethodId,
+          payment_method: finalPaymentMethodId,
           confirm: true,
+          return_url: 'https://ropewallet.vercel.app/pay/confirm',
           automatic_payment_methods: {
             enabled: true,
             allow_redirects: 'never',

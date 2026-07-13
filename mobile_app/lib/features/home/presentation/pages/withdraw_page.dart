@@ -13,7 +13,8 @@ class WithdrawPage extends StatefulWidget {
 }
 
 class _WithdrawPageState extends State<WithdrawPage> {
-  final _formKey = GlobalKey<FormState>();
+  final _cardFormKey = GlobalKey<FormState>();
+  final _bankFormKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   
   // Card Form Fields
@@ -40,11 +41,39 @@ class _WithdrawPageState extends State<WithdrawPage> {
   }
 
   Future<void> _submitWithdrawal(String method) async {
-    if (!_formKey.currentState!.validate()) return;
+    final String amountText = _amountController.text.trim();
+    if (amountText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter an amount')),
+      );
+      return;
+    }
+    final double? amount = double.tryParse(amountText);
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid positive amount')),
+      );
+      return;
+    }
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.user ?? {};
+    final double userBalance = user['walletBalance'] is num 
+        ? (user['walletBalance'] as num).toDouble() 
+        : 0.00;
+    if (amount > userBalance) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Insufficient balance')),
+      );
+      return;
+    }
+
+    if (method == 'bank') {
+      if (!_bankFormKey.currentState!.validate()) return;
+    } else {
+      if (!_cardFormKey.currentState!.validate()) return;
+    }
 
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final double amount = double.parse(_amountController.text.trim());
 
     final String? pin = await showModalBottomSheet<String>(
       context: context,
@@ -69,7 +98,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
 
     if (method == 'bank') {
       success = await walletProvider.withdraw(
-        amount: amount,
+        amount: amount!,
         method: 'bank',
         authProvider: authProvider,
         routingNumber: _routingController.text.trim(),
@@ -98,7 +127,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
       }
 
       success = await walletProvider.withdraw(
-        amount: amount,
+        amount: amount!,
         method: 'card',
         authProvider: authProvider,
         cardNumber: _cardNumberController.text.trim(),
@@ -174,10 +203,8 @@ class _WithdrawPageState extends State<WithdrawPage> {
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Available Balance card
                 Row(
@@ -255,8 +282,10 @@ class _WithdrawPageState extends State<WithdrawPage> {
                     physics: const NeverScrollableScrollPhysics(), // Prevent sliding tabs without form validation
                     children: [
                       // TAB 1: CARD PAYOUT
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Form(
+                        key: _cardFormKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
                             'Chime / Venmo / Cash App Card Details:',
@@ -360,10 +389,13 @@ class _WithdrawPageState extends State<WithdrawPage> {
                           ),
                         ],
                       ),
+                    ),
 
                       // TAB 2: BANK ACCOUNT TRANSFER
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Form(
+                        key: _bankFormKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
                             'Bank Routing & Account Details:',
@@ -479,12 +511,12 @@ class _WithdrawPageState extends State<WithdrawPage> {
                           ),
                         ],
                       ),
+                    ),
                     ],
                   ),
                 ),
               ],
             ),
-          ),
         ),
       ),
     );

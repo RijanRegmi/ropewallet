@@ -13,7 +13,7 @@ class DepositPage extends StatefulWidget {
 }
 
 class _DepositPageState extends State<DepositPage> {
-  final _formKey = GlobalKey<FormState>();
+  final _cardFormKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
 
   // Card Form Fields
@@ -35,12 +35,26 @@ class _DepositPageState extends State<DepositPage> {
   }
 
   Future<void> _submitInAppDeposit() async {
-    if (!_formKey.currentState!.validate()) return;
+    final String amountText = _amountController.text.trim();
+    if (amountText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter an amount')),
+      );
+      return;
+    }
+    final double? amount = double.tryParse(amountText);
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid positive amount')),
+      );
+      return;
+    }
+
+    if (!_cardFormKey.currentState!.validate()) return;
 
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    final double amount = double.parse(_amountController.text.trim());
     final String cardNumber = _cardNumberController.text.trim();
     final String expiry = _expiryController.text.trim();
     final String cvc = _cvcController.text.trim();
@@ -57,7 +71,7 @@ class _DepositPageState extends State<DepositPage> {
     final String expYear = '20${expiryParts[1].trim()}'; // Convert YY to YYYY
 
     final success = await walletProvider.deposit(
-      amount: amount,
+      amount: amount!,
       cardNumber: cardNumber,
       expMonth: expMonth,
       expYear: expYear,
@@ -102,10 +116,20 @@ class _DepositPageState extends State<DepositPage> {
   }
 
   Future<void> _generateRequestLink(String myQrData) async {
-    if (!_formKey.currentState!.validate()) return;
-
     final amountText = _amountController.text.trim();
-    final double amount = double.parse(amountText);
+    if (amountText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter an amount')),
+      );
+      return;
+    }
+    final double? amount = double.tryParse(amountText);
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid positive amount')),
+      );
+      return;
+    }
 
     final link = 'https://ropewallet.vercel.app/pay?to=$myQrData&amount=${amount.toStringAsFixed(2)}';
     
@@ -199,10 +223,8 @@ class _DepositPageState extends State<DepositPage> {
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Balance Indicator
                 Row(
@@ -264,8 +286,10 @@ class _DepositPageState extends State<DepositPage> {
                     physics: const NeverScrollableScrollPhysics(),
                     children: [
                       // TAB 1: INSTANT CARD LOAD
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Form(
+                        key: _cardFormKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
                             'Enter Debit Card Details:',
@@ -369,6 +393,7 @@ class _DepositPageState extends State<DepositPage> {
                           ),
                         ],
                       ),
+                    ),
 
                       // TAB 2: SHARE REQUEST LINK
                       Column(
@@ -463,7 +488,6 @@ class _DepositPageState extends State<DepositPage> {
                 ),
               ],
             ),
-          ),
         ),
       ),
     );
