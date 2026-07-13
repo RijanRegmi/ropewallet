@@ -29,5 +29,6 @@ export interface AuthResponse {
     walletBalance: number;
     qrCodeData: string;
     createdAt: Date;
+    hasPin?: boolean;
   };
 }

@@ -115,12 +115,13 @@ export class AuthService {
         walletBalance: newUser.walletBalance,
         qrCodeData: newUser.qrCodeData,
         createdAt: newUser.createdAt,
+        hasPin: !!newUser.transactionPin,
       },
     };
   }
 
   static async login(data: LoginDTO): Promise<AuthResponse> {
-    const user = await User.findOne({ email: data.email.toLowerCase().trim() }).select('+password');
+    const user = await User.findOne({ email: data.email.toLowerCase().trim() }).select('+password +transactionPin');
     if (!user) {
       throw new CustomError('Invalid email or password', 401);
     }
@@ -146,6 +147,7 @@ export class AuthService {
         walletBalance: user.walletBalance,
         qrCodeData: user.qrCodeData,
         createdAt: user.createdAt,
+        hasPin: !!user.transactionPin,
       },
     };
   }
