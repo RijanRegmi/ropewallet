@@ -270,7 +270,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
                     Row(
                       children: [
                         Text(
-                          walletProvider.isBalanceHidden ? '\$ ••••' : '\$${userBalance.toStringAsFixed(2)}',
+                          walletProvider.isBalanceHidden ? '\$xxxx.xx' : '\$${userBalance.toStringAsFixed(2)}',
                           style: TextStyle(fontWeight: FontWeight.bold, color: theme.primaryColor),
                         ),
                         const SizedBox(width: 10),

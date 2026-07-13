@@ -284,7 +284,7 @@ class _DepositPageState extends State<DepositPage> {
                       ],
                     ),
                     Text(
-                      walletProvider.isBalanceHidden ? '\$ ••••' : '\$${userBalance.toStringAsFixed(2)}',
+                      walletProvider.isBalanceHidden ? '\$xxxx.xx' : '\$${userBalance.toStringAsFixed(2)}',
                       style: TextStyle(fontWeight: FontWeight.bold, color: theme.primaryColor),
                     ),
                   ],

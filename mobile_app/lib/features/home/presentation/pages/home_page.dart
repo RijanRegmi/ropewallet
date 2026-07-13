@@ -201,7 +201,7 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 12),
                     Text(
                       isBalanceHidden
-                          ? '\$ ••••'
+                          ? '\$xxxx.xx'
                           : '\$${balance is num ? balance.toStringAsFixed(2) : double.parse(balance.toString()).toStringAsFixed(2)}',
                       style: const TextStyle(
                         color: Colors.white,
