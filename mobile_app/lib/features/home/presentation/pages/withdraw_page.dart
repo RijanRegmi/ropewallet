@@ -46,28 +46,23 @@ class _WithdrawPageState extends State<WithdrawPage> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final double amount = double.parse(_amountController.text.trim());
 
-    final hasPin = authProvider.user?['hasPin'] == true;
-    String? pin;
+    final String? pin = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) => PinCodeDialog(
+        title: 'Enter Transaction PIN',
+        subtitle: 'Confirm PIN to complete withdrawal',
+      ),
+    );
 
-    if (hasPin) {
-      pin = await showModalBottomSheet<String>(
-        context: context,
-        isScrollControlled: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        builder: (context) => PinCodeDialog(
-          title: 'Enter Transaction PIN',
-          subtitle: 'Confirm PIN to complete withdrawal',
-        ),
+    if (pin == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Withdrawal canceled')),
       );
-
-      if (pin == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Withdrawal canceled')),
-        );
-        return;
-      }
+      return;
     }
 
     bool success = false;

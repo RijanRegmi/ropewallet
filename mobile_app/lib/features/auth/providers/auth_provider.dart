@@ -69,6 +69,9 @@ class AuthProvider with ChangeNotifier {
         _user = responseData['data']['user'];
         
         await _secureStorage.write(key: 'auth_token', value: _token!);
+        // Save credentials for biometric login
+        await _secureStorage.write(key: 'saved_email', value: email);
+        await _secureStorage.write(key: 'saved_password', value: password);
         
         _isLoading = false;
         notifyListeners();
@@ -250,6 +253,43 @@ class AuthProvider with ChangeNotifier {
         return true;
       } else {
         _errorMessage = responseData['error'] ?? 'Failed to send OTP';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Verify Forgot Password OTP
+  Future<bool> verifyForgotPasswordOtp({
+    required String email,
+    required String otpCode,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post(
+        '/auth/verify-forgot-password-otp',
+        {
+          'email': email,
+          'otpCode': otpCode,
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      _isLoading = false;
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = responseData['error'] ?? 'Invalid verification code';
         notifyListeners();
         return false;
       }

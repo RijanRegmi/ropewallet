@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/security_provider.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'signup_page.dart';
 import 'forgot_password_page.dart';
 
@@ -58,11 +60,63 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _loginWithBiometrics() async {
+    final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
+    if (!securityProvider.isBiometricSupported) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Biometrics not supported on this device'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
+    final authenticated = await securityProvider.authenticateBiometrically();
+    if (authenticated && mounted) {
+      // Read stored credentials
+      const storage = FlutterSecureStorage();
+      final savedEmail = await storage.read(key: 'saved_email');
+      final savedPassword = await storage.read(key: 'saved_password');
+
+      if (savedEmail != null && savedPassword != null) {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final success = await authProvider.login(savedEmail, savedPassword);
+        if (success && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Welcome back, ${authProvider.user?["fullName"] ?? "User"}!'),
+              backgroundColor: const Color(0xFF10B981),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(authProvider.errorMessage ?? 'Login failed'),
+              backgroundColor: const Color(0xFFEF4444),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please login with email & password first to enable biometric login.'),
+              backgroundColor: Color(0xFFEAB308),
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final authProvider = Provider.of<AuthProvider>(context);
+    final securityProvider = Provider.of<SecurityProvider>(context);
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
@@ -265,6 +319,35 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                           ),
                         ),
+
+                        // Biometric login button
+                        if (securityProvider.isBiometricSupported) ...[
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 52,
+                            child: OutlinedButton.icon(
+                              onPressed: authProvider.isLoading ? null : _loginWithBiometrics,
+                              icon: Icon(Icons.fingerprint_rounded, color: theme.primaryColor, size: 24),
+                              label: Text(
+                                'Login with Biometrics',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: isDark ? Colors.white70 : Colors.black87,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                side: BorderSide(
+                                  color: theme.primaryColor.withOpacity(0.4),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

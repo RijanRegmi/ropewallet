@@ -10,6 +10,7 @@ router.post('/verify-register-otp', AuthController.verifyRegisterOtp);
 router.post('/register', AuthController.register);
 router.post('/login', AuthController.login);
 router.post('/forgot-password', AuthController.forgotPassword);
+router.post('/verify-forgot-password-otp', AuthController.verifyForgotPasswordOtp);
 router.post('/reset-password', AuthController.resetPassword);
 router.post('/set-pin', protect, AuthController.setPin);
 router.post('/verify-pin', protect, AuthController.verifyPin);

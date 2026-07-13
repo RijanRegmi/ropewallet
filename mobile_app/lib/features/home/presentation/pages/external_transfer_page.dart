@@ -44,28 +44,23 @@ class _ExternalTransferPageState extends State<ExternalTransferPage> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final double amount = double.parse(_amountController.text.trim());
 
-    final hasPin = authProvider.user?['hasPin'] == true;
-    String? pin;
+    final String? pin = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) => PinCodeDialog(
+        title: 'Enter Transaction PIN',
+        subtitle: 'Confirm PIN to send transfer',
+      ),
+    );
 
-    if (hasPin) {
-      pin = await showModalBottomSheet<String>(
-        context: context,
-        isScrollControlled: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        builder: (context) => PinCodeDialog(
-          title: 'Enter Transaction PIN',
-          subtitle: 'Confirm PIN to send transfer',
-        ),
+    if (pin == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Transfer canceled')),
       );
-
-      if (pin == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transfer canceled')),
-        );
-        return;
-      }
+      return;
     }
 
     // Backend automatically creates or generates the target routing & account details based on the recipient tag

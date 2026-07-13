@@ -21,7 +21,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final List<TextEditingController> _otpControllers = List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _otpFocusNodes = List.generate(6, (_) => FocusNode());
 
-  int _step = 0; // 0: enter email, 1: enter OTP and new password
+  bool _obscureNewPassword = true;
+  bool _obscureConfirmPassword = true;
+
+  // 0: enter email, 1: verify OTP, 2: enter new password
+  int _step = 0;
 
   @override
   void dispose() {
@@ -62,9 +66,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     }
   }
 
-  Future<void> _resetPassword() async {
-    if (!_formKeyPassword.currentState!.validate()) return;
-    
+  Future<void> _verifyOtpCode() async {
     final otpCode = _otpControllers.map((c) => c.text.trim()).join();
     if (otpCode.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -73,6 +75,38 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       return;
     }
 
+    // Verify OTP with backend
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final success = await authProvider.verifyForgotPasswordOtp(
+      email: _emailController.text.trim(),
+      otpCode: otpCode,
+    );
+
+    if (success) {
+      setState(() {
+        _step = 2;
+      });
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            content: Text(authProvider.errorMessage ?? 'Invalid verification code'),
+          ),
+        );
+        // Clear OTP fields on failure
+        for (var c in _otpControllers) {
+          c.clear();
+        }
+        _otpFocusNodes[0].requestFocus();
+      }
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    if (!_formKeyPassword.currentState!.validate()) return;
+
+    final otpCode = _otpControllers.map((c) => c.text.trim()).join();
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final success = await authProvider.resetPasswordWithOtp(
       email: _emailController.text.trim(),
@@ -97,8 +131,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.of(ctx).pop(); // pop dialog
-                  Navigator.of(context).pop(); // pop forgot password page
+                  Navigator.of(ctx).pop();
+                  Navigator.of(context).pop();
                 },
                 child: const Text('OK'),
               ),
@@ -118,14 +152,69 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     }
   }
 
-  void _handleOtpPaste(String value) {
-    final digitsOnly = value.replaceAll(RegExp(r'\D'), '');
-    if (digitsOnly.length >= 6) {
-      for (int i = 0; i < 6; i++) {
-        _otpControllers[i].text = digitsOnly[i];
-      }
-      FocusScope.of(context).unfocus();
-    }
+  Widget _buildOtpBox(int index) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final isFocused = _otpFocusNodes[index].hasFocus;
+    final hasValue = _otpControllers[index].text.isNotEmpty;
+
+    return Container(
+      width: 48,
+      height: 56,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isFocused
+              ? theme.primaryColor
+              : hasValue
+                  ? const Color(0xFF10B981)
+                  : isDark
+                      ? const Color(0xFF475569)
+                      : const Color(0xFFCBD5E1),
+          width: isFocused ? 2 : 1.5,
+        ),
+        boxShadow: isFocused
+            ? [
+                BoxShadow(
+                  color: theme.primaryColor.withOpacity(0.15),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
+      ),
+      child: TextField(
+        controller: _otpControllers[index],
+        focusNode: _otpFocusNodes[index],
+        keyboardType: TextInputType.number,
+        textAlign: TextAlign.center,
+        maxLength: 1,
+        style: TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+          color: isDark ? Colors.white : const Color(0xFF0F172A),
+        ),
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(1),
+        ],
+        onChanged: (val) {
+          setState(() {});
+          if (val.isNotEmpty && index < 5) {
+            _otpFocusNodes[index + 1].requestFocus();
+          }
+          if (val.isEmpty && index > 0) {
+            _otpFocusNodes[index - 1].requestFocus();
+          }
+        },
+        decoration: const InputDecoration(
+          border: InputBorder.none,
+          counterText: '',
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+    );
   }
 
   @override
@@ -133,6 +222,13 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final authProvider = Provider.of<AuthProvider>(context);
+
+    final stepTitles = ['Forgot Password?', 'Verify Code', 'New Password'];
+    final stepSubtitles = [
+      'Enter your email to receive a 6-digit password reset verification code.',
+      'Enter the 6-digit code sent to your email address.',
+      'Create a new password for your account.',
+    ];
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
@@ -147,9 +243,30 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 10),
+              // Progress indicators
+              Row(
+                children: List.generate(3, (index) {
+                  final isActive = index == _step;
+                  final isDone = index < _step;
+                  return Expanded(
+                    child: Container(
+                      height: 4,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      decoration: BoxDecoration(
+                        color: isActive
+                            ? theme.primaryColor
+                            : isDone
+                                ? const Color(0xFF10B981)
+                                : const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(height: 28),
               Text(
-                _step == 0 ? 'Forgot Password?' : 'Verify Code & Reset',
+                stepTitles[_step],
                 style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -158,9 +275,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               ),
               const SizedBox(height: 6),
               Text(
-                _step == 0
-                    ? 'Enter your email to receive a 6-digit password reset verification code.'
-                    : 'Check your email for the 6-digit OTP code and enter your new password.',
+                stepSubtitles[_step],
                 style: TextStyle(
                   fontSize: 14,
                   color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
@@ -216,79 +331,98 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   ),
                 ),
 
-              // STEP 1: VERIFY CODE AND INPUT NEW PASSWORD
+              // STEP 1: VERIFY OTP CODE
               if (_step == 1)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Verification Code',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: List.generate(6, (index) => _buildOtpBox(index)),
+                    ),
+                    const SizedBox(height: 40),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              setState(() {
+                                _step = 0;
+                              });
+                            },
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            ),
+                            child: const Text('Back'),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: authProvider.isLoading ? null : _verifyOtpCode,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: theme.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            ),
+                            child: authProvider.isLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                  )
+                                : const Text('Verify Code', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: TextButton(
+                        onPressed: authProvider.isLoading ? null : _sendCode,
+                        child: Text(
+                          'Resend Code',
+                          style: TextStyle(
+                            color: theme.primaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+              // STEP 2: ENTER NEW PASSWORD
+              if (_step == 2)
                 Form(
                   key: _formKeyPassword,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Verification Code',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // OTP Box Grid
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: List.generate(6, (index) {
-                          return Container(
-                            width: 44,
-                            height: 54,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                                width: 1.5,
-                              ),
-                            ),
-                            child: TextFormField(
-                              controller: _otpControllers[index],
-                              focusNode: _otpFocusNodes[index],
-                              keyboardType: TextInputType.number,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                              inputFormatters: [
-                                LengthLimitingTextInputFormatter(6),
-                                FilteringTextInputFormatter.digitsOnly,
-                              ],
-                              onChanged: (val) {
-                                if (val.length >= 6) {
-                                  _handleOtpPaste(val);
-                                  return;
-                                }
-                                if (val.isNotEmpty && index < 5) {
-                                  _otpFocusNodes[index + 1].requestFocus();
-                                } else if (val.isEmpty && index > 0) {
-                                  _otpFocusNodes[index - 1].requestFocus();
-                                }
-                              },
-                              decoration: const InputDecoration(
-                                border: InputBorder.none,
-                                counterText: '',
-                              ),
-                            ),
-                          );
-                        }),
-                      ),
-                      const SizedBox(height: 32),
-
-                      const Text(
-                        'New Credentials',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                      ),
-                      const SizedBox(height: 16),
-
                       TextFormField(
                         controller: _newPasswordController,
-                        obscureText: true,
+                        obscureText: _obscureNewPassword,
                         decoration: InputDecoration(
                           labelText: 'New Password',
                           prefixIcon: const Icon(Icons.lock_outline_rounded),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureNewPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscureNewPassword = !_obscureNewPassword;
+                              });
+                            },
+                          ),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) return 'Please enter a new password';
@@ -299,11 +433,21 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       const SizedBox(height: 18),
                       TextFormField(
                         controller: _confirmPasswordController,
-                        obscureText: true,
+                        obscureText: _obscureConfirmPassword,
                         decoration: InputDecoration(
                           labelText: 'Confirm Password',
                           prefixIcon: const Icon(Icons.lock_reset_rounded),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscureConfirmPassword = !_obscureConfirmPassword;
+                              });
+                            },
+                          ),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) return 'Confirm your password';
@@ -318,7 +462,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                             child: OutlinedButton(
                               onPressed: () {
                                 setState(() {
-                                  _step = 0;
+                                  _step = 1;
                                 });
                               },
                               style: OutlinedButton.styleFrom(

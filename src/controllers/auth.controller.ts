@@ -116,6 +116,24 @@ export class AuthController {
     }
   }
 
+  static async verifyForgotPasswordOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email, otpCode } = req.body;
+      if (!email || !otpCode) {
+        res.status(400).json({ success: false, error: 'Please provide email and verification code' });
+        return;
+      }
+      const isValid = await AuthService.verifyOtp(email, otpCode);
+      if (!isValid) {
+        res.status(400).json({ success: false, error: 'Invalid or expired verification code' });
+        return;
+      }
+      res.status(200).json({ success: true, message: 'Verification code is valid' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email, otpCode, newPassword } = req.body;

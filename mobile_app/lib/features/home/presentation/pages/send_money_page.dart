@@ -53,28 +53,23 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
     final String receiverQr = _recipientController.text.trim();
     final String remarks = _remarksController.text.trim();
 
-    final hasPin = authProvider.user?['hasPin'] == true;
-    String? pin;
+    final String? pin = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) => PinCodeDialog(
+        title: 'Enter Transaction PIN',
+        subtitle: 'Confirm PIN to send money',
+      ),
+    );
 
-    if (hasPin) {
-      pin = await showModalBottomSheet<String>(
-        context: context,
-        isScrollControlled: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        builder: (context) => PinCodeDialog(
-          title: 'Enter Transaction PIN',
-          subtitle: 'Confirm PIN to send money',
-        ),
+    if (pin == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Transaction canceled')),
       );
-
-      if (pin == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transaction canceled')),
-        );
-        return;
-      }
+      return;
     }
 
     final success = await walletProvider.transfer(

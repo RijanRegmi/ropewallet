@@ -56,11 +56,10 @@ class _SignupPageState extends State<SignupPage> {
     super.initState();
     _usernameController.addListener(_onUsernameChanged);
     
-    // Initialize OTP controllers with placeholder and focus change listeners
+    // Initialize OTP focus change listeners
     for (int i = 0; i < 6; i++) {
-      _otpControllers[i].text = '\u200B';
       _otpFocusNodes[i].addListener(() {
-        if (mounted) setState(() {}); // Trigger repaint to update borders
+        if (mounted) setState(() {});
       });
     }
   }
@@ -178,7 +177,7 @@ class _SignupPageState extends State<SignupPage> {
 
   // Issue Fix: Verify OTP code with backend before moving forward!
   Future<void> _verifyOtpAndProceed() async {
-    final otpCode = _otpControllers.map((c) => c.text.replaceAll('\u200B', '').trim()).join();
+    final otpCode = _otpControllers.map((c) => c.text.trim()).join();
     if (otpCode.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter the 6-digit verification code sent to your email.')),
@@ -223,7 +222,7 @@ class _SignupPageState extends State<SignupPage> {
   }
 
   Future<void> _submitRegister(bool enableBiometrics) async {
-    final otpCode = _otpControllers.map((c) => c.text.replaceAll('\u200B', '').trim()).join();
+    final otpCode = _otpControllers.map((c) => c.text.trim()).join();
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
 
@@ -307,7 +306,7 @@ class _SignupPageState extends State<SignupPage> {
     final digitsOnly = value.replaceAll(RegExp(r'\D'), '');
     if (digitsOnly.length >= 6) {
       for (int i = 0; i < 6; i++) {
-        _otpControllers[i].text = '\u200B${digitsOnly[i]}';
+        _otpControllers[i].text = digitsOnly[i];
       }
       FocusScope.of(context).unfocus();
     }
@@ -317,69 +316,56 @@ class _SignupPageState extends State<SignupPage> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final isFocused = _otpFocusNodes[index].hasFocus;
-    
-    // Check if box has a digit entered (excluding placeholder)
-    final hasValue = _otpControllers[index].text.replaceAll('\u200B', '').isNotEmpty;
+    final hasValue = _otpControllers[index].text.isNotEmpty;
 
     return Container(
-      width: 46,
+      width: 48,
       height: 56,
-      alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: isDark
-            ? (isFocused ? const Color(0xFF1E293B) : const Color(0xFF0F172A))
-            : (isFocused ? Colors.white : const Color(0xFFF1F5F9)),
-        borderRadius: BorderRadius.circular(14),
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isFocused
               ? theme.primaryColor
-              : (hasValue
-                  ? (isDark ? const Color(0xFF475569) : const Color(0xFF94A3B8))
-                  : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0))),
-          width: isFocused ? 2.0 : 1.5,
+              : hasValue
+                  ? const Color(0xFF10B981)
+                  : isDark
+                      ? const Color(0xFF475569)
+                      : const Color(0xFFCBD5E1),
+          width: isFocused ? 2 : 1.5,
         ),
         boxShadow: isFocused
             ? [
                 BoxShadow(
                   color: theme.primaryColor.withOpacity(0.15),
                   blurRadius: 8,
-                  offset: const Offset(0, 4),
-                )
+                  offset: const Offset(0, 2),
+                ),
               ]
-            : [],
+            : null,
       ),
       child: TextField(
         controller: _otpControllers[index],
         focusNode: _otpFocusNodes[index],
         keyboardType: TextInputType.number,
         textAlign: TextAlign.center,
-        showCursor: false,
-        enableInteractiveSelection: false,
+        maxLength: 1,
         style: TextStyle(
           fontSize: 22,
           fontWeight: FontWeight.bold,
           color: isDark ? Colors.white : const Color(0xFF0F172A),
         ),
         inputFormatters: [
-          LengthLimitingTextInputFormatter(6),
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(1),
         ],
         onChanged: (val) {
-          if (val.length >= 6) {
-            _handleOtpPaste(val);
-            return;
+          setState(() {});
+          if (val.isNotEmpty && index < 5) {
+            _otpFocusNodes[index + 1].requestFocus();
           }
-          if (val.length > 1) {
-            final enteredChar = val.substring(val.length - 1);
-            _otpControllers[index].text = '\u200B$enteredChar';
-            if (index < 5) {
-              _otpFocusNodes[index + 1].requestFocus();
-            }
-          } else if (val.isEmpty) {
-            _otpControllers[index].text = '\u200B';
-            if (index > 0) {
-              _otpControllers[index - 1].text = '\u200B';
-              _otpFocusNodes[index - 1].requestFocus();
-            }
+          if (val.isEmpty && index > 0) {
+            _otpFocusNodes[index - 1].requestFocus();
           }
         },
         decoration: const InputDecoration(

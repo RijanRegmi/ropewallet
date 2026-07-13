@@ -133,12 +133,30 @@ export class PaymentController {
       const fee = Number((amount * 0.15).toFixed(2));
       const netAmount = Number((amount - fee).toFixed(2));
 
-      // Perform transfer (update balances)
-      sender.walletBalance = Number((sender.walletBalance - amount).toFixed(2));
-      receiver.walletBalance = Number((receiver.walletBalance + netAmount).toFixed(2));
+      // Perform transfer atomically (rollback on failure)
+      const originalSenderBalance = sender.walletBalance;
+      const originalReceiverBalance = receiver.walletBalance;
 
-      await sender.save();
-      await receiver.save();
+      try {
+        sender.walletBalance = Number((sender.walletBalance - amount).toFixed(2));
+        receiver.walletBalance = Number((receiver.walletBalance + netAmount).toFixed(2));
+
+        await sender.save();
+        await receiver.save();
+      } catch (saveError: any) {
+        // Rollback both balances on any save failure
+        sender.walletBalance = originalSenderBalance;
+        receiver.walletBalance = originalReceiverBalance;
+        try {
+          await sender.save();
+          await receiver.save();
+        } catch (_) {
+          // Rollback best-effort
+        }
+        console.error('Transfer save failed, rolled back:', saveError.message);
+        res.status(500).json({ success: false, error: 'Transfer failed. No money was deducted.' });
+        return;
+      }
 
       // Log Transaction
       const transaction = await Transaction.create({
