@@ -11,10 +11,17 @@ class WalletProvider with ChangeNotifier {
   List<dynamic> _transactions = [];
   bool _isLoading = false;
   String? _errorMessage;
+  bool _isBalanceHidden = false;
 
   List<dynamic> get transactions => _transactions;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  bool get isBalanceHidden => _isBalanceHidden;
+
+  void toggleBalanceVisibility() {
+    _isBalanceHidden = !_isBalanceHidden;
+    notifyListeners();
+  }
 
   void clearError() {
     _errorMessage = null;

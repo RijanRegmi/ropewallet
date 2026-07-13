@@ -340,6 +340,142 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> updateProfileImage(String profileImage) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post(
+        '/auth/update-profile-image',
+        {
+          'profileImage': profileImage,
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+      _isLoading = false;
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        if (_user != null) {
+          _user!['profileImage'] = profileImage;
+        }
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = responseData['error'] ?? 'Failed to update profile image';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> sendUpdateOtp() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post('/auth/send-update-otp', {});
+      final responseData = jsonDecode(response.body);
+      _isLoading = false;
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = responseData['error'] ?? 'Failed to send OTP code';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> changePassword({
+    required String otpCode,
+    required String newPassword,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post(
+        '/auth/change-password',
+        {
+          'otpCode': otpCode,
+          'newPassword': newPassword,
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+      _isLoading = false;
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = responseData['error'] ?? 'Failed to change password';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> changePin({
+    required String otpCode,
+    required String newPin,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post(
+        '/auth/change-pin',
+        {
+          'otpCode': otpCode,
+          'newPin': newPin,
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+      _isLoading = false;
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        if (_user != null) {
+          _user!['hasPin'] = true;
+        }
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = responseData['error'] ?? 'Failed to change PIN';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     _token = null;
     _user = null;

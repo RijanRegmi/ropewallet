@@ -1,8 +1,14 @@
+import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../auth/providers/auth_provider.dart';
 import 'send_money_page.dart';
 import 'external_transfer_page.dart';
@@ -18,6 +24,8 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
   late AnimationController _animationController;
   final MobileScannerController _cameraController = MobileScannerController();
   final _manualInputController = TextEditingController();
+  final GlobalKey _qrBoundaryKey = GlobalKey();
+  bool _isSavingQr = false;
 
   @override
   void initState() {
@@ -84,12 +92,10 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
   Future<void> _pickAndScanImage() async {
     try {
       final ImagePicker picker = ImagePicker();
-      // This will request Photo/File access permissions automatically on iOS and Android
       final XFile? image = await picker.pickImage(source: ImageSource.gallery);
       
-      if (image == null) return; // User canceled picking
+      if (image == null) return;
 
-      // Show reading dialog loader
       if (!mounted) return;
       showDialog(
         context: context,
@@ -109,7 +115,6 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
       final BarcodeCapture? capture = await imageController.analyzeImage(image.path);
       imageController.dispose();
 
-      // Dismiss reading dialog
       if (mounted) {
         Navigator.of(context).pop();
       }
@@ -132,7 +137,6 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
       }
     } catch (e) {
       if (mounted) {
-        // Dismiss loading dialog if open
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -140,6 +144,49 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
             content: Text('Error selecting file: $e'),
           ),
         );
+      }
+    }
+  }
+
+  Future<void> _downloadAndShareQr() async {
+    setState(() {
+      _isSavingQr = true;
+    });
+
+    try {
+      // Small delay to ensure rendering completes
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      final boundary = _qrBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) throw Exception('Boundary not found');
+
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) throw Exception('Failed to get byte data');
+      final pngBytes = byteData.buffer.asUint8List();
+
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/RopeWallet_QR_Code.png');
+      await file.writeAsBytes(pngBytes);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'My RopeWallet QR Code',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            content: Text('Failed to share/download QR Code: $e'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSavingQr = false;
+        });
       }
     }
   }
@@ -152,33 +199,34 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
     final user = authProvider.user ?? {};
     final String myQrData = user['qrCodeData'] ?? 'no-qr-data';
     final String myName = user['fullName'] ?? 'User';
+    final String myUsername = user['username'] ?? 'user';
 
     return DefaultTabController(
       length: 3,
       child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
         appBar: AppBar(
           title: const Text('Payments & Scanner'),
           bottom: const TabBar(
             tabs: [
               Tab(icon: Icon(Icons.qr_code_scanner_rounded), text: 'Scan QR'),
-              Tab(icon: Icon(Icons.qr_code_rounded), text: 'Show QR'),
+              Tab(icon: Icon(Icons.qr_code_rounded), text: 'My QR'),
               Tab(icon: Icon(Icons.image_search_rounded), text: 'Upload Image'),
             ],
           ),
         ),
         body: TabBarView(
           children: [
-            // TAB 1: SCAN QR CODE (USING LIVE CAMERA)
+            // TAB 1: SCAN QR CODE
             SingleChildScrollView(
               padding: const EdgeInsets.symmetric(vertical: 24),
               child: Column(
                 children: [
-                  // Bigger Viewport with Live Camera Scanner
                   Center(
                     child: Stack(
                       children: [
                         Container(
-                          width: 320, // Bigger scan area
+                          width: 320,
                           height: 320,
                           decoration: BoxDecoration(
                             color: Colors.black,
@@ -189,7 +237,6 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
                             borderRadius: BorderRadius.circular(24),
                             child: Stack(
                               children: [
-                                // Active camera preview
                                 MobileScanner(
                                   controller: _cameraController,
                                   onDetect: (BarcodeCapture capture) {
@@ -201,7 +248,6 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
                                     }
                                   },
                                 ),
-                                // Viewfinder overlay border
                                 Container(
                                   decoration: BoxDecoration(
                                     border: Border.all(
@@ -210,7 +256,6 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
                                     ),
                                   ),
                                 ),
-                                // Pulsing laser scanning line
                                 AnimatedBuilder(
                                   animation: _animationController,
                                   builder: (context, child) {
@@ -247,8 +292,6 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
                     style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 32),
-
-                  // Manual input fallback (Still useful if camera is unavailable or to paste UID)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24.0),
                     child: Column(
@@ -298,81 +341,112 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
               ),
             ),
 
-            // TAB 2: SHOW MY QR CODE (BIG, BLACK & WHITE, PROFESSIONAL)
+            // TAB 2: SHOW MY QR CODE
             SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 children: [
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   Text(
-                    'Receive funds by presenting this QR Code',
+                    'Receive funds by presenting your unique QR code',
                     style: TextStyle(
                       color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                      fontSize: 15,
+                      fontSize: 14,
                     ),
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 30),
-                  Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white, // Keep background purely white for scannability
-                        borderRadius: BorderRadius.circular(28),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(isDark ? 0.4 : 0.08),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
+                  const SizedBox(height: 24),
+                  
+                  // Wrap in RepaintBoundary to generate PNG
+                  RepaintBoundary(
+                    key: _qrBoundaryKey,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.white, // Pure white background for best scan rate
+                          borderRadius: BorderRadius.circular(28),
+                          border: Border.all(
+                            color: const Color(0xFFE2E8F0),
+                            width: 1.5,
                           ),
-                        ],
-                        border: Border.all(
-                          color: const Color(0xFFE2E8F0),
-                          width: 1.5,
                         ),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Vector professional black & white QR code
-                          QrImageView(
-                            data: myQrData,
-                            version: QrVersions.auto,
-                            size: 240.0, // Big scan area
-                            gapless: false,
-                            foregroundColor: Colors.black,
-                            backgroundColor: Colors.white,
-                            errorStateBuilder: (cxt, err) {
-                              return const Center(child: Text("Error generating QR"));
-                            },
-                          ),
-                          const SizedBox(height: 20),
-                          Text(
-                            myName,
-                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'RopeWallet Address',
-                            style: TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.w500),
-                          ),
-                          const SizedBox(height: 16),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: theme.primaryColor.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(12),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            QrImageView(
+                              data: myQrData,
+                              version: QrVersions.auto,
+                              size: 200.0,
+                              gapless: false,
+                              foregroundColor: Colors.black,
+                              backgroundColor: Colors.white,
+                              errorStateBuilder: (cxt, err) {
+                                return const Center(child: Text("Error generating QR"));
+                              },
                             ),
-                            child: SelectableText(
-                              myQrData,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: theme.primaryColor,
-                                fontFamily: 'monospace',
+                            const SizedBox(height: 16),
+                            Text(
+                              myName,
+                              style: const TextStyle(
+                                fontSize: 20, 
+                                fontWeight: FontWeight.bold, 
+                                color: Colors.black,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '@$myUsername',
+                              style: const TextStyle(
+                                color: Color(0xFF4F46E5), 
+                                fontSize: 13, 
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF4F46E5).withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                myQrData,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Color(0xFF4F46E5),
+                                  fontFamily: 'monospace',
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Download/Share Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      onPressed: _isSavingQr ? null : _downloadAndShareQr,
+                      icon: _isSavingQr
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Icon(Icons.download_rounded, color: Colors.white),
+                      label: const Text(
+                        'Download / Share QR Code',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.primaryColor,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                     ),
                   ),
@@ -380,7 +454,7 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
               ),
             ),
 
-            // TAB 3: UPLOAD QR IMAGE (REAL FILE ACCESS)
+            // TAB 3: UPLOAD IMAGE
             Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
@@ -397,7 +471,6 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
                         border: Border.all(
                           color: theme.primaryColor.withOpacity(0.4),
                           width: 2,
-                          style: BorderStyle.solid,
                         ),
                       ),
                       child: Column(

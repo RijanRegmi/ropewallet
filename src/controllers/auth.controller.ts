@@ -203,4 +203,75 @@ export class AuthController {
       next(error);
     }
   }
+
+  static async updateProfileImage(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id;
+      const { profileImage } = req.body;
+      if (!userId) {
+        res.status(401).json({ success: false, error: 'Not authorized' });
+        return;
+      }
+      if (!profileImage) {
+        res.status(400).json({ success: false, error: 'Please provide profileImage URL' });
+        return;
+      }
+      await AuthService.updateProfileImage(userId, profileImage);
+      res.status(200).json({ success: true, message: 'Profile image updated successfully' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async sendUpdateOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        res.status(401).json({ success: false, error: 'Not authorized' });
+        return;
+      }
+      await AuthService.sendUpdateOtp(userId);
+      res.status(200).json({ success: true, message: 'Verification OTP sent to your registered email' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async changePassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id;
+      const { otpCode, newPassword } = req.body;
+      if (!userId) {
+        res.status(401).json({ success: false, error: 'Not authorized' });
+        return;
+      }
+      if (!otpCode || !newPassword) {
+        res.status(400).json({ success: false, error: 'Please provide otpCode and newPassword' });
+        return;
+      }
+      await AuthService.changePassword(userId, otpCode, newPassword);
+      res.status(200).json({ success: true, message: 'Password changed successfully' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async changePin(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id;
+      const { otpCode, newPin } = req.body;
+      if (!userId) {
+        res.status(401).json({ success: false, error: 'Not authorized' });
+        return;
+      }
+      if (!otpCode || !newPin || newPin.length !== 6 || isNaN(Number(newPin))) {
+        res.status(400).json({ success: false, error: 'Please provide otpCode and a valid 6-digit newPin' });
+        return;
+      }
+      await AuthService.changePin(userId, otpCode, newPin);
+      res.status(200).json({ success: true, message: 'Transaction PIN changed successfully' });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

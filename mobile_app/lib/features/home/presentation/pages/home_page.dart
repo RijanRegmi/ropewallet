@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:qr_flutter/qr_flutter.dart';
-import 'package:ropewallet/core/theme/theme_provider.dart';
 import 'package:ropewallet/features/auth/providers/auth_provider.dart';
+import 'package:ropewallet/features/auth/presentation/pages/profile_page.dart';
 import '../../providers/wallet_provider.dart';
-import '../../../auth/presentation/widgets/security_settings_sheet.dart';
 import 'deposit_page.dart';
 import 'scanner_page.dart';
 import 'send_money_page.dart';
 import 'withdraw_page.dart';
+import 'statement_page.dart';
+import 'receipt_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -25,7 +25,6 @@ class _HomePageState extends State<HomePage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_isInit) {
-      // Fetch user's transaction history when home page opens
       Provider.of<WalletProvider>(context, listen: false).fetchTransactions();
       _isInit = true;
     }
@@ -51,7 +50,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-    final themeProvider = Provider.of<ThemeProvider>(context);
     final walletProvider = Provider.of<WalletProvider>(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -61,41 +59,54 @@ class _HomePageState extends State<HomePage> {
     final email = user['email'] ?? '';
     final balance = user['walletBalance'] ?? 0.00;
     final qrData = user['qrCodeData'] ?? 'no-qr-data';
+    final profileImage = user['profileImage'] ?? '';
     final transactions = walletProvider.transactions;
+    final isBalanceHidden = walletProvider.isBalanceHidden;
 
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('RopeWallet'),
+        title: const Text(
+          'RopeWallet',
+          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: -0.5),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
-          IconButton(
-            icon: Icon(
-              isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-            ),
-            tooltip: 'Toggle Theme',
-            onPressed: () {
-              themeProvider.toggleTheme();
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.security_rounded),
-            tooltip: 'Security Settings',
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-                ),
-                builder: (context) => SecuritySettingsSheet(),
+          // Circular Profile Avatar on Top Right
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfilePage()),
               );
             },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Logout',
-            onPressed: () async {
-              await authProvider.logout();
-            },
+            child: Padding(
+              padding: const EdgeInsets.only(right: 18.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: theme.primaryColor.withOpacity(0.3),
+                    width: 1.5,
+                  ),
+                ),
+                child: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  backgroundImage: profileImage.isNotEmpty
+                      ? NetworkImage(profileImage)
+                      : null,
+                  child: profileImage.isEmpty
+                      ? Icon(
+                          Icons.person_rounded,
+                          size: 20,
+                          color: isDark ? Colors.white54 : Colors.grey[400],
+                        )
+                      : null,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -106,43 +117,38 @@ class _HomePageState extends State<HomePage> {
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Welcome Section
               Text(
-                'Hello,',
-                style: theme.textTheme.bodyLarge?.copyWith(
+                'Welcome Back,',
+                style: TextStyle(
                   color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                  fontSize: 18,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               Text(
                 fullName,
-                style: theme.textTheme.displayLarge?.copyWith(
-                  fontSize: 28,
+                style: const TextStyle(
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
+                  letterSpacing: -0.5,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                email,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                ),
-              ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               // Premium Wallet Balance Card
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(28.0),
+                padding: const EdgeInsets.all(24.0),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
                       theme.primaryColor,
-                      theme.primaryColor.withBlue(220),
+                      theme.primaryColor.withBlue(210),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -150,9 +156,9 @@ class _HomePageState extends State<HomePage> {
                   borderRadius: BorderRadius.circular(28),
                   boxShadow: [
                     BoxShadow(
-                      color: theme.primaryColor.withOpacity(0.35),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
+                      color: theme.primaryColor.withOpacity(0.3),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
                     ),
                   ],
                 ),
@@ -166,46 +172,44 @@ class _HomePageState extends State<HomePage> {
                           'Total Balance',
                           style: TextStyle(
                             color: Colors.white70,
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Text(
-                            'USD Wallet',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
+                        // Eye Toggle Button for balance hiding
+                        GestureDetector(
+                          onTap: () {
+                            walletProvider.toggleBalanceVisibility();
+                          },
+                          child: Icon(
+                            isBalanceHidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            color: Colors.white,
+                            size: 20,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     Text(
-                      '\$${balance is num ? balance.toStringAsFixed(2) : double.parse(balance.toString()).toStringAsFixed(2)}',
+                      isBalanceHidden
+                          ? '\$ ••••'
+                          : '\$${balance is num ? balance.toStringAsFixed(2) : double.parse(balance.toString()).toStringAsFixed(2)}',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 38,
+                        fontSize: 34,
                         fontWeight: FontWeight.bold,
                         letterSpacing: -0.5,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'Active US Sponsor Bank',
+                          'Active Sponsor Bank',
                           style: TextStyle(
                             color: Colors.white60,
-                            fontSize: 13,
+                            fontSize: 12,
                           ),
                         ),
                         Row(
@@ -214,7 +218,7 @@ class _HomePageState extends State<HomePage> {
                               width: 8,
                               height: 8,
                               decoration: const BoxDecoration(
-                                color: Color(0xFF34D399), // green dot
+                                color: Color(0xFF34D399),
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -223,7 +227,7 @@ class _HomePageState extends State<HomePage> {
                               'Connected',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 13,
+                                fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -237,161 +241,69 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 28),
 
               // Action Cards (Scan, Send, Deposit, Withdraw)
-              Column(
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      // Scan
-                      Expanded(
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const ScannerPage()),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                            decoration: BoxDecoration(
-                              color: theme.primaryColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Column(
-                              children: [
-                                Icon(Icons.qr_code_scanner_rounded, color: theme.primaryColor, size: 28),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Scan',
-                                  style: TextStyle(
-                                    color: theme.primaryColor,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // Send
-                      Expanded(
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const SendMoneyPage()),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF10B981).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Column(
-                              children: [
-                                const Icon(Icons.send_rounded, color: Color(0xFF10B981), size: 28),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  'Send',
-                                  style: TextStyle(
-                                    color: Color(0xFF10B981),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  _buildActionCard(
+                    Icons.qr_code_scanner_rounded,
+                    'Scan',
+                    theme.primaryColor,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ScannerPage()),
+                      );
+                    },
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      // Deposit
-                      Expanded(
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const DepositPage()),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF3B82F6).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Column(
-                              children: [
-                                const Icon(Icons.add_circle_rounded, color: Color(0xFF3B82F6), size: 28),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  'Deposit',
-                                  style: TextStyle(
-                                    color: Color(0xFF3B82F6),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // Withdraw
-                      Expanded(
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const WithdrawPage()),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF59E0B).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Column(
-                              children: [
-                                const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFFF59E0B), size: 28),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  'Withdraw',
-                                  style: TextStyle(
-                                    color: Color(0xFFF59E0B),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  const SizedBox(width: 12),
+                  _buildActionCard(
+                    Icons.send_rounded,
+                    'Send',
+                    const Color(0xFF10B981),
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const SendMoneyPage()),
+                      );
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _buildActionCard(
+                    Icons.add_circle_rounded,
+                    'Deposit',
+                    const Color(0xFF3B82F6),
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const DepositPage()),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 12),
+                  _buildActionCard(
+                    Icons.account_balance_wallet_rounded,
+                    'Withdraw',
+                    const Color(0xFFF59E0B),
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const WithdrawPage()),
+                      );
+                    },
                   ),
                 ],
               ),
               const SizedBox(height: 20),
 
-              // Request Payment Link Card
+              // Share link card
               InkWell(
                 onTap: () => _copyPaymentLink(qrData),
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(16),
@@ -402,43 +314,70 @@ class _HomePageState extends State<HomePage> {
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: theme.primaryColor.withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.share_rounded, color: theme.primaryColor, size: 20),
+                        child: Icon(Icons.share_rounded, color: theme.primaryColor, size: 18),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
                               'Share Your Request Link',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               'Accepts Apple Pay, Venmo, Cash App, Chime',
-                              style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 12),
+                              style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 11),
                             ),
                           ],
                         ),
                       ),
-                      Icon(Icons.copy_all_rounded, color: theme.primaryColor, size: 20),
+                      Icon(Icons.copy_all_rounded, color: theme.primaryColor, size: 18),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 32),
 
-              // Transaction History List
-              Text(
-                'Recent Transactions',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+              // Recent Transactions Header & Statement Icon
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Recent Transactions',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const StatementPage()),
+                      );
+                    },
+                    child: Row(
+                      children: [
+                        Text(
+                          'Statements',
+                          style: TextStyle(
+                            color: theme.primaryColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.receipt_long_rounded, color: theme.primaryColor, size: 18),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
 
@@ -454,10 +393,10 @@ class _HomePageState extends State<HomePage> {
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 36),
                           decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF151B2C) : Colors.white,
+                            color: isDark ? const Color(0xFF1E293B) : Colors.white,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
                             ),
                           ),
                           child: Column(
@@ -468,18 +407,13 @@ class _HomePageState extends State<HomePage> {
                                 'No transactions yet',
                                 style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
                               ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                'Perform a deposit or send money to get started!',
-                                style: TextStyle(color: Colors.grey, fontSize: 12),
-                              ),
                             ],
                           ),
                         )
                       : ListView.separated(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: transactions.length > 5 ? 5 : transactions.length, // Show up to 5 recent
+                          itemCount: transactions.length > 5 ? 5 : transactions.length,
                           separatorBuilder: (context, index) => const Divider(height: 1),
                           itemBuilder: (context, index) {
                             final tx = transactions[index];
@@ -499,7 +433,6 @@ class _HomePageState extends State<HomePage> {
                               isSender = senderId == user['id'];
                             }
 
-                            // Build transaction line details
                             IconData txIcon;
                             Color txIconColor;
                             String txTitle;
@@ -511,7 +444,7 @@ class _HomePageState extends State<HomePage> {
                               txIcon = Icons.add_circle_outline_rounded;
                               txIconColor = const Color(0xFF3B82F6);
                               txTitle = 'Deposit via Stripe';
-                              txAmountText = '+\$${amount.toStringAsFixed(2)}';
+                              txAmountText = isBalanceHidden ? '+\$ ••••' : '+\$${amount.toStringAsFixed(2)}';
                               txAmountColor = const Color(0xFF3B82F6);
                             } else {
                               if (isSender) {
@@ -520,7 +453,7 @@ class _HomePageState extends State<HomePage> {
                                 final receiverObj = tx['receiver'];
                                 final String receiverName = receiverObj is Map ? (receiverObj['fullName'] ?? 'User') : 'User';
                                 txTitle = 'Sent to $receiverName';
-                                txAmountText = '-\$${amount.toStringAsFixed(2)}';
+                                txAmountText = isBalanceHidden ? '-\$ ••••' : '-\$${amount.toStringAsFixed(2)}';
                                 txAmountColor = const Color(0xFFEF4444);
                                 txSubtitle = '$formattedDate • Incl. \$${fee.toStringAsFixed(2)} fee';
                               } else {
@@ -529,13 +462,24 @@ class _HomePageState extends State<HomePage> {
                                 final senderObj = tx['sender'];
                                 final String senderName = senderObj is Map ? (senderObj['fullName'] ?? 'User') : 'User';
                                 txTitle = 'Received from $senderName';
-                                txAmountText = '+\$${netAmount.toStringAsFixed(2)}';
+                                txAmountText = isBalanceHidden ? '+\$ ••••' : '+\$${netAmount.toStringAsFixed(2)}';
                                 txAmountColor = const Color(0xFF10B981);
-                                txSubtitle = '$formattedDate • \$${fee.toStringAsFixed(2)} platform fee cut';
+                                txSubtitle = '$formattedDate • \$${fee.toStringAsFixed(2)} fee cut';
                               }
                             }
 
                             return ListTile(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ReceiptPage(
+                                      transaction: tx,
+                                      currentUser: user,
+                                    ),
+                                  ),
+                                );
+                              },
                               contentPadding: EdgeInsets.zero,
                               leading: Container(
                                 padding: const EdgeInsets.all(10),
@@ -547,83 +491,59 @@ class _HomePageState extends State<HomePage> {
                               ),
                               title: Text(txTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
                               subtitle: Text(txSubtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                              trailing: Text(
-                                txAmountText,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: txAmountColor,
-                                ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    txAmountText,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      color: txAmountColor,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 16),
+                                ],
                               ),
                             );
                           },
                         ),
-              const SizedBox(height: 36),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-              // In-app QR Code Section
+  Widget _buildActionCard(IconData icon, String title, Color color, VoidCallback onTap) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: color.withOpacity(0.15),
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(height: 6),
               Text(
-                'My QR Code',
-                style: theme.textTheme.titleLarge?.copyWith(
+                title,
+                style: TextStyle(
+                  color: color,
                   fontWeight: FontWeight.bold,
+                  fontSize: 13,
                 ),
               ),
-              const SizedBox(height: 16),
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF151B2C) : Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
-                        blurRadius: 15,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      // Professional black & white QR code
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Colors.grey.withOpacity(0.2),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: QrImageView(
-                          data: qrData,
-                          version: QrVersions.auto,
-                          size: 156.0,
-                          foregroundColor: Colors.black,
-                          backgroundColor: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Scan to Send Funds',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      SelectableText(
-                        qrData,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontSize: 11,
-                          color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 40),
             ],
           ),
         ),

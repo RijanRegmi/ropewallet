@@ -208,9 +208,23 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Your Available Balance:', style: TextStyle(fontWeight: FontWeight.w500)),
+                  Row(
+                    children: [
+                      const Text('Your Available Balance: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                      GestureDetector(
+                        onTap: () {
+                          walletProvider.toggleBalanceVisibility();
+                        },
+                        child: Icon(
+                          walletProvider.isBalanceHidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
                   Text(
-                    '\$${userBalance.toStringAsFixed(2)}',
+                    walletProvider.isBalanceHidden ? '\$ ••••' : '\$${userBalance.toStringAsFixed(2)}',
                     style: TextStyle(fontWeight: FontWeight.bold, color: theme.primaryColor),
                   ),
                 ],
@@ -275,7 +289,10 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Send Amount:', style: TextStyle(color: Colors.grey)),
-                        Text('\$${_amount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w500)),
+                        Text(
+                          walletProvider.isBalanceHidden ? '\$ ••••' : '\$${_amount.toStringAsFixed(2)}',
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -289,7 +306,10 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                             Text(':', style: TextStyle(color: Colors.grey)),
                           ],
                         ),
-                        Text('-\$${fee.toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600)),
+                        Text(
+                          walletProvider.isBalanceHidden ? '\$ ••••' : '-\$${fee.toStringAsFixed(2)}',
+                          style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
+                        ),
                       ],
                     ),
                     const Padding(
@@ -301,7 +321,9 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                       children: [
                         const Text('Recipient Receives:', style: TextStyle(fontWeight: FontWeight.bold)),
                         Text(
-                          '\$${(netAmount < 0 ? 0.00 : netAmount).toStringAsFixed(2)}',
+                          walletProvider.isBalanceHidden
+                              ? '\$ ••••'
+                              : '\$${(netAmount < 0 ? 0.00 : netAmount).toStringAsFixed(2)}',
                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
                         ),
                       ],

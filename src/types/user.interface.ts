@@ -10,6 +10,7 @@ export interface IUser extends Document {
   password?: string;
   phoneNumber: string;
   transactionPin?: string;
+  profileImage?: string;
   walletBalance: number;
   qrCodeData: string;
   createdAt: Date;

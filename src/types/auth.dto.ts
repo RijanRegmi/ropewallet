@@ -30,5 +30,6 @@ export interface AuthResponse {
     qrCodeData: string;
     createdAt: Date;
     hasPin?: boolean;
+    profileImage?: string;
   };
 }

@@ -52,6 +52,10 @@ const userSchema = new Schema<IUser>(
       type: String,
       select: false, // Don't return PIN by default for safety
     },
+    profileImage: {
+      type: String,
+      default: '',
+    },
     walletBalance: {
       type: Number,
       default: 0.00,

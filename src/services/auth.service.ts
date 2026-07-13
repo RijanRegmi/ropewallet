@@ -116,6 +116,7 @@ export class AuthService {
         qrCodeData: newUser.qrCodeData,
         createdAt: newUser.createdAt,
         hasPin: !!newUser.transactionPin,
+        profileImage: newUser.profileImage,
       },
     };
   }
@@ -148,6 +149,7 @@ export class AuthService {
         qrCodeData: user.qrCodeData,
         createdAt: user.createdAt,
         hasPin: !!user.transactionPin,
+        profileImage: user.profileImage,
       },
     };
   }
@@ -241,6 +243,74 @@ export class AuthService {
       qrCodeData: user.qrCodeData,
       createdAt: user.createdAt,
       hasPin: !!user.transactionPin,
+      profileImage: user.profileImage,
     };
+  }
+
+  static async updateProfileImage(userId: string, profileImage: string): Promise<void> {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new CustomError('User not found', 404);
+    }
+    user.profileImage = profileImage;
+    await user.save();
+  }
+
+  static async sendUpdateOtp(userId: string): Promise<void> {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new CustomError('User not found', 404);
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await Otp.findOneAndUpdate(
+      { email: user.email.toLowerCase().trim() },
+      { code, createdAt: new Date() },
+      { upsert: true, new: true }
+    );
+
+    try {
+      await EmailService.sendOtpEmail(user.email, code);
+    } catch (err: any) {
+      console.error('SMTP Delivery error:', err);
+      throw new CustomError(`Failed to send verification email: ${err.message}`, 500);
+    }
+  }
+
+  static async changePassword(userId: string, otpCode: string, newPassword: string): Promise<void> {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new CustomError('User not found', 404);
+    }
+
+    const emailNorm = user.email.toLowerCase().trim();
+    const otpRecord = await Otp.findOne({ email: emailNorm });
+    if (!otpRecord || otpRecord.code !== otpCode.trim()) {
+      throw new CustomError('Invalid or expired verification code', 400);
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    await Otp.deleteOne({ email: emailNorm });
+  }
+
+  static async changePin(userId: string, otpCode: string, newPin: string): Promise<void> {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new CustomError('User not found', 404);
+    }
+
+    const emailNorm = user.email.toLowerCase().trim();
+    const otpRecord = await Otp.findOne({ email: emailNorm });
+    if (!otpRecord || otpRecord.code !== otpCode.trim()) {
+      throw new CustomError('Invalid or expired verification code', 400);
+    }
+
+    user.transactionPin = newPin;
+    await user.save();
+
+    await Otp.deleteOne({ email: emailNorm });
   }
 }

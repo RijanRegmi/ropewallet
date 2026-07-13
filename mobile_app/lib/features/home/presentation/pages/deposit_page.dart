@@ -208,9 +208,23 @@ class _DepositPageState extends State<DepositPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Current Balance:', style: TextStyle(fontWeight: FontWeight.w500)),
+                    Row(
+                      children: [
+                        const Text('Current Balance: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                        GestureDetector(
+                          onTap: () {
+                            walletProvider.toggleBalanceVisibility();
+                          },
+                          child: Icon(
+                            walletProvider.isBalanceHidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            size: 16,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
                     Text(
-                      '\$${userBalance.toStringAsFixed(2)}',
+                      walletProvider.isBalanceHidden ? '\$ ••••' : '\$${userBalance.toStringAsFixed(2)}',
                       style: TextStyle(fontWeight: FontWeight.bold, color: theme.primaryColor),
                     ),
                   ],
