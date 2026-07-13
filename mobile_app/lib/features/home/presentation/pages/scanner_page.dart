@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../auth/providers/auth_provider.dart';
 import 'send_money_page.dart';
+import 'external_transfer_page.dart';
 
 class ScannerPage extends StatefulWidget {
   const ScannerPage({super.key});
@@ -37,11 +38,47 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
   }
 
   void _navigateToTransfer(String qrCodeData) {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => SendMoneyPage(recipientQrData: qrCodeData),
-      ),
-    );
+    bool isExternal = false;
+    String provider = '';
+    String recipientName = '';
+
+    final lowerData = qrCodeData.toLowerCase();
+    if (lowerData.contains('cash.app') || qrCodeData.startsWith('\$')) {
+      isExternal = true;
+      provider = 'Cash App';
+      recipientName = qrCodeData.contains('/') 
+          ? qrCodeData.substring(qrCodeData.lastIndexOf('/') + 1)
+          : qrCodeData;
+    } else if (lowerData.contains('venmo.com') || lowerData.startsWith('venmo://')) {
+      isExternal = true;
+      provider = 'Venmo';
+      recipientName = qrCodeData.contains('/') 
+          ? qrCodeData.substring(qrCodeData.lastIndexOf('/') + 1)
+          : qrCodeData;
+    } else if (lowerData.contains('chime.me') || lowerData.contains('chime.com')) {
+      isExternal = true;
+      provider = 'Chime';
+      recipientName = qrCodeData.contains('/') 
+          ? qrCodeData.substring(qrCodeData.lastIndexOf('/') + 1)
+          : qrCodeData;
+    }
+
+    if (isExternal) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => ExternalTransferPage(
+            provider: provider,
+            recipientName: recipientName,
+          ),
+        ),
+      );
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => SendMoneyPage(recipientQrData: qrCodeData),
+        ),
+      );
+    }
   }
 
   Future<void> _pickAndScanImage() async {
