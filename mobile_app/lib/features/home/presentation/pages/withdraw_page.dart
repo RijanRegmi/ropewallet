@@ -277,15 +277,16 @@ class _WithdrawPageState extends State<WithdrawPage> {
 
                 // Dynamic Form Fields based on Selected Tab
                 SizedBox(
-                  height: 380,
+                  height: 480,
                   child: TabBarView(
                     physics: const NeverScrollableScrollPhysics(), // Prevent sliding tabs without form validation
                     children: [
                       // TAB 1: CARD PAYOUT
                       Form(
                         key: _cardFormKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
                             'Chime / Venmo / Cash App Card Details:',
@@ -307,10 +308,8 @@ class _WithdrawPageState extends State<WithdrawPage> {
                               hintText: '4242 4242 4242 4242',
                             ),
                             validator: (value) {
-                              if (DefaultTabController.of(context).index == 0) {
-                                if (value == null || value.trim().replaceAll(' ', '').length != 16) {
-                                  return 'Please enter a valid 16-digit card number';
-                                }
+                              if (value == null || value.trim().replaceAll(' ', '').length != 16) {
+                                return 'Please enter a valid 16-digit card number';
                               }
                               return null;
                             },
@@ -334,10 +333,8 @@ class _WithdrawPageState extends State<WithdrawPage> {
                                     hintText: 'MM/YY',
                                   ),
                                   validator: (value) {
-                                    if (DefaultTabController.of(context).index == 0) {
-                                      if (value == null || value.trim().length != 5) {
-                                        return 'Use MM/YY';
-                                      }
+                                    if (value == null || value.trim().length != 5) {
+                                      return 'Use MM/YY';
                                     }
                                     return null;
                                   },
@@ -360,10 +357,8 @@ class _WithdrawPageState extends State<WithdrawPage> {
                                     hintText: '123',
                                   ),
                                   validator: (value) {
-                                    if (DefaultTabController.of(context).index == 0) {
-                                      if (value == null || value.trim().length < 3) {
-                                        return 'CVC required';
-                                      }
+                                    if (value == null || value.trim().length < 3) {
+                                      return 'CVC required';
                                     }
                                     return null;
                                   },
@@ -390,12 +385,14 @@ class _WithdrawPageState extends State<WithdrawPage> {
                         ],
                       ),
                     ),
+                  ),
 
                       // TAB 2: BANK ACCOUNT TRANSFER
                       Form(
                         key: _bankFormKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
                             'Bank Routing & Account Details:',
@@ -431,10 +428,8 @@ class _WithdrawPageState extends State<WithdrawPage> {
                               hintText: 'John Doe',
                             ),
                             validator: (value) {
-                              if (DefaultTabController.of(context).index == 1) {
-                                if (value == null || value.trim().isEmpty) {
+                              if (value == null || value.trim().isEmpty) {
                                   return 'Please enter the account holder name';
-                                }
                               }
                               return null;
                             },
@@ -457,10 +452,8 @@ class _WithdrawPageState extends State<WithdrawPage> {
                                     hintText: '121000248',
                                   ),
                                   validator: (value) {
-                                    if (DefaultTabController.of(context).index == 1) {
-                                      if (value == null || value.trim().length != 9) {
-                                        return 'Requires 9 digits';
-                                      }
+                                    if (value == null || value.trim().length != 9) {
+                                      return 'Requires 9 digits';
                                     }
                                     return null;
                                   },
@@ -482,10 +475,8 @@ class _WithdrawPageState extends State<WithdrawPage> {
                                     hintText: '00012345678',
                                   ),
                                   validator: (value) {
-                                    if (DefaultTabController.of(context).index == 1) {
-                                      if (value == null || value.trim().length < 6) {
-                                        return 'Invalid account no.';
-                                      }
+                                    if (value == null || value.trim().length < 6) {
+                                      return 'Invalid account no.';
                                     }
                                     return null;
                                   },
@@ -512,6 +503,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
                         ],
                       ),
                     ),
+                  ),
                     ],
                   ),
                 ),

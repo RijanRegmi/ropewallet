@@ -281,16 +281,17 @@ class _DepositPageState extends State<DepositPage> {
 
                 // Dynamic Form Fields based on Selected Tab
                 SizedBox(
-                  height: 380,
+                  height: 480,
                   child: TabBarView(
                     physics: const NeverScrollableScrollPhysics(),
                     children: [
                       // TAB 1: INSTANT CARD LOAD
                       Form(
                         key: _cardFormKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                           const Text(
                             'Enter Debit Card Details:',
                             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
@@ -311,10 +312,8 @@ class _DepositPageState extends State<DepositPage> {
                               hintText: '4242 4242 4242 4242',
                             ),
                             validator: (value) {
-                              if (DefaultTabController.of(context).index == 0) {
-                                if (value == null || value.trim().replaceAll(' ', '').length != 16) {
-                                  return 'Please enter a valid 16-digit card number';
-                                }
+                              if (value == null || value.trim().replaceAll(' ', '').length != 16) {
+                                return 'Please enter a valid 16-digit card number';
                               }
                               return null;
                             },
@@ -338,10 +337,8 @@ class _DepositPageState extends State<DepositPage> {
                                     hintText: 'MM/YY',
                                   ),
                                   validator: (value) {
-                                    if (DefaultTabController.of(context).index == 0) {
-                                      if (value == null || value.trim().length != 5) {
-                                        return 'Use MM/YY';
-                                      }
+                                    if (value == null || value.trim().length != 5) {
+                                      return 'Use MM/YY';
                                     }
                                     return null;
                                   },
@@ -364,10 +361,8 @@ class _DepositPageState extends State<DepositPage> {
                                     hintText: '123',
                                   ),
                                   validator: (value) {
-                                    if (DefaultTabController.of(context).index == 0) {
-                                      if (value == null || value.trim().length < 3) {
-                                        return 'CVC required';
-                                      }
+                                    if (value == null || value.trim().length < 3) {
+                                      return 'CVC required';
                                     }
                                     return null;
                                   },
@@ -394,11 +389,13 @@ class _DepositPageState extends State<DepositPage> {
                         ],
                       ),
                     ),
+                  ),
 
                       // TAB 2: SHARE REQUEST LINK
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                      SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                           if (!_launchedPayment) ...[
                             const Text(
                               'Generate a request link to receive money:',
@@ -483,6 +480,7 @@ class _DepositPageState extends State<DepositPage> {
                           ],
                         ],
                       ),
+                    ),
                     ],
                   ),
                 ),
