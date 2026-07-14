@@ -340,8 +340,8 @@ export default function UsersManagement() {
                                 SUPER ADMIN (YOU)
                               </span>
                             ) : (
-                              <select
-                                value={u.role}
+                                <select
+                                  value={u.role || 'user'}
                                 onChange={(e) => handleRoleChange(u._id, e.target.value)}
                                 className="bg-dark-bg border border-dark-border text-dark-text px-3 py-1.5 rounded-xl text-xs font-bold outline-none cursor-pointer focus:border-primary"
                               >
@@ -440,7 +440,7 @@ export default function UsersManagement() {
                           </td>
                           <td className="py-4 px-6">
                             <select
-                              value={u.role}
+                              value={u.role || 'user'}
                               onChange={(e) => handleRoleChange(u._id, e.target.value)}
                               className="bg-dark-bg border border-dark-border text-dark-text px-3 py-1.5 rounded-xl text-xs font-bold outline-none cursor-pointer focus:border-primary"
                             >

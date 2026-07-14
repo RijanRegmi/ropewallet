@@ -140,7 +140,7 @@ export class AdminController {
       const sortOrder = (req.query.sortOrder as string) === 'asc' ? 1 : -1;
 
       // Filter for players
-      const playerFilter: any = { role: 'user' };
+      const playerFilter: any = { role: { $in: ['user', null] } };
       if (search) {
         playerFilter.$or = [
           { fullName: { $regex: search, $options: 'i' } },
