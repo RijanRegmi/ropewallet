@@ -551,10 +551,13 @@ export class AdminController {
     // Check if already logged in
     if (req.cookies?.admin_token) {
       try {
-        jwt.verify(req.cookies.admin_token, JWT_SECRET);
-        res.redirect('/admin/dashboard');
-        return;
-      } catch { /* token expired, show login */ }
+        const decoded = jwt.verify(req.cookies.admin_token, JWT_SECRET) as any;
+        const admin = await User.findOne({ _id: decoded.id, role: { $in: ['admin', 'superadmin'] } });
+        if (admin && !admin.isFrozen) {
+          res.redirect('/admin/dashboard');
+          return;
+        }
+      } catch { /* token expired or user not found, show login */ }
     }
 
     res.send(AdminController.loginPageHTML());
