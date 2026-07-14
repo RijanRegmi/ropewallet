@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --color-dark-bg: #0B0F1A;
+  --color-dark-surface: #111827;
+  --color-dark-surface-2: #1F2937;
+  --color-dark-surface-3: #374151;
+  --color-dark-border: #1F2937;
+  --color-dark-text: #F9FAFB;
+  --color-dark-text-secondary: #9CA3AF;
+  --color-primary: #6366F1;
+  --color-primary-hover: #818CF8;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --color-info: #3B82F6;
+}
+
+:root {
+  --background: #0B0F1A;
+  --foreground: #F9FAFB;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar for premium dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0B0F1A;
+}
+::-webkit-scrollbar-thumb {
+  background: #1F2937;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #374151;
+}
+
+/* Custom styling for inputs */
+input, select {
+  color-scheme: dark;
+}

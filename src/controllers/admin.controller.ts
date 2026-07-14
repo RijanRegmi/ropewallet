@@ -139,9 +139,10 @@ export class AdminController {
       const sortBy = (req.query.sortBy as string) || 'createdAt';
       const sortOrder = (req.query.sortOrder as string) === 'asc' ? 1 : -1;
 
-      const filter: any = {};
+      // Filter for players
+      const playerFilter: any = { role: 'user' };
       if (search) {
-        filter.$or = [
+        playerFilter.$or = [
           { fullName: { $regex: search, $options: 'i' } },
           { email: { $regex: search, $options: 'i' } },
           { userTag: { $regex: search, $options: 'i' } },
@@ -149,24 +150,37 @@ export class AdminController {
         ];
       }
 
-      const [users, total] = await Promise.all([
-        User.find(filter)
+      // Filter for admins
+      const adminFilter: any = { role: { $in: ['admin', 'superadmin'] } };
+      if (search) {
+        adminFilter.$or = [
+          { fullName: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+          { userTag: { $regex: search, $options: 'i' } },
+          { phoneNumber: { $regex: search, $options: 'i' } },
+        ];
+      }
+
+      const [admins, players, totalPlayers] = await Promise.all([
+        User.find(adminFilter).sort({ createdAt: -1 }).select('-savedCard'),
+        User.find(playerFilter)
           .sort({ [sortBy]: sortOrder } as any)
           .skip((page - 1) * limit)
           .limit(limit)
           .select('-savedCard'),
-        User.countDocuments(filter),
+        User.countDocuments(playerFilter),
       ]);
 
       res.json({
         success: true,
         data: {
-          users,
+          admins,
+          users: players,
           pagination: {
             page,
             limit,
-            total,
-            totalPages: Math.ceil(total / limit),
+            total: totalPlayers,
+            totalPages: Math.ceil(totalPlayers / limit),
           },
         },
       });
@@ -622,7 +636,8 @@ export class AdminController {
   }
 
   static async renderUsersPage(req: Request, res: Response): Promise<void> {
-    res.send(AdminController.usersPageHTML());
+    const adminId = (req as any).admin?.id || '';
+    res.send(AdminController.usersPageHTML(adminId));
   }
 
   static async renderDepositsPage(req: Request, res: Response): Promise<void> {
