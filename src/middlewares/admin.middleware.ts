@@ -30,12 +30,11 @@ export const adminProtect = async (req: Request, res: Response, next: NextFuncti
   }
 
   if (!token) {
-    // If it's a browser request, redirect to login
-    if (req.accepts('html')) {
-      res.redirect('/admin');
+    if (req.originalUrl.startsWith('/api')) {
+      next(new CustomError('Admin authentication required', 401));
       return;
     }
-    next(new CustomError('Admin authentication required', 401));
+    res.redirect('/admin');
     return;
   }
 
@@ -44,11 +43,11 @@ export const adminProtect = async (req: Request, res: Response, next: NextFuncti
 
     const admin = await Admin.findById(decoded.id);
     if (!admin || !admin.isActive) {
-      if (req.accepts('html')) {
-        res.redirect('/admin');
+      if (req.originalUrl.startsWith('/api')) {
+        next(new CustomError('Admin account not found or inactive', 401));
         return;
       }
-      next(new CustomError('Admin account not found or inactive', 401));
+      res.redirect('/admin');
       return;
     }
 
@@ -56,11 +55,11 @@ export const adminProtect = async (req: Request, res: Response, next: NextFuncti
     (req as any).admin = { id: decoded.id, role: decoded.role };
     next();
   } catch (error) {
-    if (req.accepts('html')) {
-      res.redirect('/admin');
+    if (req.originalUrl.startsWith('/api')) {
+      next(new CustomError('Invalid admin token', 401));
       return;
     }
-    next(new CustomError('Invalid admin token', 401));
+    res.redirect('/admin');
   }
 };
 
@@ -71,11 +70,11 @@ export const adminProtect = async (req: Request, res: Response, next: NextFuncti
 export const superAdminOnly = (req: Request, res: Response, next: NextFunction): void => {
   const admin = (req as any).admin;
   if (!admin || admin.role !== 'superadmin') {
-    if (req.accepts('html')) {
-      res.status(403).send('Access denied: Superadmin only');
+    if (req.originalUrl.startsWith('/api')) {
+      next(new CustomError('Superadmin access required', 403));
       return;
     }
-    next(new CustomError('Superadmin access required', 403));
+    res.status(403).send('Access denied: Superadmin only');
     return;
   }
   next();
