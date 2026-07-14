@@ -1380,7 +1380,7 @@ export class AdminController {
     return AdminController.adminShell('Dashboard', 'dashboard', content);
   }
 
-  private static usersPageHTML(): string {
+  private static usersPageHTML(currentAdminId?: string): string {
     const content = `
     <div class="page-header">
       <div>
@@ -1494,8 +1494,8 @@ export class AdminController {
           const roleToggleBtn = u.role === 'superadmin'
             ? ''
             : u.role === 'admin'
-              ? '<button class="btn btn-sm btn-ghost" onclick="toggleRole(\\'' + u._id + '\\', \\'user\\')">Demote</button>'
-              : '<button class="btn btn-sm btn-primary" onclick="toggleRole(\\'' + u._id + '\\', \\'admin\\')">Make Admin</button>';
+              ? '<button class="btn btn-sm btn-ghost" onclick="toggleRole(\\\'' + u._id + '\\\', \\\'user\\\')">Demote</button>'
+              : '<button class="btn btn-sm btn-primary" onclick="toggleRole(\\\'' + u._id + '\\\', \\\'admin\\\')">Make Admin</button>';
 
           tbody.innerHTML += '<tr>' +
             '<td><strong>' + (u.fullName || u.firstName + ' ' + u.lastName) + '</strong></td>' +
