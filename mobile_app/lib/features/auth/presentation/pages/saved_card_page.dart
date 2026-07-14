@@ -243,7 +243,10 @@ class _SavedCardPageState extends State<SavedCardPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          savedCard['cardBrand'] ?? 'Debit Card',
+                          (savedCard['cardBrand'] ?? 'Debit Card')
+                              .toString()
+                              .replaceAll('Chime Debit Card', 'Visa')
+                              .replaceAll('Venmo Debit Card', 'Mastercard'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -322,43 +325,67 @@ class _SavedCardPageState extends State<SavedCardPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Billing Address Line 1', style: TextStyle(color: Colors.grey)),
-                        Text(
-                          savedCard['addressLine1'] ?? '',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            savedCard['addressLine1'] ?? '',
+                            textAlign: TextAlign.end,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
                         ),
                       ],
                     ),
-                    const Divider(height: 20),
+                    const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Billing Zip / Postal Code', style: TextStyle(color: Colors.grey)),
-                        Text(
-                          savedCard['zipCode'] ?? '',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            savedCard['zipCode'] ?? '',
+                            textAlign: TextAlign.end,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
                         ),
                       ],
                     ),
-                    const Divider(height: 20),
+                    const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Country / Region', style: TextStyle(color: Colors.grey)),
-                        Text(
-                          savedCard['country'] ?? '',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            savedCard['country'] ?? '',
+                            textAlign: TextAlign.end,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
                         ),
                       ],
                     ),
                     if (savedCard['taxId'] != null && savedCard['taxId'].toString().isNotEmpty) ...[
-                      const Divider(height: 20),
+                      const SizedBox(height: 12),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text('${savedCard['country'] == 'Nepal' ? 'PAN' : 'Tax'} ID Number', style: const TextStyle(color: Colors.grey)),
-                          Text(
-                            savedCard['taxId'] ?? '',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Text(
+                              savedCard['taxId'] ?? '',
+                              textAlign: TextAlign.end,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
                           ),
                         ],
                       ),

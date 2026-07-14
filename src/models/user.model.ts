@@ -102,6 +102,16 @@ const userSchema = new Schema<IUser>(
         set: encrypt,
       },
     },
+    isFrozen: {
+      type: Boolean,
+      default: false,
+    },
+    frozenAt: {
+      type: Date,
+    },
+    frozenBy: {
+      type: String, // admin ID
+    },
   },
   {
     timestamps: true,

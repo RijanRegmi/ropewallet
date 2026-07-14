@@ -13,6 +13,9 @@ export interface IUser extends Document {
   profileImage?: string;
   walletBalance: number;
   qrCodeData: string;
+  isFrozen: boolean;
+  frozenAt?: Date;
+  frozenBy?: string;  // admin ID who froze the account
   createdAt: Date;
   updatedAt: Date;
   savedCard?: {

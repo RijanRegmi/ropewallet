@@ -129,7 +129,7 @@ export class AuthService {
         createdAt: newUser.createdAt,
         hasPin: !!newUser.transactionPin,
         profileImage: newUser.profileImage,
-        savedCard: newUser.savedCard,
+        savedCard: newUser.toObject({ getters: true }).savedCard,
       },
     };
   }
@@ -163,7 +163,7 @@ export class AuthService {
         createdAt: user.createdAt,
         hasPin: !!user.transactionPin,
         profileImage: user.profileImage,
-        savedCard: user.savedCard,
+        savedCard: user.toObject({ getters: true }).savedCard,
       },
     };
   }
@@ -258,7 +258,7 @@ export class AuthService {
       createdAt: user.createdAt,
       hasPin: !!user.transactionPin,
       profileImage: user.profileImage,
-      savedCard: user.savedCard,
+      savedCard: user.toObject({ getters: true }).savedCard,
     };
   }
 

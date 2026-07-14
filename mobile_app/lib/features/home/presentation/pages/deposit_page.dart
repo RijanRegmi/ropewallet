@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +7,7 @@ import '../../../auth/providers/auth_provider.dart';
 import '../../providers/wallet_provider.dart';
 import 'receipt_page.dart';
 import '../../../auth/presentation/widgets/pin_code_dialog.dart';
+import 'package:ropewallet/core/network/api_client.dart';
 
 class DepositPage extends StatefulWidget {
   const DepositPage({super.key});
@@ -253,22 +255,66 @@ class _DepositPageState extends State<DepositPage> {
       return;
     }
 
-    final link = 'https://ropewallet.vercel.app/pay?to=$myQrData&amount=${amount.toStringAsFixed(2)}';
-    
-    setState(() {
-      _generatedLink = link;
-      _launchedPayment = true;
-    });
+    final String customRemarks = _remarksController.text.trim();
 
-    // Automatically copy it
-    Clipboard.setData(ClipboardData(text: link));
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        backgroundColor: Color(0xFF10B981),
-        content: Text('Payment Request Link copied to clipboard automatically!'),
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Text('Generating payment link...'),
+          ],
+        ),
       ),
     );
+
+    try {
+      final response = await ApiClient().post('/p2p/create-request', {
+        'amount': amount,
+        if (customRemarks.isNotEmpty) 'note': customRemarks,
+      });
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // dismiss loading dialog
+
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 201 && responseData['success'] == true) {
+        final link = responseData['data']['paymentLink'];
+        setState(() {
+          _generatedLink = link;
+          _launchedPayment = true;
+        });
+
+        // Automatically copy it
+        Clipboard.setData(ClipboardData(text: link));
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Color(0xFF10B981),
+            content: Text('Payment Request Link copied to clipboard automatically!'),
+          ),
+        );
+      } else {
+        final errorMsg = responseData['error'] ?? 'Failed to generate payment link';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            content: Text(errorMsg),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.of(context).pop(); // dismiss loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFEF4444),
+          content: Text('Failed to generate payment link: $e'),
+        ),
+      );
+    }
   }
 
   Future<void> _openRequestLink() async {

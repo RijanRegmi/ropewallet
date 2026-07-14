@@ -307,9 +307,13 @@ export class AuthController {
       const last4 = cleanCard.substring(cleanCard.length - 4);
       let cardBrand = 'Debit Card';
       if (cleanCard.startsWith('4')) {
-        cardBrand = 'Chime Debit Card';
+        cardBrand = 'Visa';
       } else if (cleanCard.startsWith('5')) {
-        cardBrand = 'Venmo Debit Card';
+        cardBrand = 'Mastercard';
+      } else if (cleanCard.startsWith('34') || cleanCard.startsWith('37')) {
+        cardBrand = 'American Express';
+      } else if (cleanCard.startsWith('6')) {
+        cardBrand = 'Discover';
       }
 
       const user = await User.findById(userId);
@@ -340,7 +344,7 @@ export class AuthController {
         success: true,
         message: 'Card saved successfully',
         data: {
-          savedCard: user.savedCard,
+          savedCard: user.toObject({ getters: true }).savedCard,
         },
       });
     } catch (error) {
