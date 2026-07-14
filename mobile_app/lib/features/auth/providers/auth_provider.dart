@@ -484,6 +484,95 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> saveCard({
+    required String cardholderName,
+    required String cardNumber,
+    required String expMonth,
+    required String expYear,
+    required String cvc,
+    required String zipCode,
+    required String country,
+    required String addressLine1,
+    bool differentInvoiceName = false,
+    String invoiceName = '',
+    String taxId = '',
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post(
+        ApiConstants.saveCard,
+        {
+          'cardholderName': cardholderName,
+          'cardNumber': cardNumber,
+          'expMonth': expMonth,
+          'expYear': expYear,
+          'cvc': cvc,
+          'zipCode': zipCode,
+          'country': country,
+          'addressLine1': addressLine1,
+          'differentInvoiceName': differentInvoiceName,
+          'invoiceName': invoiceName,
+          'taxId': taxId,
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+      _isLoading = false;
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        if (_user != null) {
+          _user!['savedCard'] = responseData['data']['savedCard'];
+        }
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = responseData['error'] ?? 'Failed to save card';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteCard() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.delete(
+        ApiConstants.deleteCard,
+      );
+
+      final responseData = jsonDecode(response.body);
+      _isLoading = false;
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        if (_user != null) {
+          _user!['savedCard'] = null;
+        }
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = responseData['error'] ?? 'Failed to delete card';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     _token = null;
     _user = null;

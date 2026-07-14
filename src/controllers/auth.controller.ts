@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service.js';
+import { User } from '../models/user.model.js';
 
 export class AuthController {
   static async checkUserTag(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -270,6 +271,104 @@ export class AuthController {
       }
       await AuthService.changePin(userId, otpCode, newPin);
       res.status(200).json({ success: true, message: 'Transaction PIN changed successfully' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async saveCard(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id;
+      const {
+        cardholderName,
+        cardNumber,
+        expMonth,
+        expYear,
+        cvc,
+        zipCode,
+        country,
+        addressLine1,
+        differentInvoiceName,
+        invoiceName,
+        taxId
+      } = req.body;
+      
+      if (!userId) {
+        res.status(401).json({ success: false, error: 'Not authorized' });
+        return;
+      }
+
+      if (!cardholderName || !cardNumber || !expMonth || !expYear || !cvc || !zipCode || !country || !addressLine1) {
+        res.status(400).json({ success: false, error: 'Please provide complete card details, country, and address' });
+        return;
+      }
+      
+      const cleanCard = cardNumber.replace(/\s+/g, '');
+      const last4 = cleanCard.substring(cleanCard.length - 4);
+      let cardBrand = 'Debit Card';
+      if (cleanCard.startsWith('4')) {
+        cardBrand = 'Chime Debit Card';
+      } else if (cleanCard.startsWith('5')) {
+        cardBrand = 'Venmo Debit Card';
+      }
+
+      const user = await User.findById(userId);
+      if (!user) {
+        res.status(404).json({ success: false, error: 'User not found' });
+        return;
+      }
+
+      user.savedCard = {
+        cardholderName,
+        cardNumber: cleanCard,
+        expMonth,
+        expYear,
+        cvc,
+        zipCode,
+        country,
+        cardBrand,
+        last4,
+        addressLine1,
+        differentInvoiceName: !!differentInvoiceName,
+        invoiceName: invoiceName || '',
+        taxId: taxId || '',
+      };
+
+      await user.save();
+
+      res.status(200).json({
+        success: true,
+        message: 'Card saved successfully',
+        data: {
+          savedCard: user.savedCard,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteCard(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        res.status(401).json({ success: false, error: 'Not authorized' });
+        return;
+      }
+
+      const user = await User.findById(userId);
+      if (!user) {
+        res.status(404).json({ success: false, error: 'User not found' });
+        return;
+      }
+
+      user.savedCard = undefined;
+      await user.save();
+
+      res.status(200).json({
+        success: true,
+        message: 'Card deleted successfully',
+      });
     } catch (error) {
       next(error);
     }

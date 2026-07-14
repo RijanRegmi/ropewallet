@@ -54,61 +54,74 @@ class WalletProvider with ChangeNotifier {
   // Deposit funds via Stripe (REST API integration)
   Future<bool> deposit({
     required double amount,
-    required String cardNumber,
-    required String expMonth,
-    required String expYear,
-    required String cvc,
+    String? cardNumber,
+    String? expMonth,
+    String? expYear,
+    String? cvc,
     required AuthProvider authProvider,
     String? remarks,
+    bool useSavedCard = false,
+    String? pin,
   }) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final String cleanCard = cardNumber.replaceAll(' ', '');
       String paymentMethodId = '';
+      String cleanCard = '';
 
-      if (cleanCard == '4242424242424242') {
-        paymentMethodId = 'tok_visa';
-      } else {
-        // 1. Create PaymentMethod directly via Stripe's REST API
-        final stripeUrl = Uri.parse('https://api.stripe.com/v1/payment_methods');
-        final stripeResponse = await http.post(
-          stripeUrl,
-          headers: {
-            'Authorization': 'Bearer ${ApiConstants.stripePublishableKey}',
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: {
-            'type': 'card',
-            'card[number]': cleanCard,
-            'card[exp_month]': expMonth,
-            'card[exp_year]': expYear,
-            'card[cvc]': cvc,
-          },
-        );
-
-        final stripeData = jsonDecode(stripeResponse.body);
-        if (stripeResponse.statusCode != 200) {
-          final errorMsg = stripeData['error']?['message'] ?? 'Stripe tokenization failed';
-          _errorMessage = errorMsg;
+      if (!useSavedCard) {
+        if (cardNumber == null || expMonth == null || expYear == null || cvc == null) {
+          _errorMessage = 'Card details are required';
           _isLoading = false;
           notifyListeners();
           return false;
         }
+        cleanCard = cardNumber.replaceAll(' ', '');
+        if (cleanCard == '4242424242424242') {
+          paymentMethodId = 'tok_visa';
+        } else {
+          // 1. Create PaymentMethod directly via Stripe's REST API
+          final stripeUrl = Uri.parse('https://api.stripe.com/v1/payment_methods');
+          final stripeResponse = await http.post(
+            stripeUrl,
+            headers: {
+              'Authorization': 'Bearer ${ApiConstants.stripePublishableKey}',
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: {
+              'type': 'card',
+              'card[number]': cleanCard,
+              'card[exp_month]': expMonth,
+              'card[exp_year]': expYear,
+              'card[cvc]': cvc,
+            },
+          );
 
-        paymentMethodId = stripeData['id'];
+          final stripeData = jsonDecode(stripeResponse.body);
+          if (stripeResponse.statusCode != 200) {
+            final errorMsg = stripeData['error']?['message'] ?? 'Stripe tokenization failed';
+            _errorMessage = errorMsg;
+            _isLoading = false;
+            notifyListeners();
+            return false;
+          }
+
+          paymentMethodId = stripeData['id'];
+        }
       }
 
-      // 2. Send the PaymentMethod ID to the backend to complete the deposit
+      // 2. Send the PaymentMethod ID or saved card flag to the backend
       final response = await _apiClient.post(
         ApiConstants.deposit,
         {
           'amount': amount,
-          'paymentMethodId': paymentMethodId,
-          'cardNumber': cleanCard,
+          if (!useSavedCard) 'paymentMethodId': paymentMethodId,
+          if (!useSavedCard) 'cardNumber': cleanCard,
+          'useSavedCard': useSavedCard,
           'remarks': remarks,
+          if (pin != null) 'pin': pin,
         },
       );
 
@@ -188,6 +201,7 @@ class WalletProvider with ChangeNotifier {
     String? recipientTag,
     String? pin,
     String? remarks,
+    bool useSavedCard = false,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -210,6 +224,7 @@ class WalletProvider with ChangeNotifier {
           'recipientTag': recipientTag,
           'pin': pin,
           'remarks': remarks,
+          'useSavedCard': useSavedCard,
         },
       );
 

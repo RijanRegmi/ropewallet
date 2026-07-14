@@ -31,5 +31,20 @@ export interface AuthResponse {
     createdAt: Date;
     hasPin?: boolean;
     profileImage?: string;
+    savedCard?: {
+      cardholderName: string;
+      cardNumber?: string;
+      expMonth: string;
+      expYear: string;
+      cvc?: string;
+      zipCode: string;
+      country: string;
+      cardBrand: string;
+      last4: string;
+      addressLine1?: string;
+      differentInvoiceName?: boolean;
+      invoiceName?: string;
+      taxId?: string;
+    };
   };
 }

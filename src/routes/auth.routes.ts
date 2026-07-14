@@ -19,5 +19,7 @@ router.post('/update-profile-image', protect, AuthController.updateProfileImage)
 router.post('/send-update-otp', protect, AuthController.sendUpdateOtp);
 router.post('/change-password', protect, AuthController.changePassword);
 router.post('/change-pin', protect, AuthController.changePin);
+router.post('/save-card', protect, AuthController.saveCard);
+router.delete('/delete-card', protect, AuthController.deleteCard);
 
 export default router;

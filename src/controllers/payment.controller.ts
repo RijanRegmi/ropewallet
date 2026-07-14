@@ -9,7 +9,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 export class PaymentController {
   static async deposit(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { amount, paymentMethodId, remarks } = req.body;
+      const { amount, paymentMethodId, remarks, useSavedCard } = req.body;
       const userId = (req as any).user?.id;
 
       if (!amount || amount <= 0) {
@@ -17,15 +17,28 @@ export class PaymentController {
         return;
       }
 
-      if (!paymentMethodId) {
-        res.status(400).json({ success: false, error: 'Please provide a valid payment method ID' });
+      if (!paymentMethodId && !useSavedCard) {
+        res.status(400).json({ success: false, error: 'Please provide a valid payment method ID or use a saved card' });
         return;
       }
 
-      const user = await User.findById(userId);
+      const user = await User.findById(userId).select('+transactionPin');
       if (!user) {
         res.status(404).json({ success: false, error: 'User not found' });
         return;
+      }
+
+      if (user.transactionPin) {
+        const { pin } = req.body;
+        if (!pin) {
+          res.status(400).json({ success: false, error: 'Transaction PIN is required' });
+          return;
+        }
+        const isPinValid = await user.comparePin(pin);
+        if (!isPinValid) {
+          res.status(400).json({ success: false, error: 'Invalid transaction PIN' });
+          return;
+        }
       }
 
        // 1. Process Stripe charge
@@ -33,8 +46,33 @@ export class PaymentController {
       try {
         let finalPaymentMethodId = paymentMethodId;
         
-        // If it's a legacy token (like tok_visa), convert it to a PaymentMethod first
-        if (paymentMethodId.startsWith('tok_')) {
+        if (useSavedCard) {
+          if (!user.savedCard || !user.savedCard.cardNumber) {
+            res.status(400).json({ success: false, error: 'No saved card details found.' });
+            return;
+          }
+          const saved = user.savedCard;
+          if (saved.cardNumber === '4242424242424242') {
+            const pm = await stripe.paymentMethods.create({
+              type: 'card',
+              card: {
+                token: 'tok_visa',
+              },
+            });
+            finalPaymentMethodId = pm.id;
+          } else {
+            const pm = await stripe.paymentMethods.create({
+              type: 'card',
+              card: {
+                number: saved.cardNumber,
+                exp_month: parseInt(saved.expMonth),
+                exp_year: parseInt(saved.expYear),
+                cvc: saved.cvc,
+              },
+            });
+            finalPaymentMethodId = pm.id;
+          }
+        } else if (paymentMethodId.startsWith('tok_')) {
           const pm = await stripe.paymentMethods.create({
             type: 'card',
             card: {
@@ -71,7 +109,14 @@ export class PaymentController {
       await user.save();
 
       // 3. Create Transaction history log
-      const last4 = req.body.cardNumber ? req.body.cardNumber.toString().slice(-4) : '4242';
+      const last4 = useSavedCard && user.savedCard
+        ? user.savedCard.last4
+        : (req.body.cardNumber ? req.body.cardNumber.toString().slice(-4) : '4242');
+      
+      const cardBrand = useSavedCard && user.savedCard
+        ? user.savedCard.cardBrand
+        : 'Debit Card';
+
       const transaction = await Transaction.create({
         receiver: user._id,
         type: 'deposit',
@@ -79,7 +124,7 @@ export class PaymentController {
         fee: 0,
         netAmount: amount,
         stripePaymentIntentId: paymentIntent.id,
-        remarks: remarks ? remarks.trim() : `Deposit from Debit Card ending in ${last4}`,
+        remarks: remarks ? remarks.trim() : `Deposit from ${cardBrand} ending in ${last4}`,
       });
 
       res.status(200).json({
@@ -359,28 +404,46 @@ export class PaymentController {
         }
       } else {
         // Default to card withdrawal
-        if (!cardNumber || !expMonth || !expYear || !cvc) {
-          res.status(400).json({ success: false, error: 'Please provide complete card details' });
-          return;
+        let finalCardNumber = cardNumber;
+        let finalExpMonth = expMonth;
+        let finalExpYear = expYear;
+        let finalCvc = cvc;
+        let finalCardBrand = 'Debit Card';
+
+        if (req.body.useSavedCard) {
+          if (!user.savedCard || !user.savedCard.cardNumber) {
+            res.status(400).json({ success: false, error: 'No saved card details found.' });
+            return;
+          }
+          finalCardNumber = user.savedCard.cardNumber;
+          finalExpMonth = parseInt(user.savedCard.expMonth);
+          finalExpYear = parseInt(user.savedCard.expYear);
+          finalCvc = user.savedCard.cvc;
+          finalCardBrand = user.savedCard.cardBrand;
+        } else {
+          if (!finalCardNumber || !finalExpMonth || !finalExpYear || !finalCvc) {
+            res.status(400).json({ success: false, error: 'Please provide complete card details' });
+            return;
+          }
         }
 
-        const cleanCard = cardNumber.replaceAll(' ', '');
+        const cleanCard = finalCardNumber.replaceAll(' ', '');
         if (cleanCard === '4242424242424242') {
           stripeTokenId = 'tok_visa';
-          remarksText = `Withdrawal to Chime Card ending in 4242`;
+          remarksText = remarks ? remarks.trim() : `Withdrawal to ${req.body.useSavedCard ? finalCardBrand : 'Chime Card'} ending in 4242`;
         } else {
           // 1. Tokenize card details via Stripe
           try {
             const token = await stripe.tokens.create({
               card: {
                 number: cleanCard,
-                exp_month: expMonth,
-                exp_year: expYear,
-                cvc: cvc,
+                exp_month: finalExpMonth,
+                exp_year: finalExpYear,
+                cvc: finalCvc,
               },
             });
             stripeTokenId = token.id;
-            remarksText = `Withdrawal to Chime Card ending in ${token.card?.last4}`;
+            remarksText = remarks ? remarks.trim() : `Withdrawal to ${req.body.useSavedCard ? finalCardBrand : 'Card'} ending in ${token.card?.last4}`;
           } catch (stripeError: any) {
             res.status(400).json({ success: false, error: `Stripe Card Verification Failed: ${stripeError.message}` });
             return;
@@ -516,7 +579,7 @@ export class PaymentController {
       if (amount && parseFloat(amount as string) > 0) {
         const depositAmount = parseFloat(amount as string);
         const session = await stripe.checkout.sessions.create({
-          payment_method_types: ['card', 'cashapp', 'link', 'venmo'],
+          payment_method_types: ['card', 'cashapp', 'link', 'venmo'] as any,
           line_items: [
             {
               price_data: {

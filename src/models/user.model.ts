@@ -1,6 +1,7 @@
 import { Schema, model } from 'mongoose';
 import bcryptjs from 'bcryptjs';
 import { IUser } from '../types/user.interface.js';
+import { encrypt, decrypt } from '../utils/crypto.js';
 
 const userSchema = new Schema<IUser>(
   {
@@ -66,9 +67,46 @@ const userSchema = new Schema<IUser>(
       unique: true,
       required: true,
     },
+    savedCard: {
+      cardholderName: { type: String, default: '' },
+      cardNumber: {
+        type: String,
+        default: '',
+        get: decrypt,
+        set: encrypt,
+      },
+      expMonth: { type: String, default: '' },
+      expYear: { type: String, default: '' },
+      cvc: {
+        type: String,
+        default: '',
+        get: decrypt,
+        set: encrypt,
+      },
+      zipCode: { type: String, default: '' },
+      country: { type: String, default: '' },
+      cardBrand: { type: String, default: '' },
+      last4: { type: String, default: '' },
+      addressLine1: {
+        type: String,
+        default: '',
+        get: decrypt,
+        set: encrypt,
+      },
+      differentInvoiceName: { type: Boolean, default: false },
+      invoiceName: { type: String, default: '' },
+      taxId: {
+        type: String,
+        default: '',
+        get: decrypt,
+        set: encrypt,
+      },
+    },
   },
   {
     timestamps: true,
+    toJSON: { getters: true },
+    toObject: { getters: true },
   }
 );
 

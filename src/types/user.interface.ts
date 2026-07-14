@@ -15,6 +15,21 @@ export interface IUser extends Document {
   qrCodeData: string;
   createdAt: Date;
   updatedAt: Date;
+  savedCard?: {
+    cardholderName: string;
+    cardNumber: string;
+    expMonth: string;
+    expYear: string;
+    cvc: string;
+    zipCode: string;
+    country: string;
+    cardBrand: string;
+    last4: string;
+    addressLine1?: string;
+    differentInvoiceName?: boolean;
+    invoiceName?: string;
+    taxId?: string;
+  };
   comparePassword(password: string): Promise<boolean>;
   comparePin(pin: string): Promise<boolean>;
 }

@@ -45,6 +45,8 @@ class ApiConstants {
   static const String sendRegisterOtp = '/auth/send-register-otp';
   static const String forgotPassword = '/auth/forgot-password';
   static const String resetPassword = '/auth/reset-password';
+  static const String saveCard = '/auth/save-card';
+  static const String deleteCard = '/auth/delete-card';
   
   static const String deposit = '/payments/deposit';
   static const String checkout = '/payments/checkout';

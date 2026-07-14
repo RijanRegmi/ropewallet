@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:ropewallet/features/auth/providers/auth_provider.dart';
 import 'settings_page.dart';
+import 'saved_card_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -248,6 +249,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final email = user['email'] ?? '';
     final phone = user['phoneNumber'] ?? '';
     final profileImage = user['profileImage'] ?? '';
+    final savedCard = user['savedCard'];
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC),
@@ -396,6 +398,51 @@ class _ProfilePageState extends State<ProfilePage> {
                     isDark,
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Settings section
+            const Text(
+              'Settings & Security',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                ),
+              ),
+              child: ListTile(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SavedCardPage()),
+                  );
+                },
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4F46E5).withOpacity(0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.credit_card_rounded, color: Color(0xFF4F46E5), size: 20),
+                ),
+                title: const Text('Saved Payment Card', style: TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(
+                  savedCard != null && savedCard['last4'] != null
+                      ? '${savedCard['cardBrand'] ?? 'Debit Card'} ending in ${savedCard['last4']}'
+                      : 'None saved',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
               ),
             ),
           ],

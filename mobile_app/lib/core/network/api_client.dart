@@ -55,4 +55,19 @@ class ApiClient {
       throw Exception('Connection failed: Check if server is running ($e)');
     }
   }
+
+  Future<http.Response> delete(String endpoint) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    final headers = await _getHeaders();
+
+    try {
+      final response = await http.delete(
+        url,
+        headers: headers,
+      );
+      return response;
+    } catch (e) {
+      throw Exception('Connection failed: Check if server is running ($e)');
+    }
+  }
 }
