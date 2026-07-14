@@ -1467,8 +1467,8 @@ export class AdminController {
             ? '<span class="badge badge-danger">Frozen</span>'
             : '<span class="badge badge-success">Active</span>';
           const freezeBtn = u.isFrozen
-            ? '<button class="btn btn-sm btn-success" onclick="toggleFreeze(\'' + u._id + '\', false)">Unfreeze</button>'
-            : '<button class="btn btn-sm btn-ghost" onclick="toggleFreeze(\'' + u._id + '\', true)">Freeze</button>';
+            ? '<button class="btn btn-sm btn-success" onclick="toggleFreeze(\\'' + u._id + '\\', false)">Unfreeze</button>'
+            : '<button class="btn btn-sm btn-ghost" onclick="toggleFreeze(\\'' + u._id + '\\', true)">Freeze</button>';
 
           const roleBadge = u.role === 'superadmin'
             ? '<span class="badge badge-danger">Superadmin</span>'
@@ -1479,8 +1479,8 @@ export class AdminController {
           const roleToggleBtn = u.role === 'superadmin'
             ? ''
             : u.role === 'admin'
-              ? '<button class="btn btn-sm btn-ghost" onclick="toggleRole(\'' + u._id + '\', \'user\')">Demote</button>'
-              : '<button class="btn btn-sm btn-primary" onclick="toggleRole(\'' + u._id + '\', \'admin\')">Make Admin</button>';
+              ? '<button class="btn btn-sm btn-ghost" onclick="toggleRole(\\'' + u._id + '\\', \\'user\\')">Demote</button>'
+              : '<button class="btn btn-sm btn-primary" onclick="toggleRole(\\'' + u._id + '\\', \\'admin\\')">Make Admin</button>';
 
           tbody.innerHTML += '<tr>' +
             '<td><strong>' + (u.fullName || u.firstName + ' ' + u.lastName) + '</strong></td>' +
@@ -1491,10 +1491,10 @@ export class AdminController {
             '<td>' + roleBadge + '</td>' +
             '<td>' + new Date(u.createdAt).toLocaleDateString() + '</td>' +
             '<td style="display:flex;gap:6px;">' +
-              '<button class="btn btn-sm btn-primary" onclick="openEditModal(\'' + u._id + '\')">Edit</button>' +
+              '<button class="btn btn-sm btn-primary" onclick="openEditModal(\\'' + u._id + '\\')">Edit</button>' +
               roleToggleBtn +
               freezeBtn +
-              '<button class="btn btn-sm btn-danger" onclick="deleteUser(\'' + u._id + '\')">Delete</button>' +
+              '<button class="btn btn-sm btn-danger" onclick="deleteUser(\\'' + u._id + '\\')">Delete</button>' +
             '</td>' +
           '</tr>';
         });
