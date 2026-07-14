@@ -5,7 +5,7 @@
  * Creates the default superadmin account if it doesn't exist.
  */
 import { connectDB } from '../config/db.js';
-import { Admin } from '../models/admin.model.js';
+import { User } from '../models/user.model.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -14,18 +14,22 @@ async function seedAdmin() {
   try {
     await connectDB();
 
-    const existing = await Admin.findOne({ email: 'admin@ropewallet.com' });
+    const existing = await User.findOne({ email: 'admin@ropewallet.com' });
     if (existing) {
       console.log('✅ Admin account already exists:', existing.email);
       process.exit(0);
     }
 
-    const admin = await Admin.create({
+    const admin = await User.create({
+      firstName: 'RopeWallet',
+      lastName: 'Admin',
+      userTag: 'admin',
       email: 'admin@ropewallet.com',
       password: 'RopeAdmin@2024',
-      fullName: 'RopeWallet Admin',
+      phoneNumber: '0000000000',
+      qrCodeData: 'admin-qr',
       role: 'superadmin',
-      isActive: true,
+      isFrozen: false,
     });
 
     console.log('✅ Superadmin created successfully!');

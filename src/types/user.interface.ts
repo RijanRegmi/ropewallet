@@ -16,6 +16,7 @@ export interface IUser extends Document {
   isFrozen: boolean;
   frozenAt?: Date;
   frozenBy?: string;  // admin ID who froze the account
+  role: 'user' | 'admin' | 'superadmin';
   createdAt: Date;
   updatedAt: Date;
   savedCard?: {

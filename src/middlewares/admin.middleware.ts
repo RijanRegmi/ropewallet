@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { Admin } from '../models/admin.model.js';
+import { User } from '../models/user.model.js';
 import { CustomError } from './error.middleware.js';
 
 interface AdminJwtPayload {
@@ -41,8 +41,8 @@ export const adminProtect = async (req: Request, res: Response, next: NextFuncti
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as AdminJwtPayload;
 
-    const admin = await Admin.findById(decoded.id);
-    if (!admin || !admin.isActive) {
+    const admin = await User.findOne({ _id: decoded.id, role: { $in: ['admin', 'superadmin'] } });
+    if (!admin || admin.isFrozen) {
       if (req.originalUrl.startsWith('/api')) {
         next(new CustomError('Admin account not found or inactive', 401));
         return;

@@ -21,6 +21,7 @@ router.put('/users/:id', AdminController.editUser);
 router.delete('/users/:id', AdminController.deleteUser);
 router.put('/users/:id/freeze', AdminController.freezeUser);
 router.put('/users/:id/unfreeze', AdminController.unfreezeUser);
+router.put('/users/:id/role', AdminController.updateUserRole);
 
 // Pending Deposits
 router.get('/deposits', AdminController.listPendingDeposits);

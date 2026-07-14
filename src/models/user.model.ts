@@ -112,6 +112,11 @@ const userSchema = new Schema<IUser>(
     frozenBy: {
       type: String, // admin ID
     },
+    role: {
+      type: String,
+      enum: ['user', 'admin', 'superadmin'],
+      default: 'user',
+    },
   },
   {
     timestamps: true,

@@ -21,8 +21,8 @@ export class AdminController {
         return;
       }
 
-      const admin = await Admin.findOne({ email }).select('+password');
-      if (!admin || !admin.isActive) {
+      const admin = await User.findOne({ email, role: { $in: ['admin', 'superadmin'] } }).select('+password');
+      if (!admin || admin.isFrozen) {
         res.status(401).json({ success: false, error: 'Invalid credentials' });
         return;
       }
@@ -32,10 +32,6 @@ export class AdminController {
         res.status(401).json({ success: false, error: 'Invalid credentials' });
         return;
       }
-
-      // Update last login
-      admin.lastLoginAt = new Date();
-      await admin.save({ validateBeforeSave: false });
 
       const token = jwt.sign(
         { id: admin._id, role: admin.role },
@@ -308,6 +304,34 @@ export class AdminController {
       await user.save({ validateBeforeSave: false });
 
       res.json({ success: true, message: `Account for ${user.fullName} has been unfrozen` });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateUserRole(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { role } = req.body;
+      if (!role || !['user', 'admin'].includes(role)) {
+        res.status(400).json({ success: false, error: 'Invalid role. Must be either user or admin' });
+        return;
+      }
+
+      const user = await User.findById(req.params.id);
+      if (!user) {
+        res.status(404).json({ success: false, error: 'User not found' });
+        return;
+      }
+
+      if (user.role === 'superadmin') {
+        res.status(400).json({ success: false, error: 'Cannot change the role of a superadmin' });
+        return;
+      }
+
+      user.role = role;
+      await user.save();
+
+      res.json({ success: true, message: `User role updated to ${role}`, data: { user } });
     } catch (error) {
       next(error);
     }
@@ -994,6 +1018,22 @@ export class AdminController {
       .stats-grid { grid-template-columns: 1fr 1fr; }
     }
   </style>
+  <script>
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'toast toast-' + type;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
+    }
+    async function api(url, method = 'GET', body = null) {
+      const opts = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' };
+      if (body) opts.body = JSON.stringify(body);
+      const res = await fetch(url, opts);
+      return res.json();
+    }
+  </script>
 </head>
 <body>
   <aside class="sidebar">
@@ -1026,22 +1066,6 @@ export class AdminController {
     ${content}
   </main>
   <div class="toast-container" id="toastContainer"></div>
-  <script>
-    function showToast(message, type = 'success') {
-      const container = document.getElementById('toastContainer');
-      const toast = document.createElement('div');
-      toast.className = 'toast toast-' + type;
-      toast.textContent = message;
-      container.appendChild(toast);
-      setTimeout(() => toast.remove(), 4000);
-    }
-    async function api(url, method = 'GET', body = null) {
-      const opts = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' };
-      if (body) opts.body = JSON.stringify(body);
-      const res = await fetch(url, opts);
-      return res.json();
-    }
-  </script>
 </body>
 </html>`;
   }
@@ -1363,6 +1387,7 @@ export class AdminController {
             <th>Tag</th>
             <th>Balance</th>
             <th>Status</th>
+            <th>Role</th>
             <th>Joined</th>
             <th>Actions</th>
           </tr>
@@ -1439,19 +1464,34 @@ export class AdminController {
             ? '<span class="badge badge-danger">Frozen</span>'
             : '<span class="badge badge-success">Active</span>';
           const freezeBtn = u.isFrozen
-            ? '<button class="btn btn-sm btn-success" onclick="toggleFreeze(\\'' + u._id + '\\', false)">Unfreeze</button>'
-            : '<button class="btn btn-sm btn-ghost" onclick="toggleFreeze(\\'' + u._id + '\\', true)">Freeze</button>';
+            ? '<button class="btn btn-sm btn-success" onclick="toggleFreeze(\'' + u._id + '\', false)">Unfreeze</button>'
+            : '<button class="btn btn-sm btn-ghost" onclick="toggleFreeze(\'' + u._id + '\', true)">Freeze</button>';
+
+          const roleBadge = u.role === 'superadmin'
+            ? '<span class="badge badge-danger">Superadmin</span>'
+            : u.role === 'admin'
+              ? '<span class="badge badge-info">Admin</span>'
+              : '<span class="badge badge-neutral">User</span>';
+
+          const roleToggleBtn = u.role === 'superadmin'
+            ? ''
+            : u.role === 'admin'
+              ? '<button class="btn btn-sm btn-ghost" onclick="toggleRole(\'' + u._id + '\', \'user\')">Demote</button>'
+              : '<button class="btn btn-sm btn-primary" onclick="toggleRole(\'' + u._id + '\', \'admin\')">Make Admin</button>';
+
           tbody.innerHTML += '<tr>' +
             '<td><strong>' + (u.fullName || u.firstName + ' ' + u.lastName) + '</strong></td>' +
             '<td>' + u.email + '</td>' +
             '<td>@' + u.userTag + '</td>' +
             '<td>$' + Number(u.walletBalance).toFixed(2) + '</td>' +
             '<td>' + statusBadge + '</td>' +
+            '<td>' + roleBadge + '</td>' +
             '<td>' + new Date(u.createdAt).toLocaleDateString() + '</td>' +
             '<td style="display:flex;gap:6px;">' +
-              '<button class="btn btn-sm btn-primary" onclick="openEditModal(\\'' + u._id + '\\')">Edit</button>' +
+              '<button class="btn btn-sm btn-primary" onclick="openEditModal(\'' + u._id + '\')">Edit</button>' +
+              roleToggleBtn +
               freezeBtn +
-              '<button class="btn btn-sm btn-danger" onclick="deleteUser(\\'' + u._id + '\\')">Delete</button>' +
+              '<button class="btn btn-sm btn-danger" onclick="deleteUser(\'' + u._id + '\')">Delete</button>' +
             '</td>' +
           '</tr>';
         });
@@ -1525,6 +1565,13 @@ export class AdminController {
       async function toggleFreeze(id, freeze) {
         const url = freeze ? '/api/admin/users/' + id + '/freeze' : '/api/admin/users/' + id + '/unfreeze';
         const res = await api(url, 'PUT');
+        showToast(res.success ? res.message : res.error, res.success ? 'success' : 'error');
+        loadUsers(currentPage);
+      }
+
+      async function toggleRole(id, role) {
+        if (!confirm('Change role of this user to ' + role + '?')) return;
+        const res = await api('/api/admin/users/' + id + '/role', 'PUT', { role });
         showToast(res.success ? res.message : res.error, res.success ? 'success' : 'error');
         loadUsers(currentPage);
       }
