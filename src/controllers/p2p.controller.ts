@@ -295,22 +295,34 @@ export class P2PController {
   // ─── Get Receiver Profile by Tag (generates token on the fly) ────
   static async getReceiverProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      let { tag } = req.params;
+      let tag = req.params.tag.trim();
       const { amount, note } = req.query;
 
       if (tag.startsWith('$')) {
         tag = tag.substring(1);
       }
+      if (tag.startsWith('%24')) {
+        tag = tag.substring(3);
+      }
       
-      const user = await User.findOne({ userTag: tag }).select('fullName userTag profileImage');
+      const cleanTag = tag.trim().toLowerCase();
+      const user = await User.findOne({
+        $or: [
+          { userTag: cleanTag },
+          { userTag: tag },
+          { qrCodeData: cleanTag },
+          { qrCodeData: tag }
+        ]
+      }).select('fullName userTag profileImage');
+      
       if (!user) {
-        res.status(404).json({ success: false, error: 'User not found' });
+        res.status(404).json({ success: false, error: 'Recipient not found' });
         return;
       }
 
       // Generate a temporary PaymentRequest token on the fly
       const token = crypto.randomUUID().replace(/-/g, '');
-      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiration
 
       const paymentRequest = await PaymentRequest.create({
         token,
@@ -344,19 +356,32 @@ export class P2PController {
 
     if (!token && to) {
       try {
-        let tag = to as string;
+        let tag = (to as string).trim();
         if (tag.startsWith('$')) {
           tag = tag.substring(1);
         }
-        const user = await User.findOne({ userTag: tag });
+        if (tag.startsWith('%24')) {
+          tag = tag.substring(3);
+        }
+        
+        const cleanTag = tag.trim().toLowerCase();
+        const user = await User.findOne({
+          $or: [
+            { userTag: cleanTag },
+            { userTag: tag },
+            { qrCodeData: cleanTag },
+            { qrCodeData: tag }
+          ]
+        });
+        
         if (!user) {
-          res.status(404).send(P2PController.errorPageHTML('Recipient Not Found', `No user found with tag @${tag}`));
+          res.status(404).send(P2PController.errorPageHTML('Recipient Not Found', `No user found matching "${to}"`));
           return;
         }
 
         // Create temporary token on the fly
         const newToken = crypto.randomUUID().replace(/-/g, '');
-        const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 mins
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiration
 
         await PaymentRequest.create({
           token: newToken,
