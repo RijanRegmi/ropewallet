@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ApiClient } from '@/lib/api';
@@ -7,6 +8,17 @@ import { ApiClient } from '@/lib/api';
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+  useEffect(() => {
+    const checkTheme = () => {
+      const savedTheme = localStorage.getItem('admin-theme') || 'dark';
+      setIsDarkMode(savedTheme === 'dark');
+    };
+    checkTheme();
+    window.addEventListener('theme-change', checkTheme);
+    return () => window.removeEventListener('theme-change', checkTheme);
+  }, []);
 
   const handleLogout = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -27,13 +39,17 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 bg-dark-surface border-r border-dark-border py-6 flex flex-col fixed inset-y-0 left-0 z-50">
+    <aside className={`w-64 border-r py-6 flex flex-col fixed inset-y-0 left-0 z-50 transition-colors duration-200 ${
+      isDarkMode 
+        ? 'bg-[#000000] border-zinc-900 text-white' 
+        : 'bg-[#FFFFFF] border-slate-200 text-black'
+    }`}>
       {/* Sidebar Logo */}
-      <div className="px-6 pb-6 border-b border-dark-border mb-4">
+      <div className={`px-6 pb-6 border-b mb-4 ${isDarkMode ? 'border-zinc-900' : 'border-slate-200'}`}>
         <h1 className="text-xl font-extrabold bg-gradient-to-r from-primary to-primary-hover bg-clip-text text-transparent">
           RopeWallet
         </h1>
-        <span className="text-[10px] text-dark-text-secondary uppercase tracking-[2px] font-bold">
+        <span className={`text-[10px] uppercase tracking-[2px] font-bold ${isDarkMode ? 'text-zinc-500' : 'text-slate-400'}`}>
           Admin Portal
         </span>
       </div>
@@ -48,8 +64,10 @@ export default function Sidebar() {
               href={item.path}
               className={`flex items-center gap-3 px-6 py-3 text-sm font-medium transition-all duration-200 border-l-3 ${
                 isActive
-                  ? 'text-primary bg-primary/8 border-primary'
-                  : 'text-dark-text-secondary hover:text-dark-text hover:bg-dark-surface-2 border-transparent'
+                  ? 'text-primary bg-primary/8 border-primary font-semibold'
+                  : isDarkMode
+                    ? 'text-zinc-400 hover:text-white hover:bg-zinc-900 border-transparent'
+                    : 'text-slate-600 hover:text-black hover:bg-slate-50 border-transparent'
               }`}
             >
               <span className="text-lg w-6 text-center">{item.icon}</span>
@@ -60,10 +78,14 @@ export default function Sidebar() {
       </nav>
 
       {/* Sidebar Footer */}
-      <div className="mt-auto px-6 border-t border-dark-border pt-4">
+      <div className={`mt-auto px-6 border-t pt-4 ${isDarkMode ? 'border-zinc-900' : 'border-slate-200'}`}>
         <button
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-dark-border text-dark-text-secondary hover:text-danger hover:border-danger/30 hover:bg-danger/5 transition-all duration-200 cursor-pointer font-semibold text-sm"
+          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all duration-200 cursor-pointer font-semibold text-sm ${
+            isDarkMode
+              ? 'border-zinc-800 text-zinc-400 hover:text-danger hover:border-danger/30 hover:bg-danger/5'
+              : 'border-slate-200 text-slate-600 hover:text-danger hover:border-danger/30 hover:bg-danger/5'
+          }`}
         >
           Logout
         </button>

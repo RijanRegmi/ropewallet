@@ -58,6 +58,20 @@ export class AdminController {
     res.redirect('/admin');
   }
 
+  static async getCurrentAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const adminId = (req as any).admin.id;
+      const admin = await User.findById(adminId);
+      if (!admin) {
+        res.status(404).json({ success: false, error: 'Admin not found' });
+        return;
+      }
+      res.json({ success: true, admin: { id: admin._id, email: admin.email, fullName: admin.fullName, role: admin.role } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // ─── Dashboard Stats ───────────────────────────────────────────
   static async getDashboard(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -248,7 +262,7 @@ export class AdminController {
 
   static async editUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { firstName, lastName, middleName, email, phoneNumber, walletBalance } = req.body;
+      const { firstName, lastName, middleName, email, phoneNumber, walletBalance, createdAt } = req.body;
 
       const user = await User.findById(req.params.id);
       if (!user) {
@@ -262,6 +276,7 @@ export class AdminController {
       if (email !== undefined) user.email = email;
       if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
       if (walletBalance !== undefined) user.walletBalance = walletBalance;
+      if (createdAt !== undefined) user.createdAt = new Date(createdAt);
 
       await user.save();
 
@@ -326,8 +341,8 @@ export class AdminController {
   static async updateUserRole(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { role } = req.body;
-      if (!role || !['user', 'admin'].includes(role)) {
-        res.status(400).json({ success: false, error: 'Invalid role. Must be either user or admin' });
+      if (!role || !['user', 'admin', 'superadmin'].includes(role)) {
+        res.status(400).json({ success: false, error: 'Invalid role. Must be user, admin or superadmin' });
         return;
       }
 

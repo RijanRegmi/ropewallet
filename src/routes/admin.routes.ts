@@ -10,6 +10,9 @@ router.post('/login', AdminController.login);
 // Protected: All below require admin auth
 router.use(adminProtect);
 
+// Admin Profile
+router.get('/me', AdminController.getCurrentAdmin);
+
 // Dashboard
 router.get('/dashboard-data', AdminController.getDashboard);
 

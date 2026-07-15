@@ -35,7 +35,7 @@ export default function Avatar({ profileImage, fullName, firstName, lastName, si
   if (profileImage && profileImage.trim() !== '') {
     return (
       <div
-        className="rounded-full flex-shrink-0 bg-cover bg-center border border-dark-border"
+        className="rounded-full flex-shrink-0 bg-cover bg-center border border-slate-200 dark:border-zinc-800"
         style={{
           width: `${size}px`,
           height: `${size}px`,
@@ -47,7 +47,7 @@ export default function Avatar({ profileImage, fullName, firstName, lastName, si
 
   return (
     <div
-      className="rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white border border-dark-border"
+      className="rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white border border-slate-200 dark:border-zinc-800"
       style={{
         width: `${size}px`,
         height: `${size}px`,

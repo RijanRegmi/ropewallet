@@ -27,6 +27,31 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
   final _manualInputController = TextEditingController();
   final GlobalKey _qrBoundaryKey = GlobalKey();
   bool _isSavingQr = false;
+  bool _hasScanned = false;
+
+  bool _isValidQrData(String qrCodeData) {
+    final lowerData = qrCodeData.toLowerCase();
+    
+    // Check if it's a valid external transfer QR
+    if (lowerData.contains('cash.app') || 
+        (qrCodeData.startsWith('\$') && (lowerData.contains('/') || lowerData.contains('.')))) {
+      return true;
+    }
+    if (lowerData.contains('venmo.com') || lowerData.startsWith('venmo://')) {
+      return true;
+    }
+    if (lowerData.contains('chime.me') || lowerData.contains('chime.com')) {
+      return true;
+    }
+    
+    // Check if it's a valid domestic (RopeWallet) QR
+    if (qrCodeData == 'admin-qr') {
+      return true;
+    }
+    
+    final domesticRegex = RegExp(r'^\$[a-zA-Z0-9]+$');
+    return domesticRegex.hasMatch(qrCodeData);
+  }
 
   @override
   void initState() {
@@ -122,7 +147,12 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
 
       if (capture != null && capture.barcodes.isNotEmpty) {
         final String? detectedCode = capture.barcodes.first.rawValue;
-        if (detectedCode != null) {
+        if (detectedCode != null && _isValidQrData(detectedCode)) {
+          if (mounted) {
+            setState(() {
+              _hasScanned = true;
+            });
+          }
           _navigateToTransfer(detectedCode);
           return;
         }
@@ -306,9 +336,14 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
                                 MobileScanner(
                                   controller: _cameraController,
                                   onDetect: (BarcodeCapture capture) {
+                                    if (_hasScanned) return;
                                     if (capture.barcodes.isNotEmpty) {
                                       final String? code = capture.barcodes.first.rawValue;
-                                      if (code != null) {
+                                      if (code != null && _isValidQrData(code)) {
+                                        setState(() {
+                                          _hasScanned = true;
+                                        });
+                                        _cameraController.stop();
                                         _navigateToTransfer(code);
                                       }
                                     }
@@ -385,7 +420,19 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
                               onPressed: () {
                                 final qr = _manualInputController.text.trim();
                                 if (qr.isNotEmpty) {
-                                  _navigateToTransfer(qr);
+                                  if (_isValidQrData(qr) || RegExp(r'^[a-zA-Z0-9]+$').hasMatch(qr)) {
+                                    setState(() {
+                                      _hasScanned = true;
+                                    });
+                                    _navigateToTransfer(qr);
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        backgroundColor: Color(0xFFEF4444),
+                                        content: Text('Invalid user tag or wallet address format.'),
+                                      ),
+                                    );
+                                  }
                                 }
                               },
                               style: ElevatedButton.styleFrom(
