@@ -15,15 +15,15 @@ class WithdrawPage extends StatefulWidget {
 
 class _WithdrawPageState extends State<WithdrawPage> {
   final _cardFormKey = GlobalKey<FormState>();
-  final _bankFormKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   
   // Card Form Fields
   final _cardNumberController = TextEditingController();
   final _expiryController = TextEditingController();
   final _cvcController = TextEditingController();
+  final _remarksController = TextEditingController();
 
-  // Additional Billing Fields (Symmetrical to SavedCardPage / DepositPage)
+  // Additional Billing Fields
   final _cardholderController = TextEditingController();
   final _addressController = TextEditingController();
   final _zipController = TextEditingController();
@@ -36,12 +36,13 @@ class _WithdrawPageState extends State<WithdrawPage> {
   bool _isSavingCard = false;
   bool _isInlineEditing = false;
 
-  // Bank Form Fields
-  final _routingController = TextEditingController();
-  final _accountController = TextEditingController();
-  final _holderNameController = TextEditingController();
-  String _selectedBankName = 'Chime';
-  final _remarksController = TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+    _amountController.addListener(() {
+      setState(() {});
+    });
+  }
 
   @override
   void dispose() {
@@ -49,9 +50,6 @@ class _WithdrawPageState extends State<WithdrawPage> {
     _cardNumberController.dispose();
     _expiryController.dispose();
     _cvcController.dispose();
-    _routingController.dispose();
-    _accountController.dispose();
-    _holderNameController.dispose();
     _remarksController.dispose();
     _cardholderController.dispose();
     _addressController.dispose();
@@ -59,40 +57,6 @@ class _WithdrawPageState extends State<WithdrawPage> {
     _invoiceNameController.dispose();
     _taxIdController.dispose();
     super.dispose();
-  }
-
-  bool _isValidLuhn(String cardNumber) {
-    final cleanNumber = cardNumber.replaceAll(' ', '');
-    if (cleanNumber.isEmpty) return false;
-    if (cleanNumber == '4242424242424242') return true;
-
-    int sum = 0;
-    bool alternate = false;
-    for (int i = cleanNumber.length - 1; i >= 0; i--) {
-      int n = int.tryParse(cleanNumber[i]) ?? 0;
-      if (alternate) {
-        n *= 2;
-        if (n > 9) {
-          n = (n % 10) + 1;
-        }
-      }
-      sum += n;
-      alternate = !alternate;
-    }
-    return sum % 10 == 0;
-  }
-
-  String _formatCardNumber(String rawCard) {
-    final text = rawCard.replaceAll(' ', '');
-    final buffer = StringBuffer();
-    for (int i = 0; i < text.length; i++) {
-      buffer.write(text[i]);
-      final nonZeroIndexValue = i + 1;
-      if (nonZeroIndexValue % 4 == 0 && nonZeroIndexValue != text.length) {
-        buffer.write(' ');
-      }
-    }
-    return buffer.toString();
   }
 
   Future<void> _submitWithdrawal(String method) async {
@@ -110,40 +74,25 @@ class _WithdrawPageState extends State<WithdrawPage> {
       );
       return;
     }
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final user = authProvider.user ?? {};
-    final double userBalance = user['walletBalance'] is num 
-        ? (user['walletBalance'] as num).toDouble() 
-        : 0.00;
-    if (amount > userBalance) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Insufficient balance')),
-      );
-      return;
-    }
 
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final savedCard = authProvider.user?['savedCard'];
     final hasSavedCard = savedCard != null && savedCard['cardNumber'] != null && savedCard['cardNumber'].toString().isNotEmpty;
 
     // Validate forms
-    if (method == 'bank') {
-      if (!_bankFormKey.currentState!.validate()) return;
-    } else {
-      final bool needsSaveCard = !hasSavedCard || _isInlineEditing;
-      if (needsSaveCard) {
-        if (!_cardFormKey.currentState!.validate()) return;
-        if (!_agreedToTerms) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please agree to the storage terms to proceed.')),
-          );
-          return;
-        }
-      } else {
-        if (!_cardFormKey.currentState!.validate()) return;
+    final bool needsSaveCard = !hasSavedCard || _isInlineEditing;
+    if (needsSaveCard) {
+      if (!_cardFormKey.currentState!.validate()) return;
+      if (!_agreedToTerms) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please agree to the storage terms to proceed.')),
+        );
+        return;
       }
+    } else {
+      if (!_cardFormKey.currentState!.validate()) return;
     }
-
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
 
     final String? pin = await showModalBottomSheet<String>(
       context: context,
@@ -169,79 +118,60 @@ class _WithdrawPageState extends State<WithdrawPage> {
     String remarksText = '';
     String receiverName = '';
 
-    if (method == 'bank') {
-      final routing = _routingController.text.trim();
-      remarksText = customRemarks.isNotEmpty ? customRemarks : 'Withdrawal to $_selectedBankName Bank Account (routing: ...${routing.length >= 4 ? routing.substring(routing.length - 4) : ''})';
-      receiverName = '$_selectedBankName Bank Account';
+    // Step 1: Save card if needed
+    if (needsSaveCard) {
+      setState(() {
+        _isSavingCard = true;
+      });
 
-      success = await walletProvider.withdraw(
-        amount: amount,
-        method: 'bank',
-        authProvider: authProvider,
-        routingNumber: routing,
-        accountNumber: _accountController.text.trim(),
-        bankName: _selectedBankName,
-        accountHolderName: _holderNameController.text.trim(),
-        pin: pin,
-        remarks: remarksText,
+      final expiryParts = _expiryController.text.split('/');
+      final saveSuccess = await authProvider.saveCard(
+        cardholderName: _cardholderController.text.trim(),
+        cardNumber: _cardNumberController.text.trim(),
+        expMonth: expiryParts[0].trim(),
+        expYear: '20${expiryParts[1].trim()}',
+        cvc: _cvcController.text.trim(),
+        zipCode: _zipController.text.trim(),
+        country: _selectedCountry,
+        addressLine1: _addressController.text.trim(),
+        differentInvoiceName: _differentInvoiceName,
+        invoiceName: _differentInvoiceName ? _invoiceNameController.text.trim() : '',
+        taxId: _taxIdController.text.trim(),
       );
-    } else {
-      // Step 1: Save card if needed
-      final bool needsSaveCard = !hasSavedCard || _isInlineEditing;
-      if (needsSaveCard) {
-        setState(() {
-          _isSavingCard = true;
-        });
 
-        final expiryParts = _expiryController.text.split('/');
-        final saveSuccess = await authProvider.saveCard(
-          cardholderName: _cardholderController.text.trim(),
-          cardNumber: _cardNumberController.text.trim(),
-          expMonth: expiryParts[0].trim(),
-          expYear: '20${expiryParts[1].trim()}',
-          cvc: _cvcController.text.trim(),
-          zipCode: _zipController.text.trim(),
-          country: _selectedCountry,
-          addressLine1: _addressController.text.trim(),
-          differentInvoiceName: _differentInvoiceName,
-          invoiceName: _differentInvoiceName ? _invoiceNameController.text.trim() : '',
-          taxId: _taxIdController.text.trim(),
-        );
-
-        setState(() {
-          _isSavingCard = false;
-          if (saveSuccess) {
-            _isInlineEditing = false;
-          }
-        });
-
-        if (!saveSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFFEF4444),
-              content: Text(authProvider.errorMessage ?? 'Failed to save payment card details'),
-            ),
-          );
-          return;
+      setState(() {
+        _isSavingCard = false;
+        if (saveSuccess) {
+          _isInlineEditing = false;
         }
+      });
+
+      if (!saveSuccess) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            content: Text(authProvider.errorMessage ?? 'Failed to save payment card details'),
+          ),
+        );
+        return;
       }
-
-      // Step 2: Perform Instant Withdrawal using saved card
-      final updatedSavedCard = authProvider.user?['savedCard'];
-      final cardBrand = updatedSavedCard?['cardBrand'] ?? 'Debit Card';
-      final cardLast4 = updatedSavedCard?['last4'] ?? '4242';
-      remarksText = customRemarks.isNotEmpty ? customRemarks : 'Withdrawal to $cardBrand ending in $cardLast4';
-      receiverName = cardBrand;
-
-      success = await walletProvider.withdraw(
-        amount: amount,
-        method: 'card',
-        authProvider: authProvider,
-        pin: pin,
-        remarks: remarksText,
-        useSavedCard: true,
-      );
     }
+
+    // Step 2: Perform Instant Withdrawal using saved card
+    final updatedSavedCard = authProvider.user?['savedCard'];
+    final cardBrand = updatedSavedCard?['cardBrand'] ?? 'Debit Card';
+    final cardLast4 = updatedSavedCard?['last4'] ?? '4242';
+    remarksText = customRemarks.isNotEmpty ? customRemarks : 'Withdrawal to $cardBrand ending in $cardLast4';
+    receiverName = cardBrand;
+
+    success = await walletProvider.withdraw(
+      amount: amount,
+      method: 'card',
+      authProvider: authProvider,
+      pin: pin,
+      remarks: remarksText,
+      useSavedCard: true,
+    );
 
     if (mounted) {
       if (success) {
@@ -249,10 +179,10 @@ class _WithdrawPageState extends State<WithdrawPage> {
           '_id': walletProvider.transactions.isNotEmpty
               ? (walletProvider.transactions.first['_id'] ?? 'TX-${DateTime.now().millisecondsSinceEpoch}')
               : 'TX-${DateTime.now().millisecondsSinceEpoch}',
-          'type': 'transfer',
+          'type': 'withdrawal',
           'amount': amount,
-          'fee': 0.0,
-          'netAmount': amount,
+          'fee': amount * 0.15,
+          'netAmount': amount * 0.85,
           'remarks': remarksText,
           'createdAt': DateTime.now().toIso8601String(),
           'sender': {'fullName': authProvider.user?['fullName'] ?? 'You'},
@@ -295,649 +225,467 @@ class _WithdrawPageState extends State<WithdrawPage> {
     final savedCard = user['savedCard'];
     final hasSavedCard = savedCard != null && savedCard['cardNumber'] != null && savedCard['cardNumber'].toString().isNotEmpty;
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Withdraw Funds'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(icon: Icon(Icons.credit_card_rounded), text: 'Instant Card Payout'),
-              Tab(icon: Icon(Icons.account_balance_rounded), text: 'Bank Account Transfer'),
-            ],
-          ),
-        ),
-        body: Builder(
-          builder: (context) {
-            final tabController = DefaultTabController.of(context);
-            return AnimatedBuilder(
-              animation: tabController,
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Instant Card Payout'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Balance Indicator
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Text('Current Balance: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                    GestureDetector(
+                      onTap: () {
+                        walletProvider.toggleBalanceVisibility();
+                      },
+                      child: Icon(
+                        walletProvider.isBalanceHidden ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                        size: 20,
+                        color: theme.primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  walletProvider.isBalanceHidden ? '\$ ••••••' : '\$${userBalance.toStringAsFixed(2)}',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Amount Input
+            TextFormField(
+              controller: _amountController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+              ],
+              decoration: InputDecoration(
+                labelText: 'Amount to Cash Out',
+                prefixText: '\$ ',
+                prefixStyle: TextStyle(
+                  color: isDark ? Colors.white : Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Please enter an amount';
+                }
+                final amt = double.tryParse(value);
+                if (amt == null || amt <= 0) {
+                  return 'Please enter a valid amount';
+                }
+                if (amt > userBalance) {
+                  return 'Insufficient balance';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 18),
+
+            // Dynamic Fee Breakdown Card
+            AnimatedBuilder(
+              animation: _amountController,
               builder: (context, _) {
-                final isCardTab = tabController.index == 0;
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(24.0),
+                final text = _amountController.text.trim();
+                final amount = double.tryParse(text) ?? 0.00;
+                final fee = amount * 0.15;
+                final netAmount = amount - fee;
+                
+                if (amount <= 0) return const SizedBox.shrink();
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 24),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Balance Indicator
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
+                          const Text('Withdrawal Amount:', style: TextStyle(color: Colors.grey)),
+                          Text(
+                            '\$${amount.toStringAsFixed(2)}',
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Row(
                             children: [
-                              const Text('Available Balance: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                              GestureDetector(
-                                onTap: () {
-                                  walletProvider.toggleBalanceVisibility();
-                                },
-                                child: Icon(
-                                  walletProvider.isBalanceHidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                                  size: 16,
-                                  color: Colors.grey,
-                                ),
-                              ),
+                              Text('Platform Fee ', style: TextStyle(color: Colors.grey)),
+                              Text('(15% cut)', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 12)),
+                              Text(':', style: TextStyle(color: Colors.grey)),
                             ],
                           ),
                           Text(
-                            walletProvider.isBalanceHidden ? '\$xxxx.xx' : '\$${userBalance.toStringAsFixed(2)}',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: theme.primaryColor),
+                            '-\$${fee.toStringAsFixed(2)}',
+                            style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 18),
-
-                      // Amount Input
-                      TextFormField(
-                        controller: _amountController,
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
-                        ],
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                        decoration: InputDecoration(
-                          labelText: 'Withdrawal Amount (USD)',
-                          prefixIcon: const Icon(Icons.attach_money_rounded, size: 28),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter an amount';
-                          }
-                          final amount = double.tryParse(value);
-                          if (amount == null || amount <= 0) {
-                            return 'Please enter a valid positive amount';
-                          }
-                          if (amount > userBalance) {
-                            return 'Insufficient balance';
-                          }
-                          return null;
-                        },
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12.0),
+                        child: Divider(color: Colors.transparent, height: 1),
                       ),
-                      const SizedBox(height: 24),
-
-                      // Dynamic Tab Content rendered Inline to prevent nested scroll views
-                      if (isCardTab)
-                        Form(
-                          key: _cardFormKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (!hasSavedCard || _isInlineEditing) ...[
-                                // Symmetrical saved card form
-                                const Text('Payment method', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 12),
-                                const Text('Full name', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                                const SizedBox(height: 6),
-                                TextFormField(
-                                  controller: _cardholderController,
-                                  textCapitalization: TextCapitalization.words,
-                                  decoration: InputDecoration(
-                                    hintText: 'Rijan Regmi',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                  ),
-                                  validator: (value) {
-                                    if (hasSavedCard && !_isInlineEditing) return null;
-                                    if (value == null || value.trim().isEmpty) return 'Full name is required';
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 14),
-
-                                const Text('Country or region', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                                const SizedBox(height: 6),
-                                DropdownButtonFormField<String>(
-                                  value: _selectedCountry,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                  ),
-                                  items: ['United States', 'Canada', 'United Kingdom'].map((country) {
-                                    return DropdownMenuItem<String>(
-                                      value: country,
-                                      child: Text(country),
-                                    );
-                                  }).toList(),
-                                  onChanged: (val) {
-                                    if (val != null) {
-                                      setState(() {
-                                        _selectedCountry = val;
-                                      });
-                                    }
-                                  },
-                                ),
-                                const SizedBox(height: 14),
-
-                                const Text('Address line 1', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                                const SizedBox(height: 6),
-                                TextFormField(
-                                  controller: _addressController,
-                                  textCapitalization: TextCapitalization.words,
-                                  decoration: InputDecoration(
-                                    hintText: 'Street address, P.O. box',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                  ),
-                                  validator: (value) {
-                                    if (hasSavedCard && !_isInlineEditing) return null;
-                                    if (value == null || value.trim().isEmpty) return 'Address is required';
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 14),
-
-                                const Text('Billing Zip / Postal Code', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                                const SizedBox(height: 6),
-                                TextFormField(
-                                  controller: _zipController,
-                                  textCapitalization: TextCapitalization.characters,
-                                  decoration: InputDecoration(
-                                    hintText: 'e.g. 90210',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                  ),
-                                  validator: (value) {
-                                    if (hasSavedCard && !_isInlineEditing) return null;
-                                    if (value == null || value.trim().isEmpty) return 'Zip code is required';
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 14),
-
-                                const Text('Card number', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                                const SizedBox(height: 6),
-                                TextFormField(
-                                  controller: _cardNumberController,
-                                  keyboardType: TextInputType.number,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.allow(RegExp(r'[0-9 ]')),
-                                    LengthLimitingTextInputFormatter(19),
-                                    CardNumberFormatter(),
-                                  ],
-                                  decoration: InputDecoration(
-                                    hintText: '1234 5678 1234 5678',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                    suffixIcon: Container(
-                                      width: 120,
-                                      padding: const EdgeInsets.only(right: 8.0),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.end,
-                                        children: [
-                                          Image.network('https://img.icons8.com/color/48/000000/visa.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('Visa')),
-                                          const SizedBox(width: 3),
-                                          Image.network('https://img.icons8.com/color/48/000000/mastercard.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('MC')),
-                                          const SizedBox(width: 3),
-                                          Image.network('https://img.icons8.com/color/48/000000/amex.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('Amex')),
-                                          const SizedBox(width: 3),
-                                          Image.network('https://img.icons8.com/color/48/000000/discover.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('Disc')),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  validator: (value) {
-                                    if (hasSavedCard && !_isInlineEditing) return null;
-                                    if (value == null || value.trim().isEmpty) return 'Card number is required';
-                                    if (!_isValidLuhn(value)) return 'Invalid card format';
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 14),
-
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Text('Expiration date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                                          const SizedBox(height: 6),
-                                          TextFormField(
-                                            controller: _expiryController,
-                                            keyboardType: TextInputType.number,
-                                            inputFormatters: [
-                                              FilteringTextInputFormatter.allow(RegExp(r'[0-9/]')),
-                                              LengthLimitingTextInputFormatter(5),
-                                              CardExpiryFormatter(),
-                                            ],
-                                            decoration: InputDecoration(
-                                              hintText: 'MM / YY',
-                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                            ),
-                                            validator: (value) {
-                                              if (hasSavedCard && !_isInlineEditing) return null;
-                                              if (value == null || value.trim().isEmpty) return 'Required';
-                                              final parts = value.split('/');
-                                              if (parts.length != 2) return 'MM/YY';
-                                              final month = int.tryParse(parts[0]);
-                                              if (month == null || month < 1 || month > 12) return '1-12';
-                                              return null;
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 14),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Text('Security code', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                                          const SizedBox(height: 6),
-                                          TextFormField(
-                                            controller: _cvcController,
-                                            keyboardType: TextInputType.number,
-                                            obscureText: true,
-                                            inputFormatters: [
-                                              FilteringTextInputFormatter.digitsOnly,
-                                              LengthLimitingTextInputFormatter(4),
-                                            ],
-                                            decoration: InputDecoration(
-                                              hintText: 'CVC',
-                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                              suffixIcon: const Icon(Icons.lock_rounded, size: 16),
-                                            ),
-                                            validator: (value) {
-                                              if (hasSavedCard && !_isInlineEditing) return null;
-                                              if (value == null || value.trim().length < 3) return 'Required';
-                                              return null;
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 14),
-
-                                Row(
-                                  children: [
-                                    Checkbox(
-                                      value: _differentInvoiceName,
-                                      onChanged: (val) {
-                                        setState(() {
-                                          _differentInvoiceName = val ?? false;
-                                        });
-                                      },
-                                    ),
-                                    const Text('Use a different name on invoices', style: TextStyle(fontSize: 12)),
-                                  ],
-                                ),
-                                if (_differentInvoiceName) ...[
-                                  const SizedBox(height: 6),
-                                  TextFormField(
-                                    controller: _invoiceNameController,
-                                    textCapitalization: TextCapitalization.words,
-                                    decoration: InputDecoration(
-                                      hintText: 'Invoice name (e.g. Business Name)',
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                    ),
-                                    validator: (value) {
-                                      if (hasSavedCard && !_isInlineEditing) return null;
-                                      if (_differentInvoiceName && (value == null || value.trim().isEmpty)) return 'Invoice name required';
-                                      return null;
-                                    },
-                                  ),
-                                ],
-                                const SizedBox(height: 14),
-
-                                const Text('Business tax ID (Optional)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'If you provide a tax ID, the "Full name" above should be your business\'s name.',
-                                  style: TextStyle(color: Colors.grey[600], fontSize: 11),
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    const SizedBox(
-                                      width: 110,
-                                      child: Text('US SSN / EIN', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                                    ),
-                                    Expanded(
-                                      child: TextFormField(
-                                        controller: _taxIdController,
-                                        keyboardType: TextInputType.text,
-                                        decoration: InputDecoration(
-                                          hintText: '12-3456789',
-                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 18),
-
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Checkbox(
-                                      value: _agreedToTerms,
-                                      onChanged: (val) {
-                                        setState(() {
-                                          _agreedToTerms = val ?? false;
-                                        });
-                                      },
-                                    ),
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(top: 8.0),
-                                        child: Text(
-                                          'You agree that RopeWallet will securely store and verify this payment card for deposit and withdrawal purposes under our user terms.',
-                                          style: TextStyle(color: Colors.grey[600], fontSize: 11, height: 1.4),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 24),
-
-                                if (_isInlineEditing) ...[
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: OutlinedButton(
-                                          onPressed: () {
-                                            setState(() {
-                                              _isInlineEditing = false;
-                                            });
-                                          },
-                                          style: OutlinedButton.styleFrom(
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                            padding: const EdgeInsets.symmetric(vertical: 16),
-                                          ),
-                                          child: const Text('Cancel Edit'),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        flex: 2,
-                                        child: ElevatedButton(
-                                          onPressed: _isSavingCard ? null : () => _submitWithdrawal('card'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: theme.primaryColor,
-                                            foregroundColor: Colors.white,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                            padding: const EdgeInsets.symmetric(vertical: 16),
-                                          ),
-                                          child: _isSavingCard
-                                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                              : const Text('Update Saved Card', style: TextStyle(fontWeight: FontWeight.bold)),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ] else ...[
-                                  SizedBox(
-                                    width: double.infinity,
-                                    height: 52,
-                                    child: ElevatedButton(
-                                      onPressed: _isSavingCard ? null : () => _submitWithdrawal('card'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: theme.primaryColor,
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                      ),
-                                      child: _isSavingCard
-                                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                          : const Text('Confirm & Save Card', style: TextStyle(fontWeight: FontWeight.bold)),
-                                    ),
-                                  ),
-                                ],
-                              ] else ...[
-                                // Collapsed saved card details
-                                Container(
-                                  padding: const EdgeInsets.all(18),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        theme.primaryColor.withOpacity(0.85),
-                                        theme.primaryColor.withBlue(220).withOpacity(0.85),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.credit_card_rounded, color: Colors.white, size: 28),
-                                      const SizedBox(width: 14),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              savedCard['cardBrand'] ?? 'Saved Card',
-                                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              '•••• •••• •••• ${savedCard['last4']}',
-                                              style: const TextStyle(color: Colors.white70, fontSize: 12, letterSpacing: 1.0),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          setState(() {
-                                            _isInlineEditing = true;
-                                            _cardholderController.text = savedCard['cardholderName'] ?? '';
-                                            _cardNumberController.text = _formatCardNumber(savedCard['cardNumber'] ?? '');
-                                            _expiryController.text = '${savedCard['expMonth']}/${(savedCard['expYear'] ?? '').toString().substring(2)}';
-                                            _cvcController.text = savedCard['cvc'] ?? '';
-                                            _zipController.text = savedCard['zipCode'] ?? '';
-                                            _selectedCountry = savedCard['country'] ?? 'United States';
-                                            _addressController.text = savedCard['addressLine1'] ?? '';
-                                            _differentInvoiceName = savedCard['differentInvoiceName'] ?? false;
-                                            _invoiceNameController.text = savedCard['invoiceName'] ?? '';
-                                            _taxIdController.text = savedCard['taxId'] ?? '';
-                                            _agreedToTerms = true;
-                                          });
-                                        },
-                                        child: const Text('Edit', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 18),
-
-                                TextFormField(
-                                  controller: _remarksController,
-                                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                                  textCapitalization: TextCapitalization.sentences,
-                                  decoration: InputDecoration(
-                                    labelText: 'Remarks',
-                                    prefixIcon: const Icon(Icons.edit_note_rounded, size: 24),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                                    hintText: 'e.g. Cash out to card',
-                                  ),
-                                  validator: (value) {
-                                    if (value == null || value.trim().isEmpty) {
-                                      return 'Remarks are required';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 28),
-
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 52,
-                                  child: ElevatedButton(
-                                    onPressed: walletProvider.isLoading ? null : () => _submitWithdrawal('card'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: theme.primaryColor,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    ),
-                                    child: walletProvider.isLoading
-                                        ? const CircularProgressIndicator(color: Colors.white)
-                                        : const Text('Confirm Instant Card Cash Out', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  ),
-                                ),
-                              ],
-                            ],
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('You Will Receive (Net):', style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text(
+                            '\$${(netAmount < 0 ? 0.00 : netAmount).toStringAsFixed(2)}',
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
                           ),
-                        )
-                      else
-                        Form(
-                          key: _bankFormKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Bank Routing & Account Details:',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                              ),
-                              const SizedBox(height: 16),
-                              DropdownButtonFormField<String>(
-                                value: _selectedBankName,
-                                decoration: InputDecoration(
-                                  labelText: 'Select Bank',
-                                  prefixIcon: const Icon(Icons.business_rounded),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                                ),
-                                items: ['Chime', 'Venmo', 'Chase', 'Wells Fargo', 'Bank of America', 'PNC Bank']
-                                    .map((bank) => DropdownMenuItem(value: bank, child: Text(bank)))
-                                    .toList(),
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setState(() {
-                                      _selectedBankName = val;
-                                    });
-                                  }
-                                },
-                              ),
-                              const SizedBox(height: 18),
-                              TextFormField(
-                                controller: _holderNameController,
-                                autovalidateMode: AutovalidateMode.onUserInteraction,
-                                textCapitalization: TextCapitalization.words,
-                                decoration: InputDecoration(
-                                  labelText: 'Account Holder Name',
-                                  prefixIcon: const Icon(Icons.person_outline_rounded),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                                  hintText: 'John Doe',
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return 'Account holder name is required';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 18),
-                              TextFormField(
-                                controller: _routingController,
-                                autovalidateMode: AutovalidateMode.onUserInteraction,
-                                keyboardType: TextInputType.number,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
-                                  LengthLimitingTextInputFormatter(9),
-                                ],
-                                decoration: InputDecoration(
-                                  labelText: 'Routing Number',
-                                  prefixIcon: const Icon(Icons.tag_rounded),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                                  hintText: '9-digit routing number',
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.trim().length != 9) {
-                                    return 'Please enter valid 9-digit routing number';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 18),
-                              TextFormField(
-                                controller: _accountController,
-                                autovalidateMode: AutovalidateMode.onUserInteraction,
-                                keyboardType: TextInputType.number,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
-                                  LengthLimitingTextInputFormatter(17),
-                                ],
-                                decoration: InputDecoration(
-                                  labelText: 'Account Number',
-                                  prefixIcon: const Icon(Icons.account_balance_wallet_rounded),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                                  hintText: 'Account number',
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.trim().length < 4) {
-                                    return 'Please enter valid account number';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 18),
-                              TextFormField(
-                                controller: _remarksController,
-                                autovalidateMode: AutovalidateMode.onUserInteraction,
-                                textCapitalization: TextCapitalization.sentences,
-                                decoration: InputDecoration(
-                                  labelText: 'Remarks',
-                                  prefixIcon: const Icon(Icons.edit_note_rounded, size: 24),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                                  hintText: 'e.g. Cash out to bank',
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return 'Remarks are required';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 36),
-                              SizedBox(
-                                width: double.infinity,
-                                height: 54,
-                                child: ElevatedButton(
-                                  onPressed: walletProvider.isLoading ? null : () => _submitWithdrawal('bank'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: theme.primaryColor,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                  ),
-                                  child: walletProvider.isLoading
-                                      ? const CircularProgressIndicator(color: Colors.white)
-                                      : const Text('Confirm Instant Bank Payout', style: TextStyle(fontWeight: FontWeight.bold)),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        ],
+                      ),
                     ],
                   ),
                 );
               },
-            );
-          },
+            ),
+            const SizedBox(height: 24),
+
+            // Card Form
+            Form(
+              key: _cardFormKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (hasSavedCard && !_isInlineEditing) ...[
+                    // Collapsed saved card details
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            theme.primaryColor.withOpacity(0.85),
+                            theme.primaryColor.withBlue(220).withOpacity(0.85),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.credit_card_rounded, color: Colors.white, size: 28),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${savedCard['cardBrand']?.toUpperCase() ?? 'DEBIT CARD'}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '•••• •••• •••• ${savedCard['last4'] ?? '4242'}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                _isInlineEditing = true;
+                              });
+                            },
+                            child: const Text('Change', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    // Card Form Inputs
+                    if (hasSavedCard) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Enter New Card Details:', style: TextStyle(fontWeight: FontWeight.bold)),
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                _isInlineEditing = false;
+                              });
+                            },
+                            child: const Text('Use Saved Card'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+
+                    TextFormField(
+                      controller: _cardholderController,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: InputDecoration(
+                        labelText: 'Cardholder Name',
+                        prefixIcon: const Icon(Icons.person_outline_rounded),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Cardholder name is required';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 14),
+
+                    TextFormField(
+                      controller: _cardNumberController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        CardNumberFormatter(),
+                        LengthLimitingTextInputFormatter(19),
+                      ],
+                      decoration: InputDecoration(
+                        labelText: 'Card Number',
+                        prefixIcon: const Icon(Icons.credit_card_rounded),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Card number is required';
+                        }
+                        final clean = value.replaceAll(' ', '');
+                        if (clean.length < 15 || clean.length > 16) {
+                          return 'Please enter a valid card number';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 14),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _expiryController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              CardExpiryFormatter(),
+                              LengthLimitingTextInputFormatter(5),
+                            ],
+                            decoration: InputDecoration(
+                              labelText: 'Expiry Date',
+                              hintText: 'MM/YY',
+                              prefixIcon: const Icon(Icons.calendar_month_outlined),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Expiry required';
+                              }
+                              if (!value.contains('/') || value.length != 5) {
+                                return 'Invalid expiry';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _cvcController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(4),
+                            ],
+                            decoration: InputDecoration(
+                              labelText: 'CVC / CVV',
+                              prefixIcon: const Icon(Icons.lock_outline_rounded),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.length < 3) {
+                                return 'Invalid CVC';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+
+                    TextFormField(
+                      controller: _addressController,
+                      decoration: InputDecoration(
+                        labelText: 'Billing Address Line 1',
+                        prefixIcon: const Icon(Icons.location_on_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Billing address is required';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 14),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _zipController,
+                            decoration: InputDecoration(
+                              labelText: 'Zip / Postal Code',
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'ZIP is required';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _selectedCountry,
+                                isExpanded: true,
+                                items: ['United States', 'Canada', 'United Kingdom']
+                                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                                    .toList(),
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setState(() {
+                                      _selectedCountry = val;
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+
+                    SwitchListTile(
+                      title: const Text('Different Invoice Name?', style: TextStyle(fontSize: 14)),
+                      value: _differentInvoiceName,
+                      onChanged: (val) {
+                        setState(() {
+                          _differentInvoiceName = val;
+                        });
+                      },
+                    ),
+                    if (_differentInvoiceName) ...[
+                      const SizedBox(height: 10),
+                      TextFormField(
+                        controller: _invoiceNameController,
+                        decoration: InputDecoration(
+                          labelText: 'Invoice Legal Name',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Invoice name is required';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                    const SizedBox(height: 14),
+
+                    TextFormField(
+                      controller: _taxIdController,
+                      decoration: InputDecoration(
+                        labelText: 'Tax ID / SSN (Optional)',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    CheckboxListTile(
+                      title: const Text(
+                        'I agree to save this card details securely for future instant transfers.',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      value: _agreedToTerms,
+                      onChanged: (val) {
+                        setState(() {
+                          _agreedToTerms = val ?? false;
+                        });
+                      },
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                  ],
+
+                  const SizedBox(height: 18),
+                  TextFormField(
+                    controller: _remarksController,
+                    decoration: InputDecoration(
+                      labelText: 'Remarks',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: (_isSavingCard || walletProvider.isLoading) ? null : () => _submitWithdrawal('card'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.primaryColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: (_isSavingCard || walletProvider.isLoading)
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text('Confirm Instant Card Cash Out', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

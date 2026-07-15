@@ -174,18 +174,13 @@ export class PaymentController {
         }
       }
 
-      if (sender.walletBalance < amount) {
-        res.status(400).json({ success: false, error: `Insufficient funds. Your balance is $${sender.walletBalance.toFixed(2)}` });
-        return;
-      }
-
       let receiver = await User.findOne({ qrCodeData: receiverQrData });
       if (!receiver) {
         const cleanTag = receiverQrData.trim().toLowerCase();
         const tagToSearch = cleanTag.startsWith('$') ? cleanTag : `$${cleanTag}`;
         receiver = await User.findOne({ userTag: tagToSearch });
       }
-      
+
       if (!receiver) {
         res.status(404).json({ success: false, error: 'Recipient wallet or tag not found' });
         return;
@@ -196,17 +191,22 @@ export class PaymentController {
         return;
       }
 
-      // Calculate 15% fee cut
+      // Calculate 15% fee on top of transfer amount
       const fee = Number((amount * 0.15).toFixed(2));
-      const netAmount = Number((amount - fee).toFixed(2));
+      const totalCost = Number((amount + fee).toFixed(2));
+
+      if (sender.walletBalance < totalCost) {
+        res.status(400).json({ success: false, error: `Insufficient funds. Total cost with 15% platform fee is $${totalCost.toFixed(2)}` });
+        return;
+      }
 
       // Perform transfer atomically (rollback on failure)
       const originalSenderBalance = sender.walletBalance;
       const originalReceiverBalance = receiver.walletBalance;
 
       try {
-        sender.walletBalance = Number((sender.walletBalance - amount).toFixed(2));
-        receiver.walletBalance = Number((receiver.walletBalance + netAmount).toFixed(2));
+        sender.walletBalance = Number((sender.walletBalance - totalCost).toFixed(2));
+        receiver.walletBalance = Number((receiver.walletBalance + amount).toFixed(2));
 
         await sender.save();
         await receiver.save();
@@ -230,15 +230,17 @@ export class PaymentController {
         sender: sender._id,
         receiver: receiver._id,
         type: 'transfer',
-        amount: amount,
+        amount: totalCost,
         fee: fee,
-        netAmount: netAmount,
+        netAmount: amount,
+        platformFee: fee,
+        netProfit: fee,
         remarks: remarks || undefined,
       });
 
       res.status(200).json({
         success: true,
-        message: `Successfully sent $${amount.toFixed(2)} ($${netAmount.toFixed(2)} received after 15% platform fee)`,
+        message: `Successfully sent $${amount.toFixed(2)} ($${totalCost.toFixed(2)} total cost with 15% platform fee)`,
         data: {
           walletBalance: sender.walletBalance,
           transaction,
@@ -321,7 +323,7 @@ export class PaymentController {
 
   static async withdraw(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { amount, method, cardNumber, expMonth, expYear, cvc, routingNumber, accountNumber, bankName, accountHolderName, remarks } = req.body;
+      const { amount, method, cardNumber, expMonth, expYear, cvc, routingNumber, accountNumber, bankName, accountHolderName, usdtAddress, remarks } = req.body;
       const userId = (req as any).user?.id;
 
       if (!amount || amount <= 0) {
@@ -353,6 +355,10 @@ export class PaymentController {
         return;
       }
 
+      // Calculate 15% platform fee cut for withdrawals
+      const fee = Number((amount * 0.15).toFixed(2));
+      const netAmount = Number((amount - fee).toFixed(2));
+
       let stripeTokenId = '';
       let remarksText = '';
 
@@ -382,7 +388,7 @@ export class PaymentController {
             res.status(400).json({ success: false, error: 'Please provide routing number, account number, and account holder name' });
             return;
           }
-          remarksText = `Withdrawal to ${bankName || 'Chime'} Bank Account (routing: ...${routingNumber.slice(-4)})`;
+          remarksText = `Withdrawal of $${amount.toFixed(2)} ($${netAmount.toFixed(2)} received) to ${bankName || 'Chime'} Bank Account (routing: ...${routingNumber.slice(-4)})`;
         }
 
         // 1. Tokenize bank details via Stripe
@@ -402,6 +408,12 @@ export class PaymentController {
           res.status(400).json({ success: false, error: `Bank Verification Failed: ${stripeError.message}` });
           return;
         }
+      } else if (method === 'usdt') {
+        if (!usdtAddress || !usdtAddress.trim()) {
+          res.status(400).json({ success: false, error: 'Please provide a valid USDT wallet address' });
+          return;
+        }
+        remarksText = `USDT Withdrawal of $${amount.toFixed(2)} ($${netAmount.toFixed(2)} received) to address ${usdtAddress}`;
       } else {
         // Default to card withdrawal
         let finalCardNumber = cardNumber;
@@ -430,7 +442,7 @@ export class PaymentController {
         const cleanCard = finalCardNumber.replaceAll(' ', '');
         if (cleanCard === '4242424242424242') {
           stripeTokenId = 'tok_visa';
-          remarksText = remarks ? remarks.trim() : `Withdrawal to ${req.body.useSavedCard ? finalCardBrand : 'Chime Card'} ending in 4242`;
+          remarksText = remarks ? remarks.trim() : `Withdrawal of $${amount.toFixed(2)} ($${netAmount.toFixed(2)} received) to ${req.body.useSavedCard ? finalCardBrand : 'Chime Card'} ending in 4242`;
         } else {
           // 1. Tokenize card details via Stripe
           try {
@@ -443,7 +455,7 @@ export class PaymentController {
               },
             });
             stripeTokenId = token.id;
-            remarksText = remarks ? remarks.trim() : `Withdrawal to ${req.body.useSavedCard ? finalCardBrand : 'Card'} ending in ${token.card?.last4}`;
+            remarksText = remarks ? remarks.trim() : `Withdrawal of $${amount.toFixed(2)} ($${netAmount.toFixed(2)} received) to ${req.body.useSavedCard ? finalCardBrand : 'Card'} ending in ${token.card?.last4}`;
           } catch (stripeError: any) {
             res.status(400).json({ success: false, error: `Stripe Card Verification Failed: ${stripeError.message}` });
             return;
@@ -451,19 +463,24 @@ export class PaymentController {
         }
       }
 
-      // 2. Attempt real Stripe Payout
-      let stripePayoutId = 'simulated_payout_' + Math.random().toString(36).substr(2, 9);
-      try {
-        // Standard Stripe accounts require Connect for payouts.
-        // We attempt it, but if it throws an account permission error, we simulate success for testing.
-        const payout = await stripe.payouts.create({
-          amount: Math.round(amount * 100),
-          currency: 'usd',
-          method: 'instant',
-        });
-        stripePayoutId = payout.id;
-      } catch (payoutError: any) {
-        console.warn('Real Stripe Payout failed (expected in test mode without Connect):', payoutError.message);
+      // 2. Attempt Stripe Payout (or simulate USDT withdrawal)
+      let stripePayoutId = '';
+      if (method === 'usdt') {
+        stripePayoutId = 'usdt_tx_' + Math.random().toString(36).substr(2, 9);
+      } else {
+        stripePayoutId = 'simulated_payout_' + Math.random().toString(36).substr(2, 9);
+        try {
+          // Standard Stripe accounts require Connect for payouts.
+          // We attempt it, but if it throws an account permission error, we simulate success for testing.
+          const payout = await stripe.payouts.create({
+            amount: Math.round(netAmount * 100), // payout netAmount, not the full amount!
+            currency: 'usd',
+            method: 'instant',
+          });
+          stripePayoutId = payout.id;
+        } catch (payoutError: any) {
+          console.warn('Real Stripe Payout failed (expected in test mode without Connect):', payoutError.message);
+        }
       }
 
       // 3. Deduct balance and save
@@ -474,17 +491,19 @@ export class PaymentController {
       const transaction = await Transaction.create({
         sender: user._id,
         receiver: user._id,
-        type: 'transfer',
+        type: 'withdrawal',
         amount: amount,
-        fee: 0,
-        netAmount: amount,
+        fee: fee,
+        netAmount: netAmount,
+        platformFee: fee,
+        netProfit: fee,
         stripePaymentIntentId: stripePayoutId,
         remarks: remarks ? remarks.trim() : remarksText,
       });
 
       res.status(200).json({
         success: true,
-        message: `Successfully withdrew $${amount.toFixed(2)} to your account`,
+        message: `Successfully withdrew $${amount.toFixed(2)} ($${netAmount.toFixed(2)} received after 15% platform fee)`,
         data: {
           walletBalance: user.walletBalance,
           transaction,

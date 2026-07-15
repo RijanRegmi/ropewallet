@@ -128,10 +128,11 @@ class WalletProvider with ChangeNotifier {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200 && responseData['success'] == true) {
-        // Refresh User profile to get updated balance
-        await authProvider.tryAutoLogin();
-        // Refresh transaction log
-        await fetchTransactions();
+        // Refresh User profile and transaction log concurrently
+        await Future.wait([
+          authProvider.tryAutoLogin(),
+          fetchTransactions(),
+        ]);
         _isLoading = false;
         notifyListeners();
         return true;
@@ -199,6 +200,7 @@ class WalletProvider with ChangeNotifier {
     String? bankName,
     String? accountHolderName,
     String? recipientTag,
+    String? usdtAddress,
     String? pin,
     String? remarks,
     bool useSavedCard = false,
@@ -222,6 +224,7 @@ class WalletProvider with ChangeNotifier {
           'bankName': bankName,
           'accountHolderName': accountHolderName,
           'recipientTag': recipientTag,
+          if (usdtAddress != null) 'usdtAddress': usdtAddress,
           'pin': pin,
           'remarks': remarks,
           'useSavedCard': useSavedCard,
@@ -231,10 +234,11 @@ class WalletProvider with ChangeNotifier {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200 && responseData['success'] == true) {
-        // Refresh User profile to get updated balance
-        await authProvider.tryAutoLogin();
-        // Refresh transaction log
-        await fetchTransactions();
+        // Refresh User profile and transaction log concurrently
+        await Future.wait([
+          authProvider.tryAutoLogin(),
+          fetchTransactions(),
+        ]);
         _isLoading = false;
         notifyListeners();
         return true;
@@ -278,10 +282,11 @@ class WalletProvider with ChangeNotifier {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200 && responseData['success'] == true) {
-        // Refresh User profile to get updated balance
-        await authProvider.tryAutoLogin();
-        // Refresh transaction log
-        await fetchTransactions();
+        // Refresh User profile and transaction log concurrently
+        await Future.wait([
+          authProvider.tryAutoLogin(),
+          fetchTransactions(),
+        ]);
         _isLoading = false;
         notifyListeners();
         return true;

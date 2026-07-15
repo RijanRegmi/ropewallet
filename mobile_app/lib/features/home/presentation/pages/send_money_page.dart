@@ -87,9 +87,9 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
             ? walletProvider.transactions.first
             : {
                 'type': 'transfer',
-                'amount': _amount,
+                'amount': _amount * 1.15,
                 'fee': _amount * 0.15,
-                'netAmount': _amount * 0.85,
+                'netAmount': _amount,
                 'remarks': remarks,
                 'createdAt': DateTime.now().toIso8601String(),
                 'sender': {'fullName': authProvider.user?['fullName'] ?? 'You'},
@@ -248,8 +248,9 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                   if (amount == null || amount <= 0) {
                     return 'Please enter a valid amount';
                   }
-                  if (amount > userBalance) {
-                    return 'Insufficient balance';
+                  final totalCost = amount * 1.15;
+                  if (totalCost > userBalance) {
+                    return 'Insufficient balance (Total cost is \$${totalCost.toStringAsFixed(2)})';
                   }
                   return null;
                 },
@@ -305,13 +306,24 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                         const Row(
                           children: [
                             Text('Platform Fee ', style: TextStyle(color: Colors.grey)),
-                            Text('(15%)', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 12)),
+                            Text('(15% added)', style: TextStyle(color: Color(0xFFF59E0B), fontWeight: FontWeight.bold, fontSize: 12)),
                             Text(':', style: TextStyle(color: Colors.grey)),
                           ],
                         ),
                         Text(
-                          '-\$${fee.toStringAsFixed(2)}',
-                          style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
+                          '+\$${fee.toStringAsFixed(2)}',
+                          style: const TextStyle(color: Color(0xFFF59E0B), fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Total Cost (Sender Pays):', style: TextStyle(color: Colors.grey)),
+                        Text(
+                          '\$${(_amount + fee).toStringAsFixed(2)}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -324,7 +336,7 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                       children: [
                         const Text('Recipient Receives:', style: TextStyle(fontWeight: FontWeight.bold)),
                         Text(
-                          '\$${(netAmount < 0 ? 0.00 : netAmount).toStringAsFixed(2)}',
+                          '\$${_amount.toStringAsFixed(2)}',
                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
                         ),
                       ],

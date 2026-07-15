@@ -10,6 +10,11 @@ import 'send_money_page.dart';
 import 'withdraw_page.dart';
 import 'statement_page.dart';
 import 'receipt_page.dart';
+import 'chime_transfer_page.dart';
+import 'cash_app_transfer_page.dart';
+import 'venmo_transfer_page.dart';
+import 'bank_transfer_page.dart';
+import 'usdt_transfer_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -76,8 +81,10 @@ class _HomePageState extends State<HomePage> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await authProvider.tryAutoLogin();
-          await walletProvider.fetchTransactions();
+          await Future.wait([
+            authProvider.tryAutoLogin(),
+            walletProvider.fetchTransactions(),
+          ]);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -249,12 +256,12 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 28),
 
-              // Action Cards (Scan, Send, Deposit, Withdraw)
+              // Action Cards (Scan, Send, Deposit, Withdraw, Link Card, Share)
               Row(
                 children: [
                   _buildActionCard(
                     Icons.qr_code_scanner_rounded,
-                    'Scan',
+                    'Scan QR',
                     theme.primaryColor,
                     () {
                       Navigator.push(
@@ -266,7 +273,7 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(width: 12),
                   _buildActionCard(
                     Icons.send_rounded,
-                    'Send',
+                    'Send Tag',
                     const Color(0xFF10B981),
                     () {
                       Navigator.push(
@@ -282,7 +289,7 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   _buildActionCard(
                     Icons.add_circle_rounded,
-                    'Deposit',
+                    'Card Deposit',
                     const Color(0xFF3B82F6),
                     () {
                       Navigator.push(
@@ -293,8 +300,8 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(width: 12),
                   _buildActionCard(
-                    Icons.account_balance_wallet_rounded,
-                    'Withdraw',
+                    Icons.credit_card_rounded,
+                    'Card Payout',
                     const Color(0xFFF59E0B),
                     () {
                       Navigator.push(
@@ -305,52 +312,109 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _buildActionCard(
+                    Icons.link_rounded,
+                    'Link Card',
+                    const Color(0xFF8B5CF6),
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const DepositPage()),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 12),
+                  _buildActionCard(
+                    Icons.share_rounded,
+                    'Share Link',
+                    const Color(0xFFEC4899),
+                    () => _copyPaymentLink(qrData),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 32),
 
-              // Share link card
-              InkWell(
-                onTap: () => _copyPaymentLink(qrData),
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: theme.primaryColor.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.share_rounded, color: theme.primaryColor, size: 18),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Share Your Request Link',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Accepts Apple Pay, Venmo, Cash App, Chime',
-                              style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 11),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(Icons.copy_all_rounded, color: theme.primaryColor, size: 18),
-                    ],
-                  ),
+              // Services & External Wallets Hub
+              const Text(
+                'Services & External Wallets',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
+              ),
+              const SizedBox(height: 16),
+              GridView.count(
+                crossAxisCount: 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                childAspectRatio: 1.45,
+                children: [
+                  _buildServiceCard(
+                    title: 'Chime',
+                    subtitle: 'Deposit / Payout',
+                    logoUrl: 'https://img.icons8.com/color/96/chime.png',
+                    accentColor: const Color(0xFF25C974),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ChimeTransferPage()),
+                      );
+                    },
+                  ),
+                  _buildServiceCard(
+                    title: 'Cash App',
+                    subtitle: 'Send / Payout',
+                    logoUrl: 'https://img.icons8.com/color/96/cash-app.png',
+                    accentColor: const Color(0xFF00D632),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const CashAppTransferPage()),
+                      );
+                    },
+                  ),
+                  _buildServiceCard(
+                    title: 'Venmo',
+                    subtitle: 'Send / Payout',
+                    logoUrl: 'https://img.icons8.com/color/96/venmo.png',
+                    accentColor: const Color(0xFF008CFF),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const VenmoTransferPage()),
+                      );
+                    },
+                  ),
+                  _buildServiceCard(
+                    title: 'Bank Account',
+                    subtitle: 'Direct Deposit',
+                    logoUrl: 'https://img.icons8.com/color/96/bank.png',
+                    accentColor: const Color(0xFF475569),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const BankTransferPage()),
+                      );
+                    },
+                  ),
+                  _buildServiceCard(
+                    title: 'USDT Tether',
+                    subtitle: 'TRC-20 Payout',
+                    logoUrl: 'https://img.icons8.com/color/96/tether.png',
+                    accentColor: const Color(0xFF26A17B),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const UsdtTransferPage()),
+                      );
+                    },
+                  ),
+                ],
               ),
               const SizedBox(height: 32),
 
@@ -527,7 +591,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildActionCard(IconData icon, String title, Color color, VoidCallback onTap) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: InkWell(
         onTap: onTap,
@@ -555,6 +618,89 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+  Widget _buildServiceCard({
+    required String title,
+    required String subtitle,
+    required String logoUrl,
+    required Color accentColor,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Image.network(
+                    logoUrl,
+                    height: 24,
+                    width: 24,
+                    errorBuilder: (context, _, __) => Icon(
+                      Icons.currency_exchange_rounded,
+                      color: accentColor,
+                      size: 24,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: isDark ? Colors.white30 : Colors.black26,
+                  size: 14,
+                ),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: Colors.grey,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

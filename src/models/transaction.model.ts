@@ -96,5 +96,6 @@ const transactionSchema = new Schema<ITransaction>(
 transactionSchema.index({ status: 1, type: 1 });
 transactionSchema.index({ createdAt: -1 });
 transactionSchema.index({ receiver: 1, createdAt: -1 });
+transactionSchema.index({ sender: 1, createdAt: -1 });
 
 export const Transaction = model<ITransaction>('Transaction', transactionSchema);

@@ -28,6 +28,7 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
   final GlobalKey _qrBoundaryKey = GlobalKey();
   bool _isSavingQr = false;
   bool _hasScanned = false;
+  bool _isShowingInvalidMessage = false;
 
   bool _isValidQrData(String qrCodeData) {
     final lowerData = qrCodeData.toLowerCase();
@@ -339,12 +340,28 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
                                     if (_hasScanned) return;
                                     if (capture.barcodes.isNotEmpty) {
                                       final String? code = capture.barcodes.first.rawValue;
-                                      if (code != null && _isValidQrData(code)) {
-                                        setState(() {
-                                          _hasScanned = true;
-                                        });
-                                        _cameraController.stop();
-                                        _navigateToTransfer(code);
+                                      if (code != null) {
+                                        if (_isValidQrData(code)) {
+                                          setState(() {
+                                            _hasScanned = true;
+                                          });
+                                          _cameraController.stop();
+                                          _navigateToTransfer(code);
+                                        } else {
+                                          if (!_isShowingInvalidMessage) {
+                                            _isShowingInvalidMessage = true;
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                backgroundColor: Color(0xFFEF4444),
+                                                content: Text('QR code is invalid.'),
+                                                duration: Duration(seconds: 2),
+                                              ),
+                                            );
+                                            Future.delayed(const Duration(seconds: 2), () {
+                                              _isShowingInvalidMessage = false;
+                                            });
+                                          }
+                                        }
                                       }
                                     }
                                   },
