@@ -1,6 +1,6 @@
 {
-    "name": "wallet_frontend",
-    "short_name": "wallet_frontend",
+    "name": "RopeWallet",
+    "short_name": "RopeWallet",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
