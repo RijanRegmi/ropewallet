@@ -28,9 +28,13 @@ interface PaymentRequestDetails {
 
 function PayContent() {
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  const tokenParam = searchParams.get('token');
+  const toParam = searchParams.get('to');
+  const amountParam = searchParams.get('amount');
+  const methodParam = searchParams.get('method');
   const cancelled = searchParams.get('cancelled');
 
+  const [token, setToken] = useState<string | null>(null);
   const [data, setData] = useState<PaymentRequestDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,31 +49,74 @@ function PayContent() {
   const [paymentFinished, setPaymentFinished] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      setError('Invalid or missing payment link token.');
-      setLoading(false);
-      return;
-    }
-
     const fetchRequestDetails = async () => {
-      const res = await ApiClient.get<PaymentRequestDetails>(`/p2p/request/${token}`);
-      if (res.success && res.data) {
-        setData(res.data);
-        if (res.data.amount) {
-          setAmountInput(res.data.amount.toString());
+      setLoading(true);
+      setError(null);
+
+      if (tokenParam) {
+        setToken(tokenParam);
+        const res = await ApiClient.get<PaymentRequestDetails>(`/p2p/request/${tokenParam}`);
+        if (res.success && res.data) {
+          setData(res.data);
+          if (res.data.amount) {
+            setAmountInput(res.data.amount.toString());
+          }
+        } else {
+          setError(res.error || 'This payment link has expired or is invalid.');
+        }
+      } else if (toParam) {
+        // Fetch receiver details and create a dynamic token
+        const cleanTag = toParam.startsWith('$') ? toParam.substring(1) : toParam;
+        const queryParams = new URLSearchParams();
+        if (amountParam) queryParams.set('amount', amountParam);
+        queryParams.set('note', 'Direct payment link');
+
+        const res = await ApiClient.get<any>(`/p2p/receiver/${cleanTag}?${queryParams.toString()}`);
+        if (res.success && res.data) {
+          setToken(res.data.paymentRequest.token);
+          
+          const requestDetails: PaymentRequestDetails = {
+            _id: res.data.paymentRequest._id,
+            amount: res.data.paymentRequest.amount,
+            note: res.data.paymentRequest.note,
+            status: res.data.paymentRequest.status,
+            expiresAt: res.data.paymentRequest.expiresAt,
+            receiver: {
+              _id: res.data.receiver._id,
+              fullName: res.data.receiver.fullName,
+              firstName: res.data.receiver.fullName?.split(' ')[0] || '',
+              lastName: res.data.receiver.fullName?.split(' ')[1] || '',
+              userTag: res.data.receiver.userTag,
+              profileImage: res.data.receiver.profileImage,
+            },
+            p2pAccounts: res.data.p2pAccounts,
+          };
+          setData(requestDetails);
+          
+          if (amountParam) {
+            setAmountInput(amountParam);
+          } else if (res.data.paymentRequest.amount) {
+            setAmountInput(res.data.paymentRequest.amount.toString());
+          }
+
+          if (methodParam) {
+            setSelectedMethod(methodParam.toLowerCase());
+          }
+        } else {
+          setError(res.error || 'Recipient not found.');
         }
       } else {
-        setError(res.error || 'This payment link has expired or is invalid.');
+        setError('Invalid or missing payment link token.');
       }
       setLoading(false);
     };
 
     fetchRequestDetails();
-  }, [token]);
+  }, [tokenParam, toParam, amountParam, methodParam]);
 
   // Countdown timer effect
   useEffect(() => {
-    if (!data?.expiresAt) return;
+    if (!data?.expiresAt || !tokenParam) return;
 
     const timer = setInterval(() => {
       const expiry = new Date(data.expiresAt).getTime();
@@ -87,7 +134,7 @@ function PayContent() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [data?.expiresAt]);
+  }, [data?.expiresAt, tokenParam]);
 
   if (loading) {
     return (
@@ -277,7 +324,12 @@ function PayContent() {
               { id: 'chime', name: 'Chime', icon: '🏦' },
               { id: 'venmo', name: 'Venmo', icon: '💜' },
               { id: 'card', name: 'Debit/Credit', icon: '💳' },
-            ].map((method) => {
+            ].filter((m) => {
+              if (methodParam) {
+                return m.id === methodParam.toLowerCase();
+              }
+              return true;
+            }).map((method) => {
               // Hide Chime/Venmo if they are not configured for this receiver
               const isP2P = method.id === 'chime' || method.id === 'venmo';
               if (isP2P && !data.p2pAccounts.some((a) => a.platform === method.id)) {

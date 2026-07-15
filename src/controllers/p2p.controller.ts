@@ -292,6 +292,52 @@ export class P2PController {
     res.status(200).json({ received: true });
   }
 
+  // ─── Get Receiver Profile by Tag (generates token on the fly) ────
+  static async getReceiverProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      let { tag } = req.params;
+      const { amount, note } = req.query;
+
+      if (tag.startsWith('$')) {
+        tag = tag.substring(1);
+      }
+      
+      const user = await User.findOne({ userTag: tag }).select('fullName userTag profileImage');
+      if (!user) {
+        res.status(404).json({ success: false, error: 'User not found' });
+        return;
+      }
+
+      // Generate a temporary PaymentRequest token on the fly
+      const token = crypto.randomUUID().replace(/-/g, '');
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+      const paymentRequest = await PaymentRequest.create({
+        token,
+        receiver: user._id,
+        amount: amount ? parseFloat(amount as string) : undefined,
+        note: note ? String(note) : 'Direct P2P Transfer',
+        status: 'active',
+        expiresAt,
+      });
+
+      // Get active platform P2P accounts
+      const p2pAccounts = await P2PAccount.find({ isActive: true });
+
+      res.json({
+        success: true,
+        data: {
+          paymentRequest,
+          p2pAccounts,
+          receiver: user,
+          feeRate: PLATFORM_FEE_RATE,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // ─── Render P2P Payment Page ──────────────────────────────────
   static async renderPaymentPage(req: Request, res: Response): Promise<void> {
     const { token } = req.query;

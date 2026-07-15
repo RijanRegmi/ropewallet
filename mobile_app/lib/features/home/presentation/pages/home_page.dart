@@ -36,19 +36,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _copyPaymentLink(String qrData) {
-    final link = 'https://ropewallet.vercel.app/pay?to=$qrData';
-    Clipboard.setData(ClipboardData(text: link));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: Theme.of(context).primaryColor,
-        content: const Row(
-          children: [
-            Icon(Icons.link_rounded, color: Colors.white),
-            SizedBox(width: 10),
-            Text('Payment link copied to clipboard!'),
-          ],
-        ),
-      ),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return _ShareLinkBottomSheet(qrData: qrData);
+      },
     );
   }
 
@@ -699,6 +693,275 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ShareLinkBottomSheet extends StatefulWidget {
+  final String qrData;
+
+  const _ShareLinkBottomSheet({Key? key, required this.qrData}) : super(key: key);
+
+  @override
+  _ShareLinkBottomSheetState createState() => _ShareLinkBottomSheetState();
+}
+
+class _ShareLinkBottomSheetState extends State<_ShareLinkBottomSheet> {
+  final TextEditingController _amountController = TextEditingController();
+  String _selectedMethod = 'any'; // 'any', 'chime', 'venmo', 'cashapp', 'card'
+
+  final List<Map<String, dynamic>> _methods = [
+    {'id': 'any', 'name': 'Any Method', 'icon': '🌐', 'color': const Color(0xFFEC4899)},
+    {'id': 'chime', 'name': 'Chime Only', 'icon': '🏦', 'color': const Color(0xFF25C490)},
+    {'id': 'venmo', 'name': 'Venmo Only', 'icon': '💜', 'color': const Color(0xFF008CFF)},
+    {'id': 'cashapp', 'name': 'Cash App Only', 'icon': '💚', 'color': const Color(0xFF00D632)},
+    {'id': 'card', 'name': 'Card / Pay', 'icon': '💳', 'color': const Color(0xFF3B82F6)},
+  ];
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  void _generateAndCopy() {
+    final amountText = _amountController.text.trim();
+    final double? amount = double.tryParse(amountText);
+
+    final queryParams = <String, String>{};
+    queryParams['to'] = widget.qrData;
+    
+    if (amount != null && amount > 0) {
+      queryParams['amount'] = amount.toStringAsFixed(2);
+    }
+    
+    if (_selectedMethod != 'any') {
+      queryParams['method'] = _selectedMethod;
+    }
+
+    final uri = Uri.parse('https://ropewallet.vercel.app/pay').replace(queryParameters: queryParams);
+    final link = uri.toString();
+
+    Clipboard.setData(ClipboardData(text: link));
+    Navigator.pop(context);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFFEC4899),
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _selectedMethod == 'any'
+                    ? 'General payment link copied!'
+                    : '${_selectedMethod.toUpperCase()} request link copied!',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        left: 20,
+        right: 20,
+        top: 24,
+      ),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF151922) : Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 50,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white24 : Colors.black12,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Customize Request Link',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Generate a specific payment link to share with friends',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.white60 : Colors.black54,
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            // Amount Input Field
+            Text(
+              'Request Amount (Optional)',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white54 : Colors.black45,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _amountController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+              decoration: InputDecoration(
+                prefixText: '\$ ',
+                prefixStyle: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white70 : Colors.black87,
+                ),
+                hintText: '0.00',
+                hintStyle: TextStyle(
+                  fontSize: 16,
+                  color: isDark ? Colors.white24 : Colors.black26,
+                ),
+                filled: true,
+                fillColor: isDark ? const Color(0xFF0F1218) : Colors.grey.shade100,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Select Method Grid
+            Text(
+              'Select Payer Method',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white54 : Colors.black45,
+              ),
+            ),
+            const SizedBox(height: 10),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 2.2,
+              ),
+              itemCount: _methods.length,
+              itemBuilder: (context, index) {
+                final method = _methods[index];
+                final isSelected = _selectedMethod == method['id'];
+                
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedMethod = method['id'];
+                    });
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isSelected 
+                          ? (method['color'] as Color).withOpacity(0.15)
+                          : (isDark ? const Color(0xFF0F1218) : Colors.grey.shade100),
+                      border: Border.all(
+                        color: isSelected 
+                            ? (method['color'] as Color) 
+                            : Colors.transparent,
+                        width: 1.5,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          method['icon'],
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          method['name'].split(' ')[0],
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isSelected
+                                ? (method['color'] as Color)
+                                : (isDark ? Colors.white70 : Colors.black87),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 32),
+
+            // Submit Button
+            ElevatedButton(
+              onPressed: _generateAndCopy,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEC4899),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                'Generate & Copy Link',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ),

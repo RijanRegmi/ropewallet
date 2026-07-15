@@ -6,6 +6,7 @@ const router = Router();
 
 // Public routes (for guest payers)
 router.get('/request/:token', P2PController.getPaymentRequest);
+router.get('/receiver/:tag', P2PController.getReceiverProfile);
 router.post('/confirm', P2PController.confirmP2PSent);
 router.post('/stripe-checkout', P2PController.createStripeP2PCheckout);
 
