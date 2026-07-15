@@ -675,6 +675,7 @@ export class AdminController {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title} | RopeWallet Admin</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
@@ -908,6 +909,31 @@ export class AdminController {
     .btn-ghost:hover { color: var(--text); border-color: var(--text-secondary); }
     .btn-sm { padding: 6px 14px; font-size: 13px; }
 
+    /* Icon Buttons */
+    .btn-icon {
+      width: 34px;
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-icon-primary { background: rgba(99, 102, 241, 0.1); color: #818CF8; }
+    .btn-icon-primary:hover { background: #6366F1; color: #fff; }
+    .btn-icon-success { background: rgba(16, 185, 129, 0.1); color: #10B981; }
+    .btn-icon-success:hover { background: #10B981; color: #fff; }
+    .btn-icon-danger { background: rgba(239, 68, 68, 0.1); color: #EF4444; }
+    .btn-icon-danger:hover { background: #EF4444; color: #fff; }
+    .btn-icon-warning { background: rgba(245, 158, 11, 0.1); color: #F59E0B; }
+    .btn-icon-warning:hover { background: #F59E0B; color: #fff; }
+    .btn-icon-ghost { background: rgba(156, 163, 175, 0.1); color: #9CA3AF; }
+    .btn-icon-ghost:hover { background: #9CA3AF; color: #fff; }
+
     /* Forms */
     .form-group { margin-bottom: 16px; }
     .form-group label {
@@ -1050,6 +1076,32 @@ export class AdminController {
       .main { margin-left: 200px; padding: 16px; }
       .stats-grid { grid-template-columns: 1fr 1fr; }
     }
+
+    /* Loading Overlay */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(11, 15, 26, 0.7);
+      backdrop-filter: blur(4px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .loading-overlay.active {
+      display: flex;
+    }
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(99, 102, 241, 0.1);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
   <script>
     function showToast(message, type = 'success') {
@@ -1061,14 +1113,26 @@ export class AdminController {
       setTimeout(() => toast.remove(), 4000);
     }
     async function api(url, method = 'GET', body = null) {
-      const opts = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' };
-      if (body) opts.body = JSON.stringify(body);
-      const res = await fetch(url, opts);
-      return res.json();
+      const loader = document.getElementById('loadingOverlay');
+      if (loader) loader.classList.add('active');
+      try {
+        const opts = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' };
+        if (body) opts.body = JSON.stringify(body);
+        const res = await fetch(url, opts);
+        return await res.json();
+      } catch (err) {
+        console.error('API Error:', err);
+        return { success: false, error: err.message };
+      } finally {
+        if (loader) loader.classList.remove('active');
+      }
     }
   </script>
 </head>
 <body>
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+  </div>
   <aside class="sidebar">
     <div class="sidebar-logo">
       <h1>RopeWallet</h1>
@@ -1497,8 +1561,8 @@ export class AdminController {
             ? '<span class="badge badge-danger">Frozen</span>'
             : '<span class="badge badge-success">Active</span>';
           const freezeBtn = u.isFrozen
-            ? '<button class="btn btn-sm btn-success" onclick="toggleFreeze(\\'' + u._id + '\\', false)">Unfreeze</button>'
-            : '<button class="btn btn-sm btn-ghost" onclick="toggleFreeze(\\'' + u._id + '\\', true)">Freeze</button>';
+            ? '<button class="btn-icon btn-icon-success" onclick="toggleFreeze(\\'' + u._id + '\\', false)" title="Unfreeze Account"><i class="fas fa-lock-open"></i></button>'
+            : '<button class="btn-icon btn-icon-warning" onclick="toggleFreeze(\\'' + u._id + '\\', true)" title="Freeze Account"><i class="fas fa-lock"></i></button>';
 
           const roleBadge = u.role === 'superadmin'
             ? '<span class="badge badge-danger">Superadmin</span>'
@@ -1509,8 +1573,8 @@ export class AdminController {
           const roleToggleBtn = u.role === 'superadmin'
             ? ''
             : u.role === 'admin'
-              ? '<button class="btn btn-sm btn-ghost" onclick="toggleRole(\\\'' + u._id + '\\\', \\\'user\\\')">Demote</button>'
-              : '<button class="btn btn-sm btn-primary" onclick="toggleRole(\\\'' + u._id + '\\\', \\\'admin\\\')">Make Admin</button>';
+              ? '<button class="btn-icon btn-icon-ghost" onclick="toggleRole(\\\'' + u._id + '\\\', \\\'user\\\')" title="Demote to User"><i class="fas fa-user-minus"></i></button>'
+              : '<button class="btn-icon btn-icon-primary" onclick="toggleRole(\\\'' + u._id + '\\\', \\\'admin\\\')" title="Make Admin"><i class="fas fa-user-shield"></i></button>';
 
           tbody.innerHTML += '<tr>' +
             '<td><strong>' + (u.fullName || u.firstName + ' ' + u.lastName) + '</strong></td>' +
@@ -1520,11 +1584,11 @@ export class AdminController {
             '<td>' + statusBadge + '</td>' +
             '<td>' + roleBadge + '</td>' +
             '<td>' + new Date(u.createdAt).toLocaleDateString() + '</td>' +
-            '<td style="display:flex;gap:6px;">' +
-              '<button class="btn btn-sm btn-primary" onclick="openEditModal(\\'' + u._id + '\\')">Edit</button>' +
+            '<td style="display:flex;gap:8px;">' +
+              '<button class="btn-icon btn-icon-primary" onclick="openEditModal(\\'' + u._id + '\\')" title="Edit User"><i class="fas fa-edit"></i></button>' +
               roleToggleBtn +
               freezeBtn +
-              '<button class="btn btn-sm btn-danger" onclick="deleteUser(\\'' + u._id + '\\')">Delete</button>' +
+              '<button class="btn-icon btn-icon-danger" onclick="deleteUser(\\'' + u._id + '\\')" title="Delete User"><i class="fas fa-trash"></i></button>' +
             '</td>' +
           '</tr>';
         });
