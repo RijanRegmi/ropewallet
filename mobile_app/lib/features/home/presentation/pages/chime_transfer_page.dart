@@ -86,12 +86,16 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
     if (pin == null) return;
 
     final hasSavedCard = authProvider.user?['savedCard'] != null;
+    final expiryParts = _expiryController.text.contains('/')
+        ? _expiryController.text.split('/')
+        : <String>[];
 
     final success = await walletProvider.deposit(
       amount: amount,
-      method: 'card',
       authProvider: authProvider,
       cardNumber: hasSavedCard ? null : _cardNumberController.text.trim(),
+      expMonth: !hasSavedCard && expiryParts.isNotEmpty ? expiryParts[0].trim() : null,
+      expYear: !hasSavedCard && expiryParts.length > 1 ? '20${expiryParts[1].trim()}' : null,
       cvc: hasSavedCard ? null : _cvcController.text.trim(),
       pin: pin,
       remarks: 'Deposit from Chime Debit Card',

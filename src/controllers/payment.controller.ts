@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import Stripe from 'stripe';
+import { TronWeb } from 'tronweb';
 import { User } from '../models/user.model.js';
 import { Transaction } from '../models/transaction.model.js';
 import { CustomError } from '../middlewares/error.middleware.js';
@@ -466,7 +467,51 @@ export class PaymentController {
       // 2. Attempt Stripe Payout (or simulate USDT withdrawal)
       let stripePayoutId = '';
       if (method === 'usdt') {
-        stripePayoutId = 'usdt_tx_' + Math.random().toString(36).substr(2, 9);
+        const privateKey = process.env.TRON_PRIVATE_KEY;
+        if (!privateKey || privateKey.startsWith('da0000')) {
+          console.warn('USDT Payout: Using dummy private key, simulating transaction success.');
+          stripePayoutId = 'simulated_usdt_tx_' + Math.random().toString(36).substr(2, 9);
+        } else {
+          try {
+            const fullHost = process.env.TRON_NETWORK === 'mainnet' 
+              ? 'https://api.trongrid.io' 
+              : 'https://api.shasta.trongrid.io';
+            
+            const headers = process.env.TRONGRID_API_KEY 
+              ? { 'TRON-PRO-API-KEY': process.env.TRONGRID_API_KEY } 
+              : undefined;
+
+            const tronWeb = new TronWeb({
+              fullHost,
+              headers,
+              privateKey
+            });
+
+            const usdtContractAddress = process.env.TRON_NETWORK === 'mainnet'
+              ? 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'
+              : (process.env.USDT_CONTRACT_ADDRESS || 'TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs');
+
+            const contract = await tronWeb.contract().at(usdtContractAddress);
+            
+            // USDT uses 6 decimals
+            const decimals = 6;
+            const rawAmount = Math.round(netAmount * Math.pow(10, decimals));
+
+            const tx = await contract.transfer(usdtAddress.trim(), rawAmount).send({
+              feeLimit: 150000000 // 150 TRX max
+            });
+
+            if (!tx) {
+              res.status(500).json({ success: false, error: 'Failed to broadcast USDT transaction.' });
+              return;
+            }
+            stripePayoutId = tx; // tx is the TxID (transaction hash string)
+          } catch (tronError: any) {
+            console.error('TRON USDT Transfer Error:', tronError);
+            res.status(500).json({ success: false, error: `USDT Blockchain Transfer Failed: ${tronError.message || tronError}` });
+            return;
+          }
+        }
       } else {
         stripePayoutId = 'simulated_payout_' + Math.random().toString(36).substr(2, 9);
         try {
