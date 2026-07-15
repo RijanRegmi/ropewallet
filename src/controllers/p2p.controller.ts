@@ -340,7 +340,46 @@ export class P2PController {
 
   // ─── Render P2P Payment Page ──────────────────────────────────
   static async renderPaymentPage(req: Request, res: Response): Promise<void> {
-    const { token } = req.query;
+    const { token, to, amount, method } = req.query;
+
+    if (!token && to) {
+      try {
+        let tag = to as string;
+        if (tag.startsWith('$')) {
+          tag = tag.substring(1);
+        }
+        const user = await User.findOne({ userTag: tag });
+        if (!user) {
+          res.status(404).send(P2PController.errorPageHTML('Recipient Not Found', `No user found with tag @${tag}`));
+          return;
+        }
+
+        // Create temporary token on the fly
+        const newToken = crypto.randomUUID().replace(/-/g, '');
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 mins
+
+        await PaymentRequest.create({
+          token: newToken,
+          receiver: user._id,
+          amount: amount ? parseFloat(amount as string) : undefined,
+          note: 'Direct P2P Transfer',
+          status: 'active',
+          expiresAt,
+        });
+
+        // Redirect to standard token URL
+        const redirectParams = new URLSearchParams();
+        redirectParams.set('token', newToken);
+        if (method) redirectParams.set('method', method as string);
+        
+        res.redirect(`/pay?${redirectParams.toString()}`);
+        return;
+      } catch (err: any) {
+        console.error('Error generating direct payment link:', err);
+        res.status(500).send(P2PController.errorPageHTML('Server Error', 'Failed to generate payment request.'));
+        return;
+      }
+    }
 
     if (!token) {
       res.status(400).send(P2PController.errorPageHTML('Invalid Link', 'No payment token provided.'));
@@ -737,6 +776,31 @@ export class P2PController {
     const stripeKey = '${data.stripeKey}';
     let selectedMethod = '';
     let currentP2PAccount = null;
+
+    // Filter out buttons for Chime/Venmo if the receiver does not have them configured
+    document.querySelectorAll('.method-btn').forEach(btn => {
+      const method = btn.getAttribute('data-method');
+      if ((method === 'chime' || method === 'venmo') && !p2pAccounts.some(a => a.platform === method)) {
+        btn.style.display = 'none';
+      }
+    });
+
+    // Check if a specific method is requested in the URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const methodParam = urlParams.get('method');
+    if (methodParam) {
+      const cleanMethod = methodParam.toLowerCase();
+      // Hide all other buttons in the grid
+      document.querySelectorAll('.method-btn').forEach(btn => {
+        if (btn.getAttribute('data-method') !== cleanMethod) {
+          btn.style.display = 'none';
+        }
+      });
+      // Auto-select the clean method
+      setTimeout(() => {
+        selectMethod(cleanMethod);
+      }, 50);
+    }
 
     // Timer
     function updateTimer() {
