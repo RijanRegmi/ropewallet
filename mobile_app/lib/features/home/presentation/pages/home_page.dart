@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:ropewallet/core/network/api_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -713,6 +715,7 @@ class _ShareLinkBottomSheet extends StatefulWidget {
 class _ShareLinkBottomSheetState extends State<_ShareLinkBottomSheet> {
   final TextEditingController _amountController = TextEditingController();
   String _selectedMethod = 'any'; // 'any', 'chime', 'venmo', 'cashapp', 'card'
+  bool _isLoading = false;
 
   final List<Map<String, dynamic>> _methods = [
     {'id': 'any', 'name': 'Any Method', 'icon': '🌐', 'color': const Color(0xFFEC4899)},
@@ -728,46 +731,81 @@ class _ShareLinkBottomSheetState extends State<_ShareLinkBottomSheet> {
     super.dispose();
   }
 
-  void _generateAndCopy() {
+  Future<void> _generateAndCopy() async {
     final amountText = _amountController.text.trim();
     final double? amount = double.tryParse(amountText);
 
-    final queryParams = <String, String>{};
-    queryParams['to'] = widget.qrData;
-    
-    if (amount != null && amount > 0) {
-      queryParams['amount'] = amount.toStringAsFixed(2);
-    }
-    
-    if (_selectedMethod != 'any') {
-      queryParams['method'] = _selectedMethod;
-    }
+    setState(() {
+      _isLoading = true;
+    });
 
-    final uri = Uri.parse('https://ropewallet.vercel.app/pay').replace(queryParameters: queryParams);
-    final link = uri.toString();
+    try {
+      final response = await ApiClient().post('/p2p/create-request', {
+        if (amount != null && amount > 0) 'amount': amount,
+        'note': _selectedMethod == 'any' 
+            ? 'General Payment Request'
+            : 'Payment Request via ${_selectedMethod.toUpperCase()}',
+      });
 
-    Clipboard.setData(ClipboardData(text: link));
-    Navigator.pop(context);
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: const Color(0xFFEC4899),
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle_rounded, color: Colors.white),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                _selectedMethod == 'any'
-                    ? 'General payment link copied!'
-                    : '${_selectedMethod.toUpperCase()} request link copied!',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 201 && responseData['success'] == true) {
+        String link = responseData['data']['paymentLink'];
+        
+        // Append selected method to link if not 'any'
+        if (_selectedMethod != 'any') {
+          link = '$link&method=$_selectedMethod';
+        }
+
+        await Clipboard.setData(ClipboardData(text: link));
+        
+        if (!mounted) return;
+        Navigator.pop(context);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEC4899),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _selectedMethod == 'any'
+                        ? 'Unique general payment link copied!'
+                        : 'Unique ${_selectedMethod.toUpperCase()} request link copied!',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-    );
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            content: Text(responseData['error'] ?? 'Failed to generate link.'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            content: Text('Network error: $e'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -945,7 +983,7 @@ class _ShareLinkBottomSheetState extends State<_ShareLinkBottomSheet> {
 
             // Submit Button
             ElevatedButton(
-              onPressed: _generateAndCopy,
+              onPressed: _isLoading ? null : _generateAndCopy,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFEC4899),
                 foregroundColor: Colors.white,
@@ -955,13 +993,22 @@ class _ShareLinkBottomSheetState extends State<_ShareLinkBottomSheet> {
                 ),
                 elevation: 0,
               ),
-              child: const Text(
-                'Generate & Copy Link',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      'Generate & Copy Link',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ],
         ),

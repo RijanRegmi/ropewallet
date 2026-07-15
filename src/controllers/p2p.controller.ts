@@ -27,7 +27,7 @@ export class P2PController {
       }
 
       const token = crypto.randomUUID().replace(/-/g, '');
-      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
       const paymentRequest = await PaymentRequest.create({
         token,
@@ -298,19 +298,24 @@ export class P2PController {
       let tag = req.params.tag.trim();
       const { amount, note } = req.query;
 
-      if (tag.startsWith('$')) {
-        tag = tag.substring(1);
+      let cleanBase = tag;
+      if (cleanBase.startsWith('%24')) {
+        cleanBase = cleanBase.substring(3);
       }
-      if (tag.startsWith('%24')) {
-        tag = tag.substring(3);
+      if (cleanBase.startsWith('$')) {
+        cleanBase = cleanBase.substring(1);
       }
+
+      const cleanTagWithDollar = `$${cleanBase.toLowerCase()}`;
+      const cleanTagWithoutDollar = cleanBase.toLowerCase();
       
-      const cleanTag = tag.trim().toLowerCase();
       const user = await User.findOne({
         $or: [
-          { userTag: cleanTag },
+          { userTag: cleanTagWithDollar },
+          { userTag: cleanTagWithoutDollar },
+          { qrCodeData: cleanTagWithDollar },
+          { qrCodeData: cleanTagWithoutDollar },
           { userTag: tag },
-          { qrCodeData: cleanTag },
           { qrCodeData: tag }
         ]
       }).select('fullName userTag profileImage');
@@ -357,19 +362,25 @@ export class P2PController {
     if (!token && to) {
       try {
         let tag = (to as string).trim();
-        if (tag.startsWith('$')) {
-          tag = tag.substring(1);
-        }
-        if (tag.startsWith('%24')) {
-          tag = tag.substring(3);
-        }
         
-        const cleanTag = tag.trim().toLowerCase();
+        let cleanBase = tag;
+        if (cleanBase.startsWith('%24')) {
+          cleanBase = cleanBase.substring(3);
+        }
+        if (cleanBase.startsWith('$')) {
+          cleanBase = cleanBase.substring(1);
+        }
+
+        const cleanTagWithDollar = `$${cleanBase.toLowerCase()}`;
+        const cleanTagWithoutDollar = cleanBase.toLowerCase();
+        
         const user = await User.findOne({
           $or: [
-            { userTag: cleanTag },
+            { userTag: cleanTagWithDollar },
+            { userTag: cleanTagWithoutDollar },
+            { qrCodeData: cleanTagWithDollar },
+            { qrCodeData: cleanTagWithoutDollar },
             { userTag: tag },
-            { qrCodeData: cleanTag },
             { qrCodeData: tag }
           ]
         });
