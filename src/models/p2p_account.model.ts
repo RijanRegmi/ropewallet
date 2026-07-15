@@ -22,6 +22,22 @@ const p2pAccountSchema = new Schema<IP2PAccount>(
       type: Boolean,
       default: true,
     },
+    email: {
+      type: String,
+      trim: true,
+    },
+    appPassword: {
+      type: String,
+      trim: true,
+    },
+    directPayUrl: {
+      type: String,
+      trim: true,
+    },
+    isAutoVerifyEnabled: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

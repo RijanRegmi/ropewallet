@@ -5,6 +5,10 @@ export interface IP2PAccount extends Document {
   handle: string;       // email, username, or $cashtag
   displayName: string;  // friendly name shown on checkout page
   isActive: boolean;
+  email?: string;
+  appPassword?: string;
+  directPayUrl?: string;
+  isAutoVerifyEnabled?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

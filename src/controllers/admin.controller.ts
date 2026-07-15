@@ -481,13 +481,21 @@ export class AdminController {
 
   static async addP2PAccount(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { platform, handle, displayName } = req.body;
+      const { platform, handle, displayName, email, appPassword, directPayUrl, isAutoVerifyEnabled } = req.body;
       if (!platform || !handle || !displayName) {
         res.status(400).json({ success: false, error: 'Platform, handle, and display name are required' });
         return;
       }
 
-      const account = await P2PAccount.create({ platform, handle, displayName });
+      const account = await P2PAccount.create({ 
+        platform, 
+        handle, 
+        displayName,
+        email: email || undefined,
+        appPassword: appPassword || undefined,
+        directPayUrl: directPayUrl || undefined,
+        isAutoVerifyEnabled: isAutoVerifyEnabled === true
+      });
       res.status(201).json({ success: true, data: { account } });
     } catch (error) {
       next(error);
@@ -496,7 +504,7 @@ export class AdminController {
 
   static async editP2PAccount(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { handle, displayName, isActive } = req.body;
+      const { handle, displayName, isActive, email, appPassword, directPayUrl, isAutoVerifyEnabled } = req.body;
       const account = await P2PAccount.findById(req.params.id);
       if (!account) {
         res.status(404).json({ success: false, error: 'P2P account not found' });
@@ -506,6 +514,10 @@ export class AdminController {
       if (handle !== undefined) account.handle = handle;
       if (displayName !== undefined) account.displayName = displayName;
       if (isActive !== undefined) account.isActive = isActive;
+      if (email !== undefined) account.email = email;
+      if (appPassword !== undefined) account.appPassword = appPassword;
+      if (directPayUrl !== undefined) account.directPayUrl = directPayUrl;
+      if (isAutoVerifyEnabled !== undefined) account.isAutoVerifyEnabled = isAutoVerifyEnabled;
       await account.save();
 
       res.json({ success: true, data: { account } });
@@ -1835,6 +1847,22 @@ export class AdminController {
             <label>Display Name</label>
             <input class="form-input" id="p2pDisplayName" placeholder="Friendly name shown to payers" required>
           </div>
+          <div class="form-group">
+            <label>Direct Pay / App URL (Optional)</label>
+            <input class="form-input" id="p2pDirectPayUrl" placeholder="https://venmo.com/your-username">
+          </div>
+          <div class="form-group">
+            <label>Automation Gmail (Optional)</label>
+            <input class="form-input" id="p2pEmail" type="email" placeholder="example@gmail.com">
+          </div>
+          <div class="form-group">
+            <label>Gmail App Password (Optional)</label>
+            <input class="form-input" id="p2pAppPassword" type="password" placeholder="xxxx xxxx xxxx xxxx">
+          </div>
+          <div class="form-group" style="display:flex;align-items:center;gap:8px;margin-top:12px;margin-bottom:12px;">
+            <input type="checkbox" id="p2pIsAutoVerifyEnabled" style="width:auto;margin:0;">
+            <label for="p2pIsAutoVerifyEnabled" style="margin-bottom:0;cursor:pointer;user-select:none;">Enable Auto Email Verification</label>
+          </div>
           <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:20px;">
             <button type="button" class="btn btn-ghost" onclick="document.getElementById('p2pModal').classList.remove('active')">Cancel</button>
             <button type="submit" class="btn btn-primary" id="p2pSubmitBtn">Add Account</button>
@@ -1859,12 +1887,16 @@ export class AdminController {
           const statusBadge = a.isActive
             ? '<span class="badge badge-success">Active</span>'
             : '<span class="badge badge-danger">Inactive</span>';
+          const autoBadge = a.isAutoVerifyEnabled
+            ? ' <span class="badge badge-success" style="font-size:10px;background:#059669;">Auto Verify</span>'
+            : '';
           grid.innerHTML += '<div class="stat-card" style="border-left:3px solid ' + color + ';">' +
-            '<div class="label">' + icon + ' ' + a.platform.charAt(0).toUpperCase() + a.platform.slice(1) + ' ' + statusBadge + '</div>' +
+            '<div class="label">' + icon + ' ' + a.platform.charAt(0).toUpperCase() + a.platform.slice(1) + ' ' + statusBadge + autoBadge + '</div>' +
             '<div class="value" style="font-size:20px;color:' + color + ';">' + a.handle + '</div>' +
             '<div style="color:var(--text-secondary);font-size:13px;margin-top:4px;">' + a.displayName + '</div>' +
+            (a.directPayUrl ? '<div style="color:var(--text-secondary);font-size:11px;margin-top:4px;word-break:break-all;">🔗 ' + a.directPayUrl + '</div>' : '') +
             '<div style="display:flex;gap:8px;margin-top:16px;">' +
-              '<button class="btn btn-sm btn-primary" onclick="openEditP2P(\\'' + a._id + '\\',\\'' + a.platform + '\\',\\'' + a.handle + '\\',\\'' + a.displayName + '\\')">Edit</button>' +
+              '<button class="btn btn-sm btn-primary" onclick="openEditP2P(\\'' + a._id + '\\',\\'' + a.platform + '\\',\\'' + a.handle + '\\',\\'' + a.displayName + '\\',\\'' + (a.email || '') + '\\',\\'' + (a.appPassword || '') + '\\',\\'' + (a.directPayUrl || '') + '\\',' + (a.isAutoVerifyEnabled || false) + ')">Edit</button>' +
               '<button class="btn btn-sm btn-danger" onclick="deleteP2P(\\'' + a._id + '\\')">Delete</button>' +
             '</div>' +
           '</div>';
@@ -1880,16 +1912,24 @@ export class AdminController {
         document.getElementById('p2pSubmitBtn').textContent = 'Add Account';
         document.getElementById('p2pEditId').value = '';
         document.getElementById('p2pForm').reset();
+        document.getElementById('p2pEmail').value = '';
+        document.getElementById('p2pAppPassword').value = '';
+        document.getElementById('p2pDirectPayUrl').value = '';
+        document.getElementById('p2pIsAutoVerifyEnabled').checked = false;
         document.getElementById('p2pModal').classList.add('active');
       }
 
-      function openEditP2P(id, platform, handle, displayName) {
+      function openEditP2P(id, platform, handle, displayName, email, appPassword, directPayUrl, isAutoVerifyEnabled) {
         document.getElementById('p2pModalTitle').textContent = 'Edit P2P Account';
         document.getElementById('p2pSubmitBtn').textContent = 'Save Changes';
         document.getElementById('p2pEditId').value = id;
         document.getElementById('p2pPlatform').value = platform;
         document.getElementById('p2pHandle').value = handle;
         document.getElementById('p2pDisplayName').value = displayName;
+        document.getElementById('p2pEmail').value = email || '';
+        document.getElementById('p2pAppPassword').value = appPassword || '';
+        document.getElementById('p2pDirectPayUrl').value = directPayUrl || '';
+        document.getElementById('p2pIsAutoVerifyEnabled').checked = isAutoVerifyEnabled === true || isAutoVerifyEnabled === 'true';
         document.getElementById('p2pModal').classList.add('active');
       }
 
@@ -1900,6 +1940,10 @@ export class AdminController {
           platform: document.getElementById('p2pPlatform').value,
           handle: document.getElementById('p2pHandle').value,
           displayName: document.getElementById('p2pDisplayName').value,
+          email: document.getElementById('p2pEmail').value,
+          appPassword: document.getElementById('p2pAppPassword').value,
+          directPayUrl: document.getElementById('p2pDirectPayUrl').value,
+          isAutoVerifyEnabled: document.getElementById('p2pIsAutoVerifyEnabled').checked,
         };
         const res = id
           ? await api('/api/admin/p2p-accounts/' + id, 'PUT', body)

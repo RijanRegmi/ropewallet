@@ -771,7 +771,7 @@ export class P2PController {
         </button>
       </div>
 
-      <!-- P2P Instructions (for Chime/Venmo) -->
+      <!-- P2P Instructions (for Chime/Venmo/CashApp) -->
       <div class="p2p-instructions" id="p2pInstructions">
         <h3 id="p2pTitle">Send via Chime</h3>
         <div class="step">
@@ -781,6 +781,11 @@ export class P2PController {
         <div class="handle-box">
           <span id="p2pHandle">-</span>
           <button class="copy-btn" onclick="copyHandle()">📋 Copy</button>
+        </div>
+        <div id="p2pDirectLinkContainer" style="margin: 12px 0; display: none;">
+          <a id="p2pDirectLink" href="#" target="_blank" class="submit-btn" style="display: block; text-align: center; text-decoration: none; background: #10B981; padding: 12px; font-size: 14px; margin-bottom: 16px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(16,185,129,0.2);">
+             ⚡ Open App & Pay Instantly
+          </a>
         </div>
         <div class="step">
           <div class="step-num">2</div>
@@ -813,10 +818,10 @@ export class P2PController {
     let selectedMethod = '';
     let currentP2PAccount = null;
 
-    // Filter out buttons for Chime/Venmo if the receiver does not have them configured
+    // Filter out buttons for Chime/Venmo/CashApp if the receiver does not have them configured
     document.querySelectorAll('.method-btn').forEach(btn => {
       const method = btn.getAttribute('data-method');
-      if ((method === 'chime' || method === 'venmo') && !p2pAccounts.some(a => a.platform === method)) {
+      if ((method === 'chime' || method === 'venmo' || method === 'cashapp') && !p2pAccounts.some(a => a.platform === method)) {
         btn.style.display = 'none';
       }
     });
@@ -886,14 +891,23 @@ export class P2PController {
       document.querySelector('[data-method="' + method + '"]').classList.add('active');
 
       const p2pInstructions = document.getElementById('p2pInstructions');
-      if (method === 'chime' || method === 'venmo') {
+      if (method === 'chime' || method === 'venmo' || method === 'cashapp') {
         // Find the P2P account for this platform
         currentP2PAccount = p2pAccounts.find(a => a.platform === method);
         if (currentP2PAccount) {
-          const appName = method.charAt(0).toUpperCase() + method.slice(1);
+          const appName = method === 'cashapp' ? 'Cash App' : method.charAt(0).toUpperCase() + method.slice(1);
           document.getElementById('p2pTitle').textContent = 'Send via ' + appName;
           document.getElementById('p2pAppName').textContent = appName;
           document.getElementById('p2pHandle').textContent = currentP2PAccount.handle;
+          
+          // Display direct redirect URL if configured
+          const directLinkContainer = document.getElementById('p2pDirectLinkContainer');
+          if (currentP2PAccount.directPayUrl) {
+            directLinkContainer.style.display = 'block';
+          } else {
+            directLinkContainer.style.display = 'none';
+          }
+          
           updateP2PAmount();
           p2pInstructions.classList.add('visible');
         } else {
@@ -912,10 +926,25 @@ export class P2PController {
     function updateP2PAmount() {
       const amount = parseFloat(document.getElementById('amountInput').value) || 0;
       document.getElementById('p2pAmount').textContent = '$' + amount.toFixed(2);
+      
+      // Update direct pay URL dynamically
+      if (currentP2PAccount && currentP2PAccount.directPayUrl) {
+        const directLink = document.getElementById('p2pDirectLink');
+        let url = currentP2PAccount.directPayUrl;
+        if (url.includes('cash.app') && amount > 0) {
+          if (url.endsWith('/')) {
+            directLink.href = url + amount.toFixed(2);
+          } else {
+            directLink.href = url + '/' + amount.toFixed(2);
+          }
+        } else {
+          directLink.href = url;
+        }
+      }
     }
 
     document.getElementById('amountInput').addEventListener('input', () => {
-      if (selectedMethod === 'chime' || selectedMethod === 'venmo') updateP2PAmount();
+      if (selectedMethod === 'chime' || selectedMethod === 'venmo' || selectedMethod === 'cashapp') updateP2PAmount();
     });
 
     function copyHandle() {
@@ -935,10 +964,10 @@ export class P2PController {
         return;
       }
       btn.disabled = false;
-      if (selectedMethod === 'chime' || selectedMethod === 'venmo') {
+      if (selectedMethod === 'chime' || selectedMethod === 'venmo' || selectedMethod === 'cashapp') {
         btn.textContent = '✓ I Have Sent the Payment';
       } else {
-        const label = { applepay: 'Apple Pay', googlepay: 'Google Pay', cashapp: 'Cash App', card: 'Card' }[selectedMethod] || 'Stripe';
+        const label = { applepay: 'Apple Pay', googlepay: 'Google Pay', card: 'Card' }[selectedMethod] || 'Stripe';
         btn.textContent = 'Pay $' + amount.toFixed(2) + ' with ' + label;
       }
     }
@@ -952,7 +981,7 @@ export class P2PController {
       btn.innerHTML = '<span class="spinner"></span>Processing...';
 
       try {
-        if (selectedMethod === 'chime' || selectedMethod === 'venmo') {
+        if (selectedMethod === 'chime' || selectedMethod === 'venmo' || selectedMethod === 'cashapp') {
           // Confirm P2P sent
           const res = await fetch('/api/p2p/confirm', {
             method: 'POST',
