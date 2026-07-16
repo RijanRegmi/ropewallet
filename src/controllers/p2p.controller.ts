@@ -962,7 +962,7 @@ export class P2PController {
             url = 'venmo://paycharge?txn=pay&recipients=' + handle + '&amount=' + amount.toFixed(2);
           } else if (selectedMethod === 'chime') {
             if (!handle.startsWith('$')) handle = '$' + handle;
-            url = 'https://chime.me/' + handle;
+            url = 'https://chime.com/' + handle;
           }
         }
         directLink.href = url;
