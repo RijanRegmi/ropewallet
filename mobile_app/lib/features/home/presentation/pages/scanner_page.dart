@@ -41,9 +41,6 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
     if (lowerData.contains('venmo.com') || lowerData.startsWith('venmo://')) {
       return true;
     }
-    if (lowerData.contains('chime.me') || lowerData.contains('chime.com')) {
-      return true;
-    }
     
     // Check if it's a valid domestic (RopeWallet) QR
     if (qrCodeData == 'admin-qr') {
@@ -87,12 +84,6 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
     } else if (lowerData.contains('venmo.com') || lowerData.startsWith('venmo://')) {
       isExternal = true;
       provider = 'Venmo';
-      recipientName = qrCodeData.contains('/') 
-          ? qrCodeData.substring(qrCodeData.lastIndexOf('/') + 1)
-          : qrCodeData;
-    } else if (lowerData.contains('chime.me') || lowerData.contains('chime.com')) {
-      isExternal = true;
-      provider = 'Chime';
       recipientName = qrCodeData.contains('/') 
           ? qrCodeData.substring(qrCodeData.lastIndexOf('/') + 1)
           : qrCodeData;

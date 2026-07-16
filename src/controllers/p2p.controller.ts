@@ -14,6 +14,19 @@ const STRIPE_FEE_FIXED = 0.30;  // $0.30
 
 export class P2PController {
 
+  // ─── Get Active P2P Accounts (Authenticated User) ──────────────
+  static async getActiveP2PAccounts(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const p2pAccounts = await P2PAccount.find({ isActive: true }).select('platform handle displayName');
+      res.status(200).json({
+        success: true,
+        data: p2pAccounts,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // ─── Create Payment Request (Authenticated User) ──────────────
   static async createPaymentRequest(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {

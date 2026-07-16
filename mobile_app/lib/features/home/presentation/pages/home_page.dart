@@ -27,13 +27,41 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool _isInit = false;
+  List<dynamic> _activeP2pAccounts = [];
+  bool _isLoadingP2pAccounts = true;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_isInit) {
       Provider.of<WalletProvider>(context, listen: false).fetchTransactions();
+      _fetchActiveP2pAccounts();
       _isInit = true;
+    }
+  }
+
+  Future<void> _fetchActiveP2pAccounts() async {
+    try {
+      final response = await ApiClient().get('/p2p/active-accounts');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          if (mounted) {
+            setState(() {
+              _activeP2pAccounts = data['data'];
+              _isLoadingP2pAccounts = false;
+            });
+          }
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching active P2P accounts: $e');
+    }
+    if (mounted) {
+      setState(() {
+        _isLoadingP2pAccounts = false;
+      });
     }
   }
 
@@ -43,7 +71,10 @@ class _HomePageState extends State<HomePage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return _ShareLinkBottomSheet(qrData: qrData);
+        return _ShareLinkBottomSheet(
+          qrData: qrData,
+          activeP2pAccounts: _activeP2pAccounts,
+        );
       },
     );
   }
@@ -80,6 +111,7 @@ class _HomePageState extends State<HomePage> {
           await Future.wait([
             authProvider.tryAutoLogin(),
             walletProvider.fetchTransactions(),
+            _fetchActiveP2pAccounts(),
           ]);
         },
         child: SingleChildScrollView(
@@ -342,75 +374,102 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               const SizedBox(height: 16),
-              GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                childAspectRatio: 1.45,
-                children: [
-                  _buildServiceCard(
-                    title: 'Chime',
-                    subtitle: 'Deposit / Payout',
-                    logoUrl: 'https://img.icons8.com/color/96/chime.png',
-                    accentColor: const Color(0xFF25C974),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const ChimeTransferPage()),
-                      );
-                    },
-                  ),
-                  _buildServiceCard(
-                    title: 'Cash App',
-                    subtitle: 'Send / Payout',
-                    logoUrl: 'https://img.icons8.com/color/96/cash-app.png',
-                    accentColor: const Color(0xFF00D632),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const CashAppTransferPage()),
-                      );
-                    },
-                  ),
-                  _buildServiceCard(
-                    title: 'Venmo',
-                    subtitle: 'Send / Payout',
-                    logoUrl: 'https://img.icons8.com/color/96/venmo.png',
-                    accentColor: const Color(0xFF008CFF),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const VenmoTransferPage()),
-                      );
-                    },
-                  ),
-                  _buildServiceCard(
-                    title: 'Bank Account',
-                    subtitle: 'Direct Deposit',
-                    logoUrl: 'https://img.icons8.com/color/96/bank.png',
-                    accentColor: const Color(0xFF475569),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const BankTransferPage()),
-                      );
-                    },
-                  ),
-                  _buildServiceCard(
-                    title: 'USDT Tether',
-                    subtitle: 'TRC-20 Payout',
-                    logoUrl: 'https://img.icons8.com/color/96/tether.png',
-                    accentColor: const Color(0xFF26A17B),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const UsdtTransferPage()),
-                      );
-                    },
-                  ),
-                ],
+              Builder(
+                builder: (context) {
+                  final hasChime = _activeP2pAccounts.any((a) => a['platform'] == 'chime');
+                  final hasCashApp = _activeP2pAccounts.any((a) => a['platform'] == 'cashapp');
+                  final hasVenmo = _activeP2pAccounts.any((a) => a['platform'] == 'venmo');
+
+                  List<Widget> services = [];
+                  if (hasChime) {
+                    services.add(
+                      _buildServiceCard(
+                        title: 'Chime',
+                        subtitle: 'Deposit / Payout',
+                        logoUrl: 'https://img.icons8.com/color/96/chime.png',
+                        accentColor: const Color(0xFF25C974),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const ChimeTransferPage()),
+                          );
+                        },
+                      ),
+                    );
+                  }
+                  if (hasCashApp) {
+                    services.add(
+                      _buildServiceCard(
+                        title: 'Cash App',
+                        subtitle: 'Send / Payout',
+                        logoUrl: 'https://img.icons8.com/color/96/cash-app.png',
+                        accentColor: const Color(0xFF00D632),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const CashAppTransferPage()),
+                          );
+                        },
+                      ),
+                    );
+                  }
+                  if (hasVenmo) {
+                    services.add(
+                      _buildServiceCard(
+                        title: 'Venmo',
+                        subtitle: 'Send / Payout',
+                        logoUrl: 'https://img.icons8.com/color/96/venmo.png',
+                        accentColor: const Color(0xFF008CFF),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const VenmoTransferPage()),
+                          );
+                        },
+                      ),
+                    );
+                  }
+                  
+                  // Bank Account and USDT Tether are always available
+                  services.add(
+                    _buildServiceCard(
+                      title: 'Bank Account',
+                      subtitle: 'Direct Deposit',
+                      logoUrl: 'https://img.icons8.com/color/96/bank.png',
+                      accentColor: const Color(0xFF475569),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const BankTransferPage()),
+                        );
+                      },
+                    ),
+                  );
+                  services.add(
+                    _buildServiceCard(
+                      title: 'USDT Tether',
+                      subtitle: 'TRC-20 Payout',
+                      logoUrl: 'https://img.icons8.com/color/96/tether.png',
+                      accentColor: const Color(0xFF26A17B),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const UsdtTransferPage()),
+                        );
+                      },
+                    ),
+                  );
+
+                  return GridView.count(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    childAspectRatio: 1.45,
+                    children: services,
+                  );
+                }
               ),
               const SizedBox(height: 32),
 
@@ -705,8 +764,13 @@ class _HomePageState extends State<HomePage> {
 
 class _ShareLinkBottomSheet extends StatefulWidget {
   final String qrData;
+  final List<dynamic> activeP2pAccounts;
 
-  const _ShareLinkBottomSheet({Key? key, required this.qrData}) : super(key: key);
+  const _ShareLinkBottomSheet({
+    Key? key,
+    required this.qrData,
+    required this.activeP2pAccounts,
+  }) : super(key: key);
 
   @override
   _ShareLinkBottomSheetState createState() => _ShareLinkBottomSheetState();
@@ -717,13 +781,25 @@ class _ShareLinkBottomSheetState extends State<_ShareLinkBottomSheet> {
   String _selectedMethod = 'any'; // 'any', 'chime', 'venmo', 'cashapp', 'card'
   bool _isLoading = false;
 
-  final List<Map<String, dynamic>> _methods = [
+  final List<Map<String, dynamic>> _allMethods = [
     {'id': 'any', 'name': 'Any Method', 'icon': '🌐', 'color': const Color(0xFFEC4899)},
     {'id': 'chime', 'name': 'Chime Only', 'icon': '🏦', 'color': const Color(0xFF25C490)},
     {'id': 'venmo', 'name': 'Venmo Only', 'icon': '💜', 'color': const Color(0xFF008CFF)},
     {'id': 'cashapp', 'name': 'Cash App Only', 'icon': '💚', 'color': const Color(0xFF00D632)},
     {'id': 'card', 'name': 'Card / Pay', 'icon': '💳', 'color': const Color(0xFF3B82F6)},
   ];
+
+  List<Map<String, dynamic>> _availableMethods = [];
+
+  @override
+  void initState() {
+    super.initState();
+    final activePlatforms = widget.activeP2pAccounts.map((a) => a['platform'] as String).toSet();
+    _availableMethods = _allMethods.where((m) {
+      if (m['id'] == 'any' || m['id'] == 'card') return true;
+      return activePlatforms.contains(m['id']);
+    }).toList();
+  }
 
   @override
   void dispose() {
@@ -930,9 +1006,9 @@ class _ShareLinkBottomSheetState extends State<_ShareLinkBottomSheet> {
                 mainAxisSpacing: 8,
                 childAspectRatio: 2.2,
               ),
-              itemCount: _methods.length,
+              itemCount: _availableMethods.length,
               itemBuilder: (context, index) {
-                final method = _methods[index];
+                final method = _availableMethods[index];
                 final isSelected = _selectedMethod == method['id'];
                 
                 return GestureDetector(

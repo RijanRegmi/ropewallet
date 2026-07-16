@@ -11,6 +11,7 @@ router.post('/confirm', P2PController.confirmP2PSent);
 router.post('/stripe-checkout', P2PController.createStripeP2PCheckout);
 
 // Protected routes (for authenticated RopeWallet users)
+router.get('/active-accounts', protect, P2PController.getActiveP2PAccounts);
 router.post('/create-request', protect, P2PController.createPaymentRequest);
 
 export default router;
