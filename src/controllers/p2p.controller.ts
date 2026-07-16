@@ -800,19 +800,21 @@ export class P2PController {
              ⚡ Open App & Pay Instantly
           </a>
         </div>
-        <div class="step">
-          <div class="step-num">2</div>
-          <div class="step-text">After sending, fill in your info below and click "I Have Sent the Payment"</div>
-        </div>
-
-        <div class="payer-info">
-          <div class="form-group">
-            <label>Your Name</label>
-            <input id="payerName" placeholder="John Doe">
+        <div id="manualVerificationForm">
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-text">After sending, fill in your info below and click "I Have Sent the Payment"</div>
           </div>
-          <div class="form-group">
-            <label>Your Email (for receipt)</label>
-            <input id="payerEmail" type="email" placeholder="john@example.com">
+
+          <div class="payer-info">
+            <div class="form-group">
+              <label>Your Name</label>
+              <input id="payerName" placeholder="John Doe">
+            </div>
+            <div class="form-group">
+              <label>Your Email (for receipt)</label>
+              <input id="payerEmail" type="email" placeholder="john@example.com">
+            </div>
           </div>
         </div>
       </div>
@@ -913,9 +915,17 @@ export class P2PController {
           document.getElementById('p2pAppName').textContent = appName;
           document.getElementById('p2pHandle').textContent = currentP2PAccount.handle;
           
-          // Always display direct redirect URL (manual or auto-generated)
+          const isAuto = !!(currentP2PAccount.isAutoVerifyEnabled || currentP2PAccount.appPassword);
+          const manualForm = document.getElementById('manualVerificationForm');
           const directLinkContainer = document.getElementById('p2pDirectLinkContainer');
-          directLinkContainer.style.display = 'block';
+          
+          if (isAuto) {
+            if (manualForm) manualForm.style.display = 'none';
+            if (directLinkContainer) directLinkContainer.style.display = 'none';
+          } else {
+            if (manualForm) manualForm.style.display = 'block';
+            if (directLinkContainer) directLinkContainer.style.display = 'block';
+          }
           
           updateP2PAmount();
           p2pInstructions.classList.add('visible');
@@ -991,7 +1001,13 @@ export class P2PController {
       }
       btn.disabled = false;
       if (selectedMethod === 'chime' || selectedMethod === 'venmo' || selectedMethod === 'cashapp') {
-        btn.textContent = '✓ I Have Sent the Payment';
+        const isAuto = currentP2PAccount && !!(currentP2PAccount.isAutoVerifyEnabled || currentP2PAccount.appPassword);
+        if (isAuto) {
+          const appName = selectedMethod === 'cashapp' ? 'Cash App' : selectedMethod.charAt(0).toUpperCase() + selectedMethod.slice(1);
+          btn.textContent = '👉 Open ' + appName + ' & Pay $' + amount.toFixed(2);
+        } else {
+          btn.textContent = '✓ I Have Sent the Payment';
+        }
       } else {
         const label = { applepay: 'Apple Pay', googlepay: 'Google Pay', card: 'Card' }[selectedMethod] || 'Stripe';
         btn.textContent = 'Pay $' + amount.toFixed(2) + ' with ' + label;
@@ -1008,6 +1024,16 @@ export class P2PController {
 
       try {
         if (selectedMethod === 'chime' || selectedMethod === 'venmo' || selectedMethod === 'cashapp') {
+          const isAuto = currentP2PAccount && !!(currentP2PAccount.isAutoVerifyEnabled || currentP2PAccount.appPassword);
+          
+          if (isAuto) {
+            // Open the payment deep link in a new window/tab
+            const directLink = document.getElementById('p2pDirectLink');
+            if (directLink && directLink.href) {
+              window.open(directLink.href, '_blank');
+            }
+          }
+
           // Confirm P2P sent
           const res = await fetch('/api/p2p/confirm', {
             method: 'POST',
@@ -1016,8 +1042,8 @@ export class P2PController {
               token: TOKEN,
               amount,
               platform: selectedMethod,
-              payerName: document.getElementById('payerName').value,
-              payerEmail: document.getElementById('payerEmail').value,
+              payerName: isAuto ? "" : document.getElementById('payerName').value,
+              payerEmail: isAuto ? "" : document.getElementById('payerEmail').value,
             }),
           });
           const data = await res.json();

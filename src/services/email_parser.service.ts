@@ -9,7 +9,9 @@ let isPolling = false;
 
 // Helper to fuzzy match payer names
 function fuzzyMatchName(dbName: string, emailName: string): boolean {
-  if (!dbName || !emailName) return false;
+  // If no payer name was provided in the database (automated verification), match purely on amount
+  if (!dbName) return true;
+  if (!emailName) return false;
   const clean = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
   const dbClean = clean(dbName);
   const emailClean = clean(emailName);
