@@ -40,7 +40,7 @@ export class P2PController {
       }
 
       const token = crypto.randomUUID().replace(/-/g, '');
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
 
       const paymentRequest = await PaymentRequest.create({
         token,
@@ -340,7 +340,7 @@ export class P2PController {
 
       // Generate a temporary PaymentRequest token on the fly
       const token = crypto.randomUUID().replace(/-/g, '');
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiration
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes expiration
 
       const paymentRequest = await PaymentRequest.create({
         token,
@@ -405,7 +405,7 @@ export class P2PController {
 
         // Create temporary token on the fly
         const newToken = crypto.randomUUID().replace(/-/g, '');
-        const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiration
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes expiration
 
         await PaymentRequest.create({
           token: newToken,
@@ -913,13 +913,9 @@ export class P2PController {
           document.getElementById('p2pAppName').textContent = appName;
           document.getElementById('p2pHandle').textContent = currentP2PAccount.handle;
           
-          // Display direct redirect URL if configured
+          // Always display direct redirect URL (manual or auto-generated)
           const directLinkContainer = document.getElementById('p2pDirectLinkContainer');
-          if (currentP2PAccount.directPayUrl) {
-            directLinkContainer.style.display = 'block';
-          } else {
-            directLinkContainer.style.display = 'none';
-          }
+          directLinkContainer.style.display = 'block';
           
           updateP2PAmount();
           p2pInstructions.classList.add('visible');
@@ -940,19 +936,36 @@ export class P2PController {
       const amount = parseFloat(document.getElementById('amountInput').value) || 0;
       document.getElementById('p2pAmount').textContent = '$' + amount.toFixed(2);
       
-      // Update direct pay URL dynamically
-      if (currentP2PAccount && currentP2PAccount.directPayUrl) {
+      if (currentP2PAccount) {
         const directLink = document.getElementById('p2pDirectLink');
-        let url = currentP2PAccount.directPayUrl;
-        if (url.includes('cash.app') && amount > 0) {
-          if (url.endsWith('/')) {
-            directLink.href = url + amount.toFixed(2);
-          } else {
-            directLink.href = url + '/' + amount.toFixed(2);
+        const appName = selectedMethod === 'cashapp' ? 'Cash App' : selectedMethod.charAt(0).toUpperCase() + selectedMethod.slice(1);
+        directLink.innerHTML = '⚡ Open ' + appName + ' & Pay $' + amount.toFixed(2) + ' Instantly';
+        
+        let url = '';
+        if (currentP2PAccount.directPayUrl) {
+          url = currentP2PAccount.directPayUrl;
+          if (url.includes('cash.app') && amount > 0) {
+            if (url.endsWith('/')) {
+              url = url + amount.toFixed(2);
+            } else {
+              url = url + '/' + amount.toFixed(2);
+            }
           }
         } else {
-          directLink.href = url;
+          // Auto-generate based on handle
+          let handle = currentP2PAccount.handle.trim();
+          if (selectedMethod === 'cashapp') {
+            if (!handle.startsWith('$')) handle = '$' + handle;
+            url = 'https://cash.app/' + handle + '/' + amount.toFixed(2);
+          } else if (selectedMethod === 'venmo') {
+            if (handle.startsWith('@')) handle = handle.substring(1);
+            url = 'venmo://paycharge?txn=pay&recipients=' + handle + '&amount=' + amount.toFixed(2);
+          } else if (selectedMethod === 'chime') {
+            if (!handle.startsWith('$')) handle = '$' + handle;
+            url = 'https://chime.me/' + handle;
+          }
         }
+        directLink.href = url;
       }
     }
 
