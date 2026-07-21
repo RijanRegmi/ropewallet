@@ -69,15 +69,14 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Show loading spinner while authenticating / auto-logging on startup
+    // While authenticating, show a plain scaffold matching native splash background
+    // so the transition from native splash → Flutter is invisible (no flash)
     if (authProvider.isLoading && authProvider.user == null) {
       return Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
-          ),
-        ),
+        backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFFFFFFF),
+        body: const SizedBox.shrink(),
       );
     }
 

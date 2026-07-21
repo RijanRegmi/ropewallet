@@ -518,7 +518,7 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
                             const SizedBox(height: 8),
                             GestureDetector(
                               onTap: () {
-                                final displayTag = myUserTag.startsWith(r'$') ? myUserTag : '\$${myUserTag}';
+                                final displayTag = myUserTag.startsWith(r'$') ? myUserTag : '\$' + myUserTag;
                                 Clipboard.setData(ClipboardData(text: displayTag));
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
@@ -541,7 +541,7 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                      myUserTag.startsWith(r'$') ? myUserTag : '\$${myUserTag}',
+                                      myUserTag.startsWith(r'$') ? myUserTag : '\$' + myUserTag,
                                       style: const TextStyle(
                                         fontSize: 14,
                                         color: Color(0xFF4F46E5),
