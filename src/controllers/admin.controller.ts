@@ -153,10 +153,10 @@ export class AdminController {
       const sortBy = (req.query.sortBy as string) || 'createdAt';
       const sortOrder = (req.query.sortOrder as string) === 'asc' ? 1 : -1;
 
-      // Filter for players
-      const playerFilter: any = { role: { $in: ['user', null] } };
+      // Filter for all user accounts in main table list
+      const userFilter: any = {};
       if (search) {
-        playerFilter.$or = [
+        userFilter.$or = [
           { fullName: { $regex: search, $options: 'i' } },
           { email: { $regex: search, $options: 'i' } },
           { userTag: { $regex: search, $options: 'i' } },
@@ -164,7 +164,7 @@ export class AdminController {
         ];
       }
 
-      // Filter for admins
+      // Filter for admins list
       const adminFilter: any = { role: { $in: ['admin', 'superadmin'] } };
       if (search) {
         adminFilter.$or = [
@@ -175,26 +175,26 @@ export class AdminController {
         ];
       }
 
-      const [admins, players, totalPlayers] = await Promise.all([
+      const [admins, users, totalUsers] = await Promise.all([
         User.find(adminFilter).sort({ createdAt: -1 }).select('-savedCard'),
-        User.find(playerFilter)
+        User.find(userFilter)
           .sort({ [sortBy]: sortOrder } as any)
           .skip((page - 1) * limit)
           .limit(limit)
           .select('-savedCard'),
-        User.countDocuments(playerFilter),
+        User.countDocuments(userFilter),
       ]);
 
       res.json({
         success: true,
         data: {
           admins,
-          users: players,
+          users,
           pagination: {
             page,
             limit,
-            total: totalPlayers,
-            totalPages: Math.ceil(totalPlayers / limit),
+            total: totalUsers,
+            totalPages: Math.ceil(totalUsers / limit),
           },
         },
       });
@@ -1276,11 +1276,58 @@ export class AdminController {
       display: none;
       text-align: center;
     }
-    .branding {
+    .forgot-link {
+      display: block;
+      text-align: right;
+      font-size: 13px;
+      color: #818CF8;
+      text-decoration: none;
+      margin-top: 6px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .forgot-link:hover { text-decoration: underline; }
+    
+    /* Modal styles */
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+    .modal-box {
+      background: #111827;
+      border: 1px solid #1F2937;
+      border-radius: 20px;
+      padding: 32px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      position: relative;
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px; right: 16px;
+      background: transparent;
+      border: none;
+      color: #9CA3AF;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .success-msg {
+      background: rgba(16,185,129,0.1);
+      color: #10B981;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      margin-bottom: 16px;
+      display: none;
       text-align: center;
-      margin-top: 24px;
-      font-size: 12px;
-      color: #4B5563;
     }
   </style>
 </head>
@@ -1297,15 +1344,55 @@ export class AdminController {
           <label>Email Address</label>
           <input type="email" id="email" placeholder="admin@ropewallet.com" required autofocus>
         </div>
-        <div class="form-group">
+        <div class="form-group" style="margin-bottom: 8px;">
           <label>Password</label>
           <input type="password" id="password" placeholder="Enter your password" required>
+        </div>
+        <div style="margin-bottom: 20px;">
+          <a class="forgot-link" onclick="openForgotModal()">Forgot Password?</a>
         </div>
         <button type="submit" class="btn-login" id="loginBtn">Sign In</button>
       </form>
     </div>
     <div class="branding">&copy; ${new Date().getFullYear()} RopeWallet. All rights reserved.</div>
   </div>
+
+  <!-- Forgot Password Modal -->
+  <div class="modal-backdrop" id="forgotModal">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeForgotModal()">&times;</button>
+      <div style="text-align: center; margin-bottom: 20px;">
+        <h3 style="font-size: 20px; font-weight: 800; color: #F9FAFB;">🔑 Reset Password</h3>
+        <p style="font-size: 13px; color: #9CA3AF; margin-top: 4px;">Enter your registered email to receive an OTP code</p>
+      </div>
+
+      <div class="error-msg" id="forgotErrorMsg"></div>
+      <div class="success-msg" id="forgotSuccessMsg"></div>
+
+      <!-- Step 1: Send OTP -->
+      <form id="sendOtpForm">
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="forgotEmail" placeholder="your-email@example.com" required>
+        </div>
+        <button type="submit" class="btn-login" id="sendOtpBtn">Send Verification OTP</button>
+      </form>
+
+      <!-- Step 2: Verify OTP & Reset Password -->
+      <form id="resetPassForm" style="display: none;">
+        <div class="form-group">
+          <label>6-Digit OTP Code</label>
+          <input type="text" id="otpCode" placeholder="123456" maxlength="6" required style="letter-spacing: 4px; font-size: 18px; text-align: center;">
+        </div>
+        <div class="form-group">
+          <label>New Password</label>
+          <input type="password" id="newPassword" placeholder="Minimum 6 characters" required minlength="6">
+        </div>
+        <button type="submit" class="btn-login" id="resetPassBtn">Update Password</button>
+      </form>
+    </div>
+  </div>
+
   <script>
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -1337,6 +1424,95 @@ export class AdminController {
       }
       btn.disabled = false;
       btn.textContent = 'Sign In';
+    });
+
+    function openForgotModal() {
+      document.getElementById('forgotModal').style.display = 'flex';
+      document.getElementById('sendOtpForm').style.display = 'block';
+      document.getElementById('resetPassForm').style.display = 'none';
+      document.getElementById('forgotErrorMsg').style.display = 'none';
+      document.getElementById('forgotSuccessMsg').style.display = 'none';
+    }
+
+    function closeForgotModal() {
+      document.getElementById('forgotModal').style.display = 'none';
+    }
+
+    let resetEmail = '';
+
+    document.getElementById('sendOtpForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('forgotEmail').value.trim();
+      const btn = document.getElementById('sendOtpBtn');
+      const errEl = document.getElementById('forgotErrorMsg');
+      const succEl = document.getElementById('forgotSuccessMsg');
+      
+      btn.disabled = true;
+      btn.textContent = 'Sending OTP...';
+      errEl.style.display = 'none';
+      succEl.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          resetEmail = email;
+          succEl.textContent = 'OTP sent! Please check your email inbox.';
+          succEl.style.display = 'block';
+          document.getElementById('sendOtpForm').style.display = 'none';
+          document.getElementById('resetPassForm').style.display = 'block';
+        } else {
+          errEl.textContent = data.error || 'Failed to send OTP';
+          errEl.style.display = 'block';
+        }
+      } catch (err) {
+        errEl.textContent = 'Network error. Please try again.';
+        errEl.style.display = 'block';
+      }
+      btn.disabled = false;
+      btn.textContent = 'Send Verification OTP';
+    });
+
+    document.getElementById('resetPassForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const otpCode = document.getElementById('otpCode').value.trim();
+      const newPassword = document.getElementById('newPassword').value;
+      const btn = document.getElementById('resetPassBtn');
+      const errEl = document.getElementById('forgotErrorMsg');
+      const succEl = document.getElementById('forgotSuccessMsg');
+
+      btn.disabled = true;
+      btn.textContent = 'Updating password...';
+      errEl.style.display = 'none';
+      succEl.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: resetEmail, otpCode, newPassword }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          succEl.textContent = 'Password reset successfully! You can now log in.';
+          succEl.style.display = 'block';
+          setTimeout(() => {
+            closeForgotModal();
+          }, 2000);
+        } else {
+          errEl.textContent = data.error || 'Failed to reset password';
+          errEl.style.display = 'block';
+        }
+      } catch (err) {
+        errEl.textContent = 'Network error. Please try again.';
+        errEl.style.display = 'block';
+      }
+      btn.disabled = false;
+      btn.textContent = 'Update Password';
     });
   </script>
 </body>
@@ -1518,11 +1694,11 @@ export class AdminController {
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <div class="form-group">
               <label>First Name *</label>
-              <input class="form-input" id="uFirstName" required>
+              <input class="form-input" id="uFirstName" oninput="autoGenerateTag()" required>
             </div>
             <div class="form-group">
               <label>Last Name *</label>
-              <input class="form-input" id="uLastName" required>
+              <input class="form-input" id="uLastName" oninput="autoGenerateTag()" required>
             </div>
           </div>
           <div class="form-group">
@@ -1576,17 +1752,13 @@ export class AdminController {
             ? '<button class="btn-icon btn-icon-success" onclick="toggleFreeze(\\'' + u._id + '\\', false)" title="Unfreeze Account"><i class="fas fa-lock-open"></i></button>'
             : '<button class="btn-icon btn-icon-warning" onclick="toggleFreeze(\\'' + u._id + '\\', true)" title="Freeze Account"><i class="fas fa-lock"></i></button>';
 
-          const roleBadge = u.role === 'superadmin'
+          const isSuperAdmin = u.role === 'superadmin';
+          const roleSelect = isSuperAdmin
             ? '<span class="badge badge-danger">Superadmin</span>'
-            : u.role === 'admin'
-              ? '<span class="badge badge-info">Admin</span>'
-              : '<span class="badge badge-neutral">User</span>';
-
-          const roleToggleBtn = u.role === 'superadmin'
-            ? ''
-            : u.role === 'admin'
-              ? '<button class="btn-icon btn-icon-ghost" onclick="toggleRole(\\\'' + u._id + '\\\', \\\'user\\\')" title="Demote to User"><i class="fas fa-user-minus"></i></button>'
-              : '<button class="btn-icon btn-icon-primary" onclick="toggleRole(\\\'' + u._id + '\\\', \\\'admin\\\')" title="Make Admin"><i class="fas fa-user-shield"></i></button>';
+            : '<select style="background:#1F2937;color:#F9FAFB;border:1px solid #374151;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;outline:none;" onchange="toggleRole(\\\'' + u._id + '\\\', this.value)">' +
+                '<option value="user"' + (u.role === 'user' ? ' selected' : '') + '>User</option>' +
+                '<option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>Admin</option>' +
+              '</select>';
 
           tbody.innerHTML += '<tr>' +
             '<td><strong>' + (u.fullName || u.firstName + ' ' + u.lastName) + '</strong></td>' +
@@ -1594,11 +1766,10 @@ export class AdminController {
             '<td>@' + u.userTag + '</td>' +
             '<td>$' + Number(u.walletBalance).toFixed(2) + '</td>' +
             '<td>' + statusBadge + '</td>' +
-            '<td>' + roleBadge + '</td>' +
+            '<td>' + roleSelect + '</td>' +
             '<td>' + new Date(u.createdAt).toLocaleDateString() + '</td>' +
             '<td style="display:flex;gap:8px;">' +
               '<button class="btn-icon btn-icon-primary" onclick="openEditModal(\\'' + u._id + '\\')" title="Edit User"><i class="fas fa-edit"></i></button>' +
-              roleToggleBtn +
               freezeBtn +
               '<button class="btn-icon btn-icon-danger" onclick="deleteUser(\\'' + u._id + '\\')" title="Delete User"><i class="fas fa-trash"></i></button>' +
             '</td>' +
@@ -1614,6 +1785,19 @@ export class AdminController {
         }
       }
 
+      function autoGenerateTag() {
+        const isEdit = !!document.getElementById('editUserId').value;
+        if (isEdit) return;
+        const first = document.getElementById('uFirstName').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const last = document.getElementById('uLastName').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const name = first || last || 'user';
+        const tagEl = document.getElementById('uTag');
+        let currentVal = tagEl.value;
+        let numMatch = currentVal.match(/\d+$/);
+        let num = numMatch ? numMatch[0] : Math.floor(100 + Math.random() * 900);
+        tagEl.value = '$' + name + num;
+      }
+
       function openCreateModal() {
         document.getElementById('modalTitle').textContent = 'Create User';
         document.getElementById('submitBtn').textContent = 'Create User';
@@ -1621,6 +1805,7 @@ export class AdminController {
         document.getElementById('passwordGroup').style.display = 'block';
         document.getElementById('balanceGroup').style.display = 'none';
         document.getElementById('userForm').reset();
+        document.getElementById('uTag').value = '$user' + Math.floor(100 + Math.random() * 900);
         document.getElementById('userModal').classList.add('active');
       }
 
@@ -1679,9 +1864,12 @@ export class AdminController {
       }
 
       async function toggleRole(id, role) {
-        if (!confirm('Change role of this user to ' + role + '?')) return;
+        if (!confirm('Change role of this account to ' + role + '?')) {
+          loadUsers(currentPage);
+          return;
+        }
         const res = await api('/api/admin/users/' + id + '/role', 'PUT', { role });
-        showToast(res.success ? res.message : res.error, res.success ? 'success' : 'error');
+        showToast(res.success ? (res.message || 'Role updated') : res.error, res.success ? 'success' : 'error');
         loadUsers(currentPage);
       }
 

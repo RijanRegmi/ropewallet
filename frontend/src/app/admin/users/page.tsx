@@ -124,7 +124,7 @@ export default function UsersManagement() {
     setFormFirstName('');
     setFormLastName('');
     setFormEmail('');
-    setFormTag('');
+    setFormTag(`user${Math.floor(100 + Math.random() * 900)}`);
     setFormPhone('');
     setFormPassword('');
     setFormBalance('0');
@@ -691,7 +691,18 @@ export default function UsersManagement() {
                   <input
                     type="text"
                     value={formFirstName}
-                    onChange={(e) => setFormFirstName(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormFirstName(val);
+                      if (!selectedUser) {
+                        const cleanFirst = val.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+                        const cleanLast = formLastName.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+                        const name = cleanFirst || cleanLast || 'user';
+                        const numMatch = formTag.match(/\d+$/);
+                        const num = numMatch ? numMatch[0] : Math.floor(100 + Math.random() * 900);
+                        setFormTag(`${name}${num}`);
+                      }
+                    }}
                     required
                     className={`w-full px-4 py-2.5 border rounded-xl text-sm outline-none transition-colors ${
                       isDarkMode
@@ -707,7 +718,18 @@ export default function UsersManagement() {
                   <input
                     type="text"
                     value={formLastName}
-                    onChange={(e) => setFormLastName(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormLastName(val);
+                      if (!selectedUser) {
+                        const cleanFirst = formFirstName.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+                        const cleanLast = val.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+                        const name = cleanFirst || cleanLast || 'user';
+                        const numMatch = formTag.match(/\d+$/);
+                        const num = numMatch ? numMatch[0] : Math.floor(100 + Math.random() * 900);
+                        setFormTag(`${name}${num}`);
+                      }
+                    }}
                     required
                     className={`w-full px-4 py-2.5 border rounded-xl text-sm outline-none transition-colors ${
                       isDarkMode

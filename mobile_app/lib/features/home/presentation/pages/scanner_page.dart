@@ -515,20 +515,47 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
                                 color: Colors.black,
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF4F46E5).withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                myQrData,
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  color: Color(0xFF4F46E5),
-                                  fontFamily: 'monospace',
-                                  fontWeight: FontWeight.bold,
+                            const SizedBox(height: 8),
+                            GestureDetector(
+                              onTap: () {
+                                final displayTag = myUserTag.startsWith(r'$') ? myUserTag : '\$${myUserTag}';
+                                Clipboard.setData(ClipboardData(text: displayTag));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: const Color(0xFF10B981),
+                                    content: Text('Copied tag $displayTag to clipboard!'),
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF4F46E5).withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: const Color(0xFF4F46E5).withOpacity(0.2),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      myUserTag.startsWith(r'$') ? myUserTag : '\$${myUserTag}',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Color(0xFF4F46E5),
+                                        fontFamily: 'monospace',
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    const Icon(
+                                      Icons.copy_rounded,
+                                      size: 14,
+                                      color: Color(0xFF4F46E5),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
