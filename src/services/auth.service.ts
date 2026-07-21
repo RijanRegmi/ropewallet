@@ -108,7 +108,7 @@ export class AuthService {
       phoneNumber: data.phoneNumber.trim(),
       transactionPin: data.transactionPin.trim(),
       qrCodeData,
-      walletBalance: 1000.00, // Pre-fund with $1000 for simulation / testing
+      walletBalance: 0.00, // Initial balance set to 0.00 for live accounts
     });
 
     const token = generateToken(newUser._id.toString());

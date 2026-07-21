@@ -79,37 +79,33 @@ class WalletProvider with ChangeNotifier {
           return false;
         }
         cleanCard = cardNumber.replaceAll(' ', '');
-        if (cleanCard == '4242424242424242') {
-          paymentMethodId = 'tok_visa';
-        } else {
-          // 1. Create PaymentMethod directly via Stripe's REST API
-          final stripeUrl = Uri.parse('https://api.stripe.com/v1/payment_methods');
-          final stripeResponse = await http.post(
-            stripeUrl,
-            headers: {
-              'Authorization': 'Bearer ${ApiConstants.stripePublishableKey}',
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: {
-              'type': 'card',
-              'card[number]': cleanCard,
-              'card[exp_month]': expMonth,
-              'card[exp_year]': expYear,
-              'card[cvc]': cvc,
-            },
-          );
+        // 1. Create PaymentMethod directly via Stripe's REST API using live key
+        final stripeUrl = Uri.parse('https://api.stripe.com/v1/payment_methods');
+        final stripeResponse = await http.post(
+          stripeUrl,
+          headers: {
+            'Authorization': 'Bearer ${ApiConstants.stripePublishableKey}',
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: {
+            'type': 'card',
+            'card[number]': cleanCard,
+            'card[exp_month]': expMonth,
+            'card[exp_year]': expYear,
+            'card[cvc]': cvc,
+          },
+        );
 
-          final stripeData = jsonDecode(stripeResponse.body);
-          if (stripeResponse.statusCode != 200) {
-            final errorMsg = stripeData['error']?['message'] ?? 'Stripe tokenization failed';
-            _errorMessage = errorMsg;
-            _isLoading = false;
-            notifyListeners();
-            return false;
-          }
-
-          paymentMethodId = stripeData['id'];
+        final stripeData = jsonDecode(stripeResponse.body);
+        if (stripeResponse.statusCode != 200) {
+          final errorMsg = stripeData['error']?['message'] ?? 'Stripe tokenization failed';
+          _errorMessage = errorMsg;
+          _isLoading = false;
+          notifyListeners();
+          return false;
         }
+
+        paymentMethodId = stripeData['id'];
       }
 
       // 2. Send the PaymentMethod ID or saved card flag to the backend

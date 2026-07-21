@@ -14,7 +14,7 @@ class ApiConstants {
   static const bool isTestingOnPhysicalDevice = true;
   static const String localComputerIp = '192.168.1.7'; // Change to your local IP address
   static const String ngrokUrl = 'https://your-ngrok-tunnel-url.ngrok-free.app'; // Change to your ngrok URL
-  static const String stripePublishableKey = 'pk_test_51TsQ9OE7AQ2Xgd8r7jE2SNJjCZs1YUydWQoA079KDS7LHNKKkqZ3rRAq4N6vTBC8kJsyw3qWWF1kctGzdMsq81Fa00WdD6V2fG';
+  static const String stripePublishableKey = 'pk_live_51TsQ96EAXnJUFOnkpg5J6wq4ZNg79gk3lxsdhFDKXk0CPPTS24OYkDf4E4xPnNLc9epU3YA0eoi5cSKXi0iQ5n5900ZKKnbUvY';
   // ====================================================================
 
   static String get baseUrl {

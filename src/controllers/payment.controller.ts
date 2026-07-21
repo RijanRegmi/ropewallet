@@ -53,26 +53,16 @@ export class PaymentController {
             return;
           }
           const saved = user.savedCard;
-          if (saved.cardNumber === '4242424242424242') {
-            const pm = await stripe.paymentMethods.create({
-              type: 'card',
-              card: {
-                token: 'tok_visa',
-              },
-            });
-            finalPaymentMethodId = pm.id;
-          } else {
-            const pm = await stripe.paymentMethods.create({
-              type: 'card',
-              card: {
-                number: saved.cardNumber,
-                exp_month: parseInt(saved.expMonth),
-                exp_year: parseInt(saved.expYear),
-                cvc: saved.cvc,
-              },
-            });
-            finalPaymentMethodId = pm.id;
-          }
+          const pm = await stripe.paymentMethods.create({
+            type: 'card',
+            card: {
+              number: saved.cardNumber,
+              exp_month: parseInt(saved.expMonth),
+              exp_year: parseInt(saved.expYear),
+              cvc: saved.cvc,
+            },
+          });
+          finalPaymentMethodId = pm.id;
         } else if (paymentMethodId.startsWith('tok_')) {
           const pm = await stripe.paymentMethods.create({
             type: 'card',
