@@ -116,6 +116,7 @@ const userSchema = new Schema<IUser>(
       type: Schema.Types.ObjectId,
       ref: 'User',
     },
+    usedCardFingerprints: [{ type: String }],
     role: {
       type: String,
       enum: ['user', 'admin', 'superadmin'],

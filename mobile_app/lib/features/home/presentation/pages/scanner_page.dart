@@ -21,20 +21,23 @@ class ScannerPage extends StatefulWidget {
   State<ScannerPage> createState() => _ScannerPageState();
 }
 
-class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
+class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin {
+  late AnimationController _laserController;
+  late AnimationController _sheetController;
   final MobileScannerController _cameraController = MobileScannerController();
   final _manualInputController = TextEditingController();
   final GlobalKey _qrBoundaryKey = GlobalKey();
+  
   bool _isSavingQr = false;
   bool _hasScanned = false;
   bool _isTorchOn = false;
   bool _isShowingInvalidMessage = false;
+  bool _isSheetExpanded = false;
 
   bool _isValidQrData(String qrCodeData) {
     final lowerData = qrCodeData.toLowerCase();
     
-    // Check if it's a valid external transfer QR
+    // External transfer QR
     if (lowerData.contains('cash.app') || 
         (qrCodeData.startsWith('\$') && (lowerData.contains('/') || lowerData.contains('.')))) {
       return true;
@@ -43,7 +46,7 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
       return true;
     }
     
-    // Check if it's a valid domestic (RopeWallet) QR
+    // Domestic QR
     if (qrCodeData == 'admin-qr') {
       return true;
     }
@@ -55,19 +58,37 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    // Pulse animation for the scanning laser line
-    _animationController = AnimationController(
+    // Pulse animation for laser scan line
+    _laserController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+
+    // Hardware-accelerated smooth bottom sheet animation controller
+    _sheetController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _laserController.dispose();
+    _sheetController.dispose();
     _cameraController.dispose();
     _manualInputController.dispose();
     super.dispose();
+  }
+
+  void _toggleSheet() {
+    setState(() {
+      _isSheetExpanded = !_isSheetExpanded;
+      if (_isSheetExpanded) {
+        _sheetController.forward();
+      } else {
+        _sheetController.reverse();
+      }
+    });
   }
 
   void _navigateToTransfer(String qrCodeData) {
@@ -120,13 +141,13 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
         context: context,
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
-          backgroundColor: const Color(0xFF1E293B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: const Color(0xFF0F172A),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           content: const Row(
             children: [
               CircularProgressIndicator(color: Color(0xFF10B981)),
               SizedBox(width: 20),
-              Text('Analyzing QR from image...', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              Text('Analyzing QR image...', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ],
           ),
         ),
@@ -308,6 +329,7 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
     final user = authProvider.user;
     final myTag = user?['userTag'] ?? '\$user';
     final myQrData = user?['qrCodeData'] ?? myTag;
+    final size = MediaQuery.of(context).size;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -349,91 +371,61 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
             },
           ),
 
-          // 2. CAMERA OVERLAY & VIEWFINDER FRAME
+          // 2. CAMERA VIEWFINDER WITH ROUNDED EMERALD CORNER BRACKETS
           Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Container(
-                      width: 270,
-                      height: 270,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(32),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.5),
-                            blurRadius: 30,
-                            spreadRadius: 10,
-                          ),
-                        ],
+                // Curved Glass Box Frame
+                Container(
+                  width: 270,
+                  height: 270,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(36),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        blurRadius: 40,
+                        spreadRadius: 10,
                       ),
-                    ),
-
-                    // Corner brackets for ultra-sleek view
-                    SizedBox(
-                      width: 270,
-                      height: 270,
-                      child: CustomPaint(
-                        painter: ScannerCornersPainter(color: const Color(0xFF10B981)),
-                      ),
-                    ),
-
-                    // Laser scan animation line
-                    AnimatedBuilder(
-                      animation: _animationController,
-                      builder: (context, child) {
-                        return Positioned(
-                          top: _animationController.value * 220 + 25,
-                          left: 30,
-                          right: 30,
-                          child: Container(
-                            height: 3,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF10B981),
-                              borderRadius: BorderRadius.circular(2),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF10B981).withValues(alpha: 0.8),
-                                  blurRadius: 12,
-                                  spreadRadius: 3,
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 24),
 
-                // Instruction pill
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: BackdropFilter(
-                    filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                      ),
-                      child: const Text(
-                        'Align QR Code within frame',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.2,
+                // Smooth Curved Corner Painter Brackets
+                SizedBox(
+                  width: 270,
+                  height: 270,
+                  child: CustomPaint(
+                    painter: ScannerCornersPainter(color: const Color(0xFF10B981)),
+                  ),
+                ),
+
+                // Laser scan animation line
+                AnimatedBuilder(
+                  animation: _laserController,
+                  builder: (context, child) {
+                    return Positioned(
+                      top: _laserController.value * 220 + 25,
+                      left: 30,
+                      right: 30,
+                      child: Container(
+                        height: 3.5,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981),
+                          borderRadius: BorderRadius.circular(2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.9),
+                              blurRadius: 16,
+                              spreadRadius: 4,
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -448,13 +440,13 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(20),
                   child: BackdropFilter(
-                    filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                    filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(16),
+                        color: Colors.black.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
                       ),
                       child: IconButton(
@@ -467,19 +459,19 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
 
                 // Glass Title
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(24),
                   child: BackdropFilter(
-                    filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                    filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(20),
+                        color: Colors.black.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(24),
                         border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
                       ),
                       child: const Text(
                         'Scan & Pay',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.3),
                       ),
                     ),
                   ),
@@ -487,13 +479,13 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
 
                 // Flash toggle
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(20),
                   child: BackdropFilter(
-                    filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                    filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(16),
+                        color: Colors.black.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
                       ),
                       child: IconButton(
@@ -516,9 +508,9 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
             ),
           ),
 
-          // 4. FLOATING GLASS ACTION BAR (UPLOAD IMAGE ABOVE SLIDER)
+          // 4. FLOATING GLASS ACTION BAR (UPLOAD IMAGE)
           Positioned(
-            bottom: 120,
+            bottom: 110,
             left: 24,
             right: 24,
             child: Row(
@@ -529,17 +521,17 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(24),
                     child: BackdropFilter(
-                      filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                      filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
+                          color: Colors.white.withValues(alpha: 0.16),
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1.5),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.3),
-                              blurRadius: 20,
+                              color: Colors.black.withValues(alpha: 0.35),
+                              blurRadius: 24,
                               spreadRadius: 2,
                             ),
                           ],
@@ -568,232 +560,266 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
             ),
           ),
 
-          // 5. SLIDING BOTTOM SHEET FOR MY QR CODE
-          DraggableScrollableSheet(
-            initialChildSize: 0.12,
-            minChildSize: 0.12,
-            maxChildSize: 0.88,
-            builder: (BuildContext context, ScrollController scrollController) {
-              return Container(
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFFFFFFF),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.6),
-                      blurRadius: 30,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                ),
-                child: ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(24),
-                  children: [
-                    // Drag Handle Bar
-                    Center(
-                      child: Container(
-                        width: 48,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white.withValues(alpha: 0.2) : Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
+          // 5. HARDWARE-ACCELERATED ULTRA-SMOOTH BOTTOM SLIDER (MY QR CODE)
+          AnimatedBuilder(
+            animation: _sheetController,
+            builder: (context, child) {
+              final double value = CurvedAnimation(
+                parent: _sheetController,
+                curve: Curves.fastOutSlowIn,
+              ).value;
+              final double collapsedHeight = 85.0;
+              final double expandedHeight = size.height * 0.78;
+              final double currentHeight = collapsedHeight + (expandedHeight - collapsedHeight) * value;
 
-                    // Slider Drag Title
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.keyboard_arrow_up_rounded, color: Color(0xFF10B981), size: 24),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Slide up for My QR Code',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
-                          ),
+              return Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: currentHeight,
+                child: GestureDetector(
+                  onVerticalDragUpdate: (details) {
+                    if (details.primaryDelta! < -5) {
+                      if (!_isSheetExpanded) _toggleSheet();
+                    } else if (details.primaryDelta! > 5) {
+                      if (_isSheetExpanded) _toggleSheet();
+                    }
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFFFFFFF),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          blurRadius: 36,
+                          spreadRadius: 6,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 28),
-
-                    // QR Card Container
-                    RepaintBoundary(
-                      key: _qrBoundaryKey,
-                      child: Container(
-                        padding: const EdgeInsets.all(28),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(28),
-                          border: Border.all(
-                            color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.shade200,
+                    child: SingleChildScrollView(
+                      physics: value > 0.8 ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        children: [
+                          // Tap/Drag Bar Header
+                          GestureDetector(
+                            onTap: _toggleSheet,
+                            behavior: HitTestBehavior.opaque,
+                            child: Column(
+                              children: [
+                                Container(
+                                  width: 48,
+                                  height: 5,
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Colors.white.withValues(alpha: 0.25) : Colors.grey.shade300,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      _isSheetExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_up_rounded,
+                                      color: const Color(0xFF10B981),
+                                      size: 26,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _isSheetExpanded ? 'Tap to close My QR Code' : 'Slide up for My QR Code',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        child: Column(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(20),
+                          const SizedBox(height: 28),
+
+                          // QR Card Container
+                          RepaintBoundary(
+                            key: _qrBoundaryKey,
+                            child: Container(
+                              padding: const EdgeInsets.all(28),
                               decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(24),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.08),
-                                    blurRadius: 16,
-                                    spreadRadius: 2,
+                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(32),
+                                border: Border.all(
+                                  color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.shade200,
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(24),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.08),
+                                          blurRadius: 20,
+                                          spreadRadius: 2,
+                                        ),
+                                      ],
+                                    ),
+                                    child: QrImageView(
+                                      data: myQrData,
+                                      version: QrVersions.auto,
+                                      size: 190.0,
+                                      backgroundColor: Colors.white,
+                                      eyeStyle: const QrEyeStyle(
+                                        eyeShape: QrEyeShape.square,
+                                        color: Color(0xFF0F172A),
+                                      ),
+                                      dataModuleStyle: const QrDataModuleStyle(
+                                        dataModuleShape: QrDataModuleShape.square,
+                                        color: Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+
+                                  // User Tag Header
+                                  Text(
+                                    user?['fullName'] ?? 'RopeWallet User',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Text(
+                                      myTag.startsWith('\$') ? myTag : '\$$myTag',
+                                      style: const TextStyle(
+                                        color: Color(0xFF10B981),
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 14,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
-                              child: QrImageView(
-                                data: myQrData,
-                                version: QrVersions.auto,
-                                size: 200.0,
-                                backgroundColor: Colors.white,
-                                eyeStyle: const QrEyeStyle(
-                                  eyeShape: QrEyeShape.square,
-                                  color: Color(0xFF0F172A),
-                                ),
-                                dataModuleStyle: const QrDataModuleStyle(
-                                  dataModuleShape: QrDataModuleShape.square,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-
-                            // User Tag Header
-                            Text(
-                              user?['fullName'] ?? 'RopeWallet User',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : const Color(0xFF0F172A),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                myTag.startsWith('\$') ? myTag : '\$$myTag',
-                                style: const TextStyle(
-                                  color: Color(0xFF10B981),
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Action Buttons for My QR (Download & Share)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _isSavingQr ? null : _downloadQr,
-                            icon: const Icon(Icons.file_download_outlined, size: 20),
-                            label: const Text('Save QR'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                              foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              elevation: 0,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _isSavingQr ? null : _shareQr,
-                            icon: const Icon(Icons.share_outlined, size: 20),
-                            label: const Text('Share QR'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF10B981),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              elevation: 0,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
+                          const SizedBox(height: 24),
 
-                    // Manual Input Section
-                    Text(
-                      'Or Enter User Tag Manually',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _manualInputController,
-                            style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                            decoration: InputDecoration(
-                              hintText: 'e.g. \$username',
-                              fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                              filled: true,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        ElevatedButton(
-                          onPressed: () {
-                            final qr = _manualInputController.text.trim();
-                            if (qr.isNotEmpty) {
-                              if (_isValidQrData(qr) || RegExp(r'^[a-zA-Z0-9]+$').hasMatch(qr)) {
-                                setState(() {
-                                  _hasScanned = true;
-                                });
-                                _navigateToTransfer(qr);
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    backgroundColor: const Color(0xFFEF4444),
-                                    behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                    content: const Text('Invalid user tag format.'),
+                          // Action Buttons for My QR (Download & Share)
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _isSavingQr ? null : _downloadQr,
+                                  icon: const Icon(Icons.file_download_outlined, size: 20),
+                                  label: const Text('Save QR'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                                    foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                                    elevation: 0,
                                   ),
-                                );
-                              }
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF10B981),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _isSavingQr ? null : _shareQr,
+                                  icon: const Icon(Icons.share_outlined, size: 20),
+                                  label: const Text('Share QR'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF10B981),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                                    elevation: 0,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          child: const Text('Proceed', style: TextStyle(fontWeight: FontWeight.bold)),
-                        ),
-                      ],
+                          const SizedBox(height: 28),
+
+                          // Manual Tag Entry Section
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Or Enter User Tag Manually',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _manualInputController,
+                                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                                  decoration: InputDecoration(
+                                    hintText: 'e.g. \$username',
+                                    fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                    filled: true,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(18),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              ElevatedButton(
+                                onPressed: () {
+                                  final qr = _manualInputController.text.trim();
+                                  if (qr.isNotEmpty) {
+                                    if (_isValidQrData(qr) || RegExp(r'^[a-zA-Z0-9]+$').hasMatch(qr)) {
+                                      setState(() {
+                                        _hasScanned = true;
+                                      });
+                                      _navigateToTransfer(qr);
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          backgroundColor: const Color(0xFFEF4444),
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                          content: const Text('Invalid user tag format.'),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF10B981),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                                ),
+                                child: const Text('Proceed', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 40),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 24),
-                  ],
+                  ),
                 ),
               );
             },
@@ -804,7 +830,7 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
   }
 }
 
-// Custom Painter for Glassmorphic Scanner Frame Corners
+// Custom Painter for Rounded Curved Emerald Scanner Brackets
 class ScannerCornersPainter extends CustomPainter {
   final Color color;
   ScannerCornersPainter({required this.color});
@@ -813,47 +839,44 @@ class ScannerCornersPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
-      ..strokeWidth = 4.0
+      ..strokeWidth = 4.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    const cornerLength = 28.0;
+    const cornerLength = 32.0;
+    const radius = 24.0;
 
-    // Top-Left Corner
-    canvas.drawPath(
-      Path()
-        ..moveTo(0, cornerLength)
-        ..lineTo(0, 0)
-        ..lineTo(cornerLength, 0),
-      paint,
-    );
+    // Top-Left Curved Corner
+    final pathTL = Path()
+      ..moveTo(0, cornerLength)
+      ..lineTo(0, radius)
+      ..arcToPoint(const Offset(radius, 0), radius: const Radius.circular(radius))
+      ..lineTo(cornerLength, 0);
+    canvas.drawPath(pathTL, paint);
 
-    // Top-Right Corner
-    canvas.drawPath(
-      Path()
-        ..moveTo(size.width - cornerLength, 0)
-        ..lineTo(size.width, 0)
-        ..lineTo(size.width, cornerLength),
-      paint,
-    );
+    // Top-Right Curved Corner
+    final pathTR = Path()
+      ..moveTo(size.width - cornerLength, 0)
+      ..lineTo(size.width - radius, 0)
+      ..arcToPoint(Offset(size.width, radius), radius: const Radius.circular(radius))
+      ..lineTo(size.width, cornerLength);
+    canvas.drawPath(pathTR, paint);
 
-    // Bottom-Left Corner
-    canvas.drawPath(
-      Path()
-        ..moveTo(0, size.height - cornerLength)
-        ..lineTo(0, size.height)
-        ..lineTo(cornerLength, size.height),
-      paint,
-    );
+    // Bottom-Left Curved Corner
+    final pathBL = Path()
+      ..moveTo(0, size.height - cornerLength)
+      ..lineTo(0, size.height - radius)
+      ..arcToPoint(Offset(radius, size.height), radius: const Radius.circular(radius), clockwise: false)
+      ..lineTo(cornerLength, size.height);
+    canvas.drawPath(pathBL, paint);
 
-    // Bottom-Right Corner
-    canvas.drawPath(
-      Path()
-        ..moveTo(size.width - cornerLength, size.height)
-        ..lineTo(size.width, size.height)
-        ..lineTo(size.width, size.height - cornerLength),
-      paint,
-    );
+    // Bottom-Right Curved Corner
+    final pathBR = Path()
+      ..moveTo(size.width - cornerLength, size.height)
+      ..lineTo(size.width - radius, size.height)
+      ..arcToPoint(Offset(size.width, size.height - radius), radius: const Radius.circular(radius), clockwise: false)
+      ..lineTo(size.width, size.height - cornerLength);
+    canvas.drawPath(pathBR, paint);
   }
 
   @override

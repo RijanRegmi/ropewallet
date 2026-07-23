@@ -308,58 +308,192 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
         title: const Text('Chime Services'),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: const Color(0xFF25C974),
-          labelColor: const Color(0xFF25C974),
-          unselectedLabelColor: isDark ? Colors.white60 : Colors.black54,
-          tabs: const [
-            Tab(icon: Icon(Icons.arrow_downward_rounded), text: 'Deposit'),
-            Tab(icon: Icon(Icons.send_rounded), text: 'Send Tag'),
-            Tab(icon: Icon(Icons.account_balance_rounded), text: 'Withdraw'),
-          ],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          // 1. Chime Card Deposit
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Form(
-              key: _depositFormKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF25C974), Color(0xFF1B9454)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+          // Glassmorphic Segmented Pill Selector (No Green-on-Green Blurring!)
+          // Glassmorphic Sliding Segmented Pill Track
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final double itemWidth = (constraints.maxWidth - 10) / 3;
+                final Alignment alignment = _tabController.index == 0
+                    ? Alignment.centerLeft
+                    : _tabController.index == 1
+                        ? Alignment.center
+                        : Alignment.centerRight;
+
+                return Container(
+                  height: 50,
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Stack(
+                    children: [
+                      // Smooth Sliding Emerald Glass Pill Indicator
+                      AnimatedAlign(
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.fastOutSlowIn,
+                        alignment: alignment,
+                        child: Container(
+                          width: itemWidth,
+                          height: double.infinity,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                                blurRadius: 12,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
+
+                      // Interactive Button Labels
+                      Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => _tabController.animateTo(0),
+                              behavior: HitTestBehavior.opaque,
+                              child: Center(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.arrow_downward_rounded,
+                                      size: 16,
+                                      color: _tabController.index == 0 ? Colors.white : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Deposit',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: _tabController.index == 0 ? Colors.white : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => _tabController.animateTo(1),
+                              behavior: HitTestBehavior.opaque,
+                              child: Center(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.send_rounded,
+                                      size: 16,
+                                      color: _tabController.index == 1 ? Colors.white : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Send Tag',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: _tabController.index == 1 ? Colors.white : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => _tabController.animateTo(2),
+                              behavior: HitTestBehavior.opaque,
+                              child: Center(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.account_balance_rounded,
+                                      size: 16,
+                                      color: _tabController.index == 2 ? Colors.white : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Withdraw',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: _tabController.index == 2 ? Colors.white : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // 1. Chime Card Deposit
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Form(
+                    key: _depositFormKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Chime Deposit', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                            Image.network('https://img.icons8.com/color/96/chime.png', height: 28, errorBuilder: (c, e, s) => const SizedBox.shrink()),
-                          ],
+                        // Ultra-Sleek Glass Balance Card
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(22),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF0F172A) : const Color(0xFF1E293B),
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3), width: 1.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.25),
+                                blurRadius: 20,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Chime Banking Services', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                                  Image.network('https://img.icons8.com/color/96/chime.png', height: 26, errorBuilder: (c, e, s) => const SizedBox.shrink()),
+                                ],
+                              ),
+                              const SizedBox(height: 18),
+                              const Text('AVAILABLE ROPEWALLET BALANCE', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                              const SizedBox(height: 4),
+                              Text('\$${userBalance.toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFF10B981), fontSize: 28, fontWeight: FontWeight.w800)),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 20),
-                        const Text('CURRENT BALANCE', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 4),
-                        Text('\$${userBalance.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 32),
+                        const SizedBox(height: 24),
                   TextFormField(
                     controller: _depositAmountController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -502,7 +636,7 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
                   Builder(
                     builder: (context) {
                       final amount = double.tryParse(_tagAmountController.text) ?? 0.0;
-                      final fee = amount * 0.15;
+                      final fee = 0.0;
                       if (amount <= 0) return const SizedBox.shrink();
                       return Container(
                         padding: const EdgeInsets.all(18),
@@ -523,8 +657,8 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('Platform Fee (15% added):', style: TextStyle(color: Colors.grey)),
-                                Text('+\$${fee.toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFFF59E0B))),
+                                const Text('Platform Fee:', style: TextStyle(color: Colors.grey)),
+                                const Text('\$0.00 (0% Fee)', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
                               ],
                             ),
                             const Divider(height: 16),
@@ -532,7 +666,7 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text('Total Cost (You Pay):', style: TextStyle(fontWeight: FontWeight.bold)),
-                                Text('\$${(amount + fee).toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                Text('\$${amount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
                               ],
                             ),
                           ],
@@ -620,8 +754,8 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
                   Builder(
                     builder: (context) {
                       final amount = double.tryParse(_bankAmountController.text) ?? 0.0;
-                      final fee = amount * 0.15;
-                      final net = amount - fee;
+                      final fee = amount > 0 ? (amount * 0.01 + 0.30) : 0.0;
+                      final net = amount > 0 ? (amount - fee) : 0.0;
                       if (amount <= 0) return const SizedBox.shrink();
                       return Container(
                         padding: const EdgeInsets.all(18),
@@ -642,7 +776,7 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('Platform Fee (15% cut):', style: TextStyle(color: Colors.grey)),
+                                const Text('Fee (1% + \$0.30):', style: TextStyle(color: Colors.grey)),
                                 Text('-\$${fee.toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFFEF4444))),
                               ],
                             ),
@@ -650,8 +784,8 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('You Will Receive (Net):', style: TextStyle(fontWeight: FontWeight.bold)),
-                                Text('\$${(net < 0 ? 0.0 : net).toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
+                                const Text('Net Received in Bank:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                Text('\$${net.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
                               ],
                             ),
                           ],
@@ -681,6 +815,9 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
           ),
         ],
       ),
-    );
-  }
+    ),
+  ],
+),
+);
+}
 }

@@ -163,8 +163,8 @@ async function checkAccountInbox(account: any): Promise<void> {
               console.log(`[P2P Auto] Found matching pending transaction: ID ${txn._id} for recipient wallet.`);
               
               // Approve the transaction and update recipient balance
-              const fee = txn.amount * 0.15;
-              const netAmount = txn.amount - fee;
+              const fee = 0;
+              const netAmount = txn.amount;
               
               txn.status = 'completed';
               txn.fee = fee;

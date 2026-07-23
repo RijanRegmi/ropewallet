@@ -94,8 +94,8 @@ class _BankTransferPageState extends State<BankTransferPage> {
               : 'TX-${DateTime.now().millisecondsSinceEpoch}',
           'type': 'withdrawal',
           'amount': amount,
-          'fee': amount * 0.15,
-          'netAmount': amount * 0.85,
+          'fee': amount * 0.01 + 0.30,
+          'netAmount': amount - (amount * 0.01 + 0.30),
           'remarks': remarksText,
           'createdAt': DateTime.now().toIso8601String(),
           'sender': {'fullName': authProvider.user?['fullName'] ?? 'You'},
@@ -353,8 +353,8 @@ class _BankTransferPageState extends State<BankTransferPage> {
                 builder: (context) {
                   final text = _amountController.text.trim();
                   final amount = double.tryParse(text) ?? 0.00;
-                  final fee = amount * 0.15;
-                  final netAmount = amount - fee;
+                  final fee = amount > 0 ? (amount * 0.01 + 0.30) : 0.0;
+                  final netAmount = amount > 0 ? (amount - fee) : 0.0;
 
                   if (amount <= 0) return const SizedBox.shrink();
 
@@ -379,34 +379,25 @@ class _BankTransferPageState extends State<BankTransferPage> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Row(
-                              children: [
-                                Text('Platform Fee ', style: TextStyle(color: Colors.grey)),
-                                Text('(15% cut)', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 12)),
-                                Text(':', style: TextStyle(color: Colors.grey)),
-                              ],
-                            ),
+                            const Text('Fee (1% + \$0.30):', style: TextStyle(color: Colors.grey)),
                             Text(
                               '-\$${fee.toStringAsFixed(2)}',
-                              style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
+                              style: const TextStyle(color: Color(0xFFEF4444)),
                             ),
                           ],
                         ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12.0),
-                          child: Divider(color: Colors.transparent, height: 1),
-                        ),
+                        const Divider(height: 20),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('You Will Receive (Net):', style: TextStyle(fontWeight: FontWeight.bold)),
+                            const Text('Net Received in Bank:', style: TextStyle(fontWeight: FontWeight.bold)),
                             Text(
-                              '\$${(netAmount < 0 ? 0.00 : netAmount).toStringAsFixed(2)}',
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+                              '\$${netAmount.toStringAsFixed(2)}',
+                              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
                             ),
                           ],
                         ),

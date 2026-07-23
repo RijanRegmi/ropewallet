@@ -389,12 +389,7 @@ class _DepositPageState extends State<DepositPage> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Add Funds / Request'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(icon: Icon(Icons.credit_card_rounded), text: 'Instant Card Load'),
-              Tab(icon: Icon(Icons.share_rounded), text: 'Share Request Link'),
-            ],
-          ),
+          elevation: 0,
         ),
         body: Builder(
           builder: (context) {
@@ -404,10 +399,101 @@ class _DepositPageState extends State<DepositPage> {
               builder: (context, _) {
                 final isCardTab = tabController.index == 0;
                 return SingleChildScrollView(
-                  padding: const EdgeInsets.all(24.0),
+                  padding: const EdgeInsets.all(20.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Glassmorphic Segmented Pill Selector (No Divider Lines!)
+                      Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => tabController.animateTo(0),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  decoration: BoxDecoration(
+                                    color: isCardTab ? const Color(0xFF10B981) : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: isCardTab ? [
+                                      BoxShadow(
+                                        color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                                        blurRadius: 10,
+                                        spreadRadius: 1,
+                                      ),
+                                    ] : [],
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.credit_card_rounded,
+                                        size: 18,
+                                        color: isCardTab ? Colors.white : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Instant Card Load',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                          color: isCardTab ? Colors.white : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => tabController.animateTo(1),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  decoration: BoxDecoration(
+                                    color: !isCardTab ? const Color(0xFF10B981) : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: !isCardTab ? [
+                                      BoxShadow(
+                                        color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                                        blurRadius: 10,
+                                        spreadRadius: 1,
+                                      ),
+                                    ] : [],
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.share_rounded,
+                                        size: 18,
+                                        color: !isCardTab ? Colors.white : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Share Request Link',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                          color: !isCardTab ? Colors.white : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
                       // Balance Indicator
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -491,56 +577,14 @@ class _DepositPageState extends State<DepositPage> {
                                 ),
                                 const SizedBox(height: 14),
 
-                                const Text('Country or region', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                                const SizedBox(height: 6),
-                                DropdownButtonFormField<String>(
-                                  value: _selectedCountry,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                  ),
-                                  items: ['United States', 'Canada', 'United Kingdom'].map((country) {
-                                    return DropdownMenuItem<String>(
-                                      value: country,
-                                      child: Text(country),
-                                    );
-                                  }).toList(),
-                                  onChanged: (val) {
-                                    if (val != null) {
-                                      setState(() {
-                                        _selectedCountry = val;
-                                      });
-                                    }
-                                  },
-                                ),
-                                const SizedBox(height: 14),
-
-                                const Text('Address line 1', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                                const SizedBox(height: 6),
-                                TextFormField(
-                                  controller: _addressController,
-                                  textCapitalization: TextCapitalization.words,
-                                  decoration: InputDecoration(
-                                    hintText: 'Street address, P.O. box',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                  ),
-                                  validator: (value) {
-                                    if (hasSavedCard && !_isInlineEditing) return null;
-                                    if (value == null || value.trim().isEmpty) return 'Address is required';
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 14),
-
-                                const Text('Billing Zip / Postal Code', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                                 const Text('Billing Zip / Postal Code', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                                 const SizedBox(height: 6),
                                 TextFormField(
                                   controller: _zipController,
                                   textCapitalization: TextCapitalization.characters,
                                   decoration: InputDecoration(
                                     hintText: 'e.g. 90210',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                                   ),
                                   validator: (value) {

@@ -87,8 +87,8 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
             ? walletProvider.transactions.first
             : {
                 'type': 'transfer',
-                'amount': _amount * 1.15,
-                'fee': _amount * 0.15,
+                'amount': _amount,
+                'fee': 0.0,
                 'netAmount': _amount,
                 'remarks': remarks,
                 'createdAt': DateTime.now().toIso8601String(),

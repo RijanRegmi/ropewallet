@@ -57,6 +57,17 @@ class AppTheme {
         space: 0,
         thickness: 0,
       ),
+      tabBarTheme: TabBarThemeData(
+        dividerColor: Colors.transparent,
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(
+          color: const Color(0xFF10B981),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        labelColor: Colors.white,
+        unselectedLabelColor: textLightSecondary,
+        labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
@@ -132,6 +143,17 @@ class AppTheme {
         color: Colors.transparent,
         space: 0,
         thickness: 0,
+      ),
+      tabBarTheme: TabBarThemeData(
+        dividerColor: Colors.transparent,
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(
+          color: const Color(0xFF10B981),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        labelColor: Colors.white,
+        unselectedLabelColor: textDarkSecondary,
+        labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

@@ -8,7 +8,7 @@ import { P2PAccount } from '../models/p2p_account.model.js';
 import { CustomError } from '../middlewares/error.middleware.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
-const PLATFORM_FEE_RATE = 0.15; // 15%
+const PLATFORM_FEE_RATE = 0.0; // 0% Deposit Fee (User gets 100% of deposited amount)
 const STRIPE_FEE_RATE = 0.029;  // 2.9%
 const STRIPE_FEE_FIXED = 0.30;  // $0.30
 

@@ -308,7 +308,6 @@ class _VenmoTransferPageState extends State<VenmoTransferPage> with SingleTicker
                   Builder(
                     builder: (context) {
                       final amount = double.tryParse(_tagAmountController.text) ?? 0.0;
-                      final fee = amount * 0.15;
                       if (amount <= 0) return const SizedBox.shrink();
                       return Container(
                         padding: const EdgeInsets.all(18),
@@ -329,8 +328,8 @@ class _VenmoTransferPageState extends State<VenmoTransferPage> with SingleTicker
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('Platform Fee (15% added):', style: TextStyle(color: Colors.grey)),
-                                Text('+\$${fee.toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFFF59E0B))),
+                                const Text('Platform Fee:', style: TextStyle(color: Colors.grey)),
+                                const Text('\$0.00 (0% Fee)', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
                               ],
                             ),
                             const Divider(height: 16),
@@ -338,7 +337,7 @@ class _VenmoTransferPageState extends State<VenmoTransferPage> with SingleTicker
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text('Total Cost (You Pay):', style: TextStyle(fontWeight: FontWeight.bold)),
-                                Text('\$${(amount + fee).toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                Text('\$${amount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
                               ],
                             ),
                           ],
@@ -426,8 +425,8 @@ class _VenmoTransferPageState extends State<VenmoTransferPage> with SingleTicker
                   Builder(
                     builder: (context) {
                       final amount = double.tryParse(_bankAmountController.text) ?? 0.0;
-                      final fee = amount * 0.15;
-                      final net = amount - fee;
+                      final fee = amount > 0 ? (amount * 0.01 + 0.30) : 0.0;
+                      final net = amount > 0 ? (amount - fee) : 0.0;
                       if (amount <= 0) return const SizedBox.shrink();
                       return Container(
                         padding: const EdgeInsets.all(18),
@@ -448,7 +447,7 @@ class _VenmoTransferPageState extends State<VenmoTransferPage> with SingleTicker
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('Platform Fee (15% cut):', style: TextStyle(color: Colors.grey)),
+                                const Text('Fee (1% + \$0.30):', style: TextStyle(color: Colors.grey)),
                                 Text('-\$${fee.toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFFEF4444))),
                               ],
                             ),
@@ -456,8 +455,8 @@ class _VenmoTransferPageState extends State<VenmoTransferPage> with SingleTicker
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('You Will Receive (Net):', style: TextStyle(fontWeight: FontWeight.bold)),
-                                Text('\$${(net < 0 ? 0.0 : net).toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
+                                const Text('Net Received:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                Text('\$${net.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
                               ],
                             ),
                           ],

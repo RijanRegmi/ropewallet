@@ -42,10 +42,27 @@ export class PaymentController {
         }
       }
 
-       // 1. Process Stripe charge
+      // ─── ANTI-FRAUD RISK CONTROL 1: Daily Card Deposit Cap ($2,500 Max) ───
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const todayDeposits = await Transaction.aggregate([
+        { $match: { receiver: user._id, type: 'deposit', status: 'completed', createdAt: { $gte: startOfDay } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]);
+      const currentDailySum = todayDeposits[0]?.total || 0;
+      if (currentDailySum + amount > 2500) {
+        res.status(400).json({
+          success: false,
+          error: `Daily card deposit limit reached ($2,500.00 max). Your current daily total is $${currentDailySum.toFixed(2)}.`,
+        });
+        return;
+      }
+
+      // ─── 1. Process Stripe charge with 3DS & Fingerprint Check ───
       let paymentIntent;
       try {
         let finalPaymentMethodId = paymentMethodId;
+        let pmObj: any;
         
         if (useSavedCard) {
           if (!user.savedCard || !user.savedCard.cardNumber) {
@@ -53,7 +70,7 @@ export class PaymentController {
             return;
           }
           const saved = user.savedCard;
-          const pm = await stripe.paymentMethods.create({
+          pmObj = await stripe.paymentMethods.create({
             type: 'card',
             card: {
               number: saved.cardNumber,
@@ -62,23 +79,46 @@ export class PaymentController {
               cvc: saved.cvc,
             },
           });
-          finalPaymentMethodId = pm.id;
+          finalPaymentMethodId = pmObj.id;
         } else if (paymentMethodId.startsWith('tok_')) {
-          const pm = await stripe.paymentMethods.create({
+          pmObj = await stripe.paymentMethods.create({
             type: 'card',
             card: {
               token: paymentMethodId,
             },
           });
-          finalPaymentMethodId = pm.id;
+          finalPaymentMethodId = pmObj.id;
+        } else {
+          pmObj = await stripe.paymentMethods.retrieve(paymentMethodId);
         }
 
+        // ─── ANTI-FRAUD RISK CONTROL 2: Max 3 Cards per Account Limit ───
+        const cardFingerprint = pmObj.card?.fingerprint || `${pmObj.card?.last4}_${pmObj.card?.exp_month}_${pmObj.card?.exp_year}_${pmObj.card?.brand}`;
+        const existingCards = user.usedCardFingerprints || [];
+        
+        if (cardFingerprint && !existingCards.includes(cardFingerprint)) {
+          if (existingCards.length >= 3) {
+            res.status(400).json({
+              success: false,
+              error: 'Security Enforcement: A single RopeWallet account is limited to a maximum of 3 unique payment cards to prevent fraud. Please use one of your saved cards or contact Support.',
+            });
+            return;
+          }
+          user.usedCardFingerprints = [...existingCards, cardFingerprint];
+        }
+
+        // ─── ANTI-FRAUD RISK CONTROL 3: Force 3D Secure Verification ───
         paymentIntent = await stripe.paymentIntents.create({
           amount: Math.round(amount * 100), // convert to cents
           currency: 'usd',
           payment_method: finalPaymentMethodId,
           confirm: true,
           return_url: `${process.env.FRONTEND_URL || process.env.BASE_URL || 'https://ropewallet.com'}/pay/confirm`,
+          payment_method_options: {
+            card: {
+              request_three_d_secure: 'any', // Force 3DS OTP verification for liability shift
+            },
+          },
           automatic_payment_methods: {
             enabled: true,
             allow_redirects: 'never',
@@ -346,8 +386,12 @@ export class PaymentController {
       const { amount, method, cardNumber, expMonth, expYear, cvc, routingNumber, accountNumber, bankName, accountHolderName, usdtAddress, remarks } = req.body;
       const userId = (req as any).user?.id;
 
-      if (!amount || amount <= 0) {
-        res.status(400).json({ success: false, error: 'Please provide a valid withdrawal amount' });
+      if (!amount || amount < 5.00) {
+        res.status(400).json({ success: false, error: 'Minimum withdrawal amount is $5.00' });
+        return;
+      }
+      if (amount > 5000.00) {
+        res.status(400).json({ success: false, error: 'Maximum single withdrawal limit is $5,000.00 per transaction' });
         return;
       }
 

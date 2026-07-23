@@ -561,9 +561,9 @@ export class AdminController {
         return;
       }
 
-      // Calculate fees
-      const platformFee = txn.amount * 0.15;
-      const netAmount = txn.amount - platformFee;
+      // 0% Deposit Fee (User receives 100% of deposited amount)
+      const platformFee = 0;
+      const netAmount = txn.amount;
 
       // Credit user wallet
       const user = await User.findById(txn.receiver);

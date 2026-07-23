@@ -17,6 +17,7 @@ export interface IUser extends Document {
   frozenAt?: Date;
   frozenBy?: string;  // admin ID who froze the account
   createdBy?: string; // admin ID who created this account
+  usedCardFingerprints?: string[]; // Array of unique card fingerprints used on this account
   role: 'user' | 'admin' | 'superadmin';
   createdAt: Date;
   updatedAt: Date;
