@@ -6,6 +6,7 @@ import 'features/auth/providers/auth_provider.dart';
 import 'features/home/providers/wallet_provider.dart';
 import 'features/auth/providers/security_provider.dart';
 import 'features/auth/presentation/pages/login_page.dart';
+import 'features/auth/presentation/pages/set_pin_page.dart';
 import 'features/home/presentation/pages/home_page.dart';
 
 void main() {
@@ -82,6 +83,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
     // Direct routing based on login authentication state
     if (authProvider.isAuthenticated) {
+      final hasPin = authProvider.user?['hasPin'] == true;
+      if (!hasPin) {
+        return const SetPinPage();
+      }
       return const HomePage();
     } else {
       return const LoginPage();

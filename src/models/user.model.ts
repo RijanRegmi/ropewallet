@@ -112,6 +112,10 @@ const userSchema = new Schema<IUser>(
     frozenBy: {
       type: String, // admin ID
     },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
     role: {
       type: String,
       enum: ['user', 'admin', 'superadmin'],

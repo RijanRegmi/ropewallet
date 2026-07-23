@@ -20,7 +20,6 @@ class _CreateUserPageState extends State<CreateUserPage> {
   final _phoneController = TextEditingController();
   final _tagController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _pinController = TextEditingController();
 
   String _selectedRole = 'user';
   bool _isLoading = false;
@@ -35,7 +34,6 @@ class _CreateUserPageState extends State<CreateUserPage> {
     _phoneController.dispose();
     _tagController.dispose();
     _passwordController.dispose();
-    _pinController.dispose();
     super.dispose();
   }
 
@@ -62,9 +60,6 @@ class _CreateUserPageState extends State<CreateUserPage> {
               : null,
           'password': _passwordController.text,
           'role': _selectedRole,
-          'transactionPin': _pinController.text.trim().isNotEmpty
-              ? _pinController.text.trim()
-              : null,
         },
       );
 
@@ -265,20 +260,6 @@ class _CreateUserPageState extends State<CreateUserPage> {
                   if (val.length < 6) return 'Password must be at least 6 characters';
                   return null;
                 },
-              ),
-              const SizedBox(height: 16),
-
-              // Transaction PIN (Optional)
-              TextFormField(
-                controller: _pinController,
-                keyboardType: TextInputType.number,
-                maxLength: 4,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: 'Transaction PIN (4 digits, Optional)',
-                  prefixIcon: const Icon(Icons.pin),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                ),
               ),
               const SizedBox(height: 28),
 

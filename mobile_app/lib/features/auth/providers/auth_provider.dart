@@ -27,6 +27,13 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  void markPinAsSet() {
+    if (_user != null) {
+      _user!['hasPin'] = true;
+      notifyListeners();
+    }
+  }
+
   // Load saved token and user on startup
   Future<void> tryAutoLogin() async {
     _isLoading = true;

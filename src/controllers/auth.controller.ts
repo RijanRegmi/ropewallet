@@ -157,8 +157,8 @@ export class AuthController {
         res.status(401).json({ success: false, error: 'Not authorized to access this route' });
         return;
       }
-      if (!pin || pin.length !== 6 || isNaN(Number(pin))) {
-        res.status(400).json({ success: false, error: 'PIN must be a 6-digit number' });
+      if (!pin || (pin.length !== 4 && pin.length !== 6) || isNaN(Number(pin))) {
+        res.status(400).json({ success: false, error: 'PIN must be a 4-digit or 6-digit number' });
         return;
       }
       await AuthService.setPin(userId, pin);

@@ -75,6 +75,12 @@ export class AdminController {
   // ─── Dashboard Stats ───────────────────────────────────────────
   static async getDashboard(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      const creatorRole = (req as any).admin?.role;
+      if (creatorRole !== 'superadmin') {
+        res.status(403).json({ success: false, error: 'Superadmin access required' });
+        return;
+      }
+
       const [
         totalUsers,
         frozenUsers,
@@ -153,8 +159,15 @@ export class AdminController {
       const sortBy = (req.query.sortBy as string) || 'createdAt';
       const sortOrder = (req.query.sortOrder as string) === 'asc' ? 1 : -1;
 
-      // Filter for all user accounts in main table list
+      const creatorId = (req as any).admin?.id;
+      const creatorRole = (req as any).admin?.role;
+
+      // Filter for user accounts
       const userFilter: any = {};
+      if (creatorRole === 'admin') {
+        userFilter.createdBy = creatorId;
+      }
+
       if (search) {
         userFilter.$or = [
           { fullName: { $regex: search, $options: 'i' } },
@@ -164,9 +177,12 @@ export class AdminController {
         ];
       }
 
-      // Filter for admins list
-      const adminFilter: any = { role: { $in: ['admin', 'superadmin'] } };
-      if (search) {
+      // Filter for admins list (only superadmin sees admins list)
+      const adminFilter: any = creatorRole === 'superadmin'
+        ? { role: { $in: ['admin', 'superadmin'] } }
+        : { _id: null };
+
+      if (search && creatorRole === 'superadmin') {
         adminFilter.$or = [
           { fullName: { $regex: search, $options: 'i' } },
           { email: { $regex: search, $options: 'i' } },
@@ -228,7 +244,8 @@ export class AdminController {
 
   static async createUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { firstName, lastName, middleName, email, phoneNumber, userTag, password, role, transactionPin } = req.body;
+      const { firstName, lastName, middleName, email, phoneNumber, userTag, password, role } = req.body;
+      const creatorId = (req as any).admin?.id;
       const creatorRole = (req as any).admin?.role || 'admin';
 
       if (!firstName || !lastName || !email || !phoneNumber || !password) {
@@ -295,7 +312,7 @@ export class AdminController {
         userTag: finalTag,
         password,
         role: targetRole,
-        transactionPin: transactionPin ? transactionPin.trim() : undefined,
+        createdBy: creatorId,
         qrCodeData,
       });
 
@@ -409,6 +426,14 @@ export class AdminController {
   static async updateUserRole(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { role } = req.body;
+      const creatorId = (req as any).admin?.id;
+      const creatorRole = (req as any).admin?.role;
+
+      if (creatorRole !== 'superadmin') {
+        res.status(403).json({ success: false, error: 'Only Super Admins can change user roles' });
+        return;
+      }
+
       if (!role || !['user', 'admin', 'superadmin'].includes(role)) {
         res.status(400).json({ success: false, error: 'Invalid role. Must be user, admin or superadmin' });
         return;
@@ -420,13 +445,13 @@ export class AdminController {
         return;
       }
 
-      if (user.role === 'superadmin') {
-        res.status(400).json({ success: false, error: 'Cannot change the role of a superadmin' });
+      if (user._id.toString() === creatorId) {
+        res.status(400).json({ success: false, error: 'You cannot change your own superadmin role' });
         return;
       }
 
       user.role = role;
-      await user.save();
+      await user.save({ validateBeforeSave: false });
 
       res.json({ success: true, message: `User role updated to ${role}`, data: { user } });
     } catch (error) {
@@ -1820,12 +1845,10 @@ export class AdminController {
             ? '<button class="btn-icon btn-icon-success" onclick="toggleFreeze(\\'' + u._id + '\\', false)" title="Unfreeze Account"><i class="fas fa-lock-open"></i></button>'
             : '<button class="btn-icon btn-icon-warning" onclick="toggleFreeze(\\'' + u._id + '\\', true)" title="Freeze Account"><i class="fas fa-lock"></i></button>';
 
-          const isSuperAdmin = u.role === 'superadmin';
-          const roleSelect = isSuperAdmin
-            ? '<span class="badge badge-danger">Superadmin</span>'
-            : '<select style="background:#1F2937;color:#F9FAFB;border:1px solid #374151;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;outline:none;" onchange="toggleRole(\\\'' + u._id + '\\\', this.value)">' +
+          const roleSelect = '<select style="background:#1F2937;color:#F9FAFB;border:1px solid #374151;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;outline:none;" onchange="toggleRole(\'' + u._id + '\', this.value)">' +
                 '<option value="user"' + (u.role === 'user' ? ' selected' : '') + '>User</option>' +
                 '<option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>Admin</option>' +
+                '<option value="superadmin"' + (u.role === 'superadmin' ? ' selected' : '') + '>Superadmin</option>' +
               '</select>';
 
           tbody.innerHTML += '<tr>' +

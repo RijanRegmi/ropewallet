@@ -315,6 +315,75 @@ class _AdminPortalPageState extends State<AdminPortalPage> with SingleTickerProv
     );
   }
 
+  void _showChangeRoleDialog(Map<String, dynamic> user) {
+    String selectedRole = user['role'] ?? 'user';
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Change Role for ${user['fullName'] ?? user['firstName']}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<String>(
+                title: const Text('User'),
+                value: 'user',
+                groupValue: selectedRole,
+                onChanged: (val) => setDialogState(() => selectedRole = val!),
+              ),
+              RadioListTile<String>(
+                title: const Text('Admin'),
+                value: 'admin',
+                groupValue: selectedRole,
+                onChanged: (val) => setDialogState(() => selectedRole = val!),
+              ),
+              RadioListTile<String>(
+                title: const Text('Super Admin'),
+                value: 'superadmin',
+                groupValue: selectedRole,
+                onChanged: (val) => setDialogState(() => selectedRole = val!),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                final pinOk = await _verifyPinPrompt('Confirm Role Change');
+                if (!pinOk) return;
+
+                try {
+                  final res = await _apiClient.put(
+                    '/admin/users/${user['_id']}/role',
+                    {'role': selectedRole},
+                  );
+                  final data = jsonDecode(res.body);
+                  if (res.statusCode == 200 && data['success'] == true) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Role updated to ${selectedRole.toUpperCase()}'), backgroundColor: const Color(0xFF10B981)),
+                    );
+                    _fetchUsersData();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(data['error'] ?? 'Role change failed'), backgroundColor: const Color(0xFFEF4444)),
+                    );
+                  }
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(e.toString()), backgroundColor: const Color(0xFFEF4444)),
+                  );
+                }
+              },
+              child: const Text('Update Role'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ─── Deposit Action Methods ────────────────────────────────────────
 
   Future<void> _approveDeposit(String depositId) async {
@@ -510,15 +579,46 @@ class _AdminPortalPageState extends State<AdminPortalPage> with SingleTickerProv
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final authProvider = Provider.of<AuthProvider>(context);
+    final isSuperAdmin = authProvider.isSuperAdmin;
+
+    // Regular Admins only see their created users list (no overview, deposits, or p2p accounts tabs)
+    if (!isSuperAdmin) {
+      return Scaffold(
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+        appBar: AppBar(
+          title: const Row(
+            children: [
+              Icon(Icons.badge_outlined, color: Color(0xFF4F46E5)),
+              SizedBox(width: 8),
+              Text('Agent Admin — My Users'),
+            ],
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        ),
+        body: _buildUsersTab(isDark, theme, authProvider),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const CreateUserPage()),
+            ).then((_) => _fetchUsersData());
+          },
+          backgroundColor: theme.primaryColor,
+          icon: const Icon(Icons.person_add_alt_1_rounded, color: Colors.white),
+          label: const Text('Create User', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Row(
+        title: const Row(
           children: [
-            const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF4F46E5)),
-            const SizedBox(width: 8),
-            Text(authProvider.isSuperAdmin ? 'Super Admin Portal' : 'Admin Portal'),
+            Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF4F46E5)),
+            SizedBox(width: 8),
+            Text('Super Admin Portal'),
           ],
         ),
         backgroundColor: Colors.transparent,
@@ -680,7 +780,7 @@ class _AdminPortalPageState extends State<AdminPortalPage> with SingleTickerProv
             ],
           ),
           const SizedBox(height: 8),
-          Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.extrabold, color: accentColor)),
+          Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: accentColor)),
         ],
       ),
     );
@@ -780,6 +880,7 @@ class _AdminPortalPageState extends State<AdminPortalPage> with SingleTickerProv
                                 onSelected: (action) {
                                   if (action == 'freeze') _toggleFreezeUser(u['_id'], isFrozen);
                                   if (action == 'balance') _showAdjustBalanceDialog(u);
+                                  if (action == 'role') _showChangeRoleDialog(u);
                                   if (action == 'delete') _deleteUser(u['_id'], u['fullName'] ?? u['firstName']);
                                 },
                                 itemBuilder: (context) => [
@@ -791,11 +892,16 @@ class _AdminPortalPageState extends State<AdminPortalPage> with SingleTickerProv
                                     value: 'balance',
                                     child: Text('Adjust Balance'),
                                   ),
-                                  if (authProvider.isSuperAdmin && u['_id'] != authProvider.user?['id'])
+                                  if (authProvider.isSuperAdmin && u['_id'] != authProvider.user?['id']) ...[
+                                    const PopupMenuItem(
+                                      value: 'role',
+                                      child: Text('Change Role'),
+                                    ),
                                     const PopupMenuItem(
                                       value: 'delete',
                                       child: Text('Delete Account', style: TextStyle(color: Color(0xFFEF4444))),
                                     ),
+                                  ],
                                 ],
                               ),
                             ),
@@ -844,7 +950,7 @@ class _AdminPortalPageState extends State<AdminPortalPage> with SingleTickerProv
                               ),
                               Text(
                                 '\$${(dep['amount'] ?? 0.0).toStringAsFixed(2)}',
-                                style: const TextStyle(fontWeight: FontWeight.extrabold, fontSize: 18, color: Color(0xFF10B981)),
+                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF10B981)),
                               ),
                             ],
                           ),

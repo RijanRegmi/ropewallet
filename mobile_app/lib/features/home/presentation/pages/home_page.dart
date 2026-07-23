@@ -57,11 +57,6 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       debugPrint('Error fetching active P2P accounts: $e');
     }
-    if (mounted) {
-      setState(() {
-        _isLoadingP2pAccounts = false;
-      });
-    }
   }
 
   void _copyPaymentLink(String qrData) {
