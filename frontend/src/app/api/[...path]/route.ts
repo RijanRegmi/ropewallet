@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://ropewallet.vercel.app/api';
+const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://ropewallet.com/api';
 
 /**
  * Wildcard API Proxy Route Handler

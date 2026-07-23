@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 
-const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://ropewallet.vercel.app/api';
+const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://ropewallet.com/api';
 
 async function getAuthHeader(): Promise<Record<string, string>> {
   const cookieStore = await cookies();

@@ -78,7 +78,7 @@ export class PaymentController {
           currency: 'usd',
           payment_method: finalPaymentMethodId,
           confirm: true,
-          return_url: 'https://ropewallet.vercel.app/pay/confirm',
+          return_url: `${process.env.FRONTEND_URL || process.env.BASE_URL || 'https://ropewallet.com'}/pay/confirm`,
           automatic_payment_methods: {
             enabled: true,
             allow_redirects: 'never',
@@ -299,8 +299,8 @@ export class PaymentController {
           userId: user._id.toString(),
           amount: amount.toString(),
         },
-        success_url: `https://ropewallet.vercel.app/success`,
-        cancel_url: `https://ropewallet.vercel.app/cancel`,
+        success_url: `${process.env.FRONTEND_URL || process.env.BASE_URL || 'https://ropewallet.com'}/success`,
+        cancel_url: `${process.env.FRONTEND_URL || process.env.BASE_URL || 'https://ropewallet.com'}/cancel`,
       });
 
       res.status(200).json({
@@ -652,8 +652,8 @@ export class PaymentController {
             userId: recipient._id.toString(),
             amount: depositAmount.toString(),
           },
-          success_url: `https://ropewallet.vercel.app/success`,
-          cancel_url: `https://ropewallet.vercel.app/cancel`,
+          success_url: `${process.env.FRONTEND_URL || process.env.BASE_URL || 'https://ropewallet.com'}/success`,
+          cancel_url: `${process.env.FRONTEND_URL || process.env.BASE_URL || 'https://ropewallet.com'}/cancel`,
         });
 
         res.redirect(session.url as string);

@@ -5,7 +5,7 @@ class ApiConstants {
   // 1. Set 'useProduction' to true and update 'productionUrl' with your Vercel URL once deployed.
   // 2. Otherwise, for local development, configure the local settings below.
   static const bool useProduction = true;
-  static const String productionUrl = 'https://ropewallet.vercel.app'; // Update with Vercel deployment URL
+  static const String productionUrl = 'https://ropewallet.com'; // Custom domain for RopeWallet
 
   // Local development settings:
   // - Set 'isTestingOnPhysicalDevice' to true if you are running on a physical device.

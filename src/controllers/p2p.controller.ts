@@ -51,7 +51,7 @@ export class P2PController {
         expiresAt,
       });
 
-      const baseUrl = process.env.BASE_URL || 'https://ropewallet.vercel.app';
+      const baseUrl = process.env.BASE_URL || 'https://ropewallet.com';
       const paymentLink = `${baseUrl}/pay?token=${token}`;
 
       res.status(201).json({
@@ -197,7 +197,7 @@ export class P2PController {
         paymentMethodTypes.push('cashapp');
       }
 
-      const baseUrl = process.env.BASE_URL || 'https://ropewallet.vercel.app';
+      const baseUrl = process.env.BASE_URL || 'https://ropewallet.com';
 
       const session = await stripe.checkout.sessions.create({
         payment_method_types: paymentMethodTypes,

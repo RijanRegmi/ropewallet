@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://ropewallet.vercel.app/api';
+const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://ropewallet.com/api';
 
 /**
  * Admin Server Actions

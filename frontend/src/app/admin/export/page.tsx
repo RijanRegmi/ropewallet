@@ -4,7 +4,7 @@ import Sidebar from '@/components/Sidebar';
 
 export default function ExportData() {
   const handleExportTransactions = () => {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ropewallet.vercel.app/api';
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ropewallet.com/api';
     // Open standard export endpoint
     window.open(`${apiBaseUrl}/admin/transactions/export`, '_blank');
   };
