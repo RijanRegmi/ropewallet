@@ -155,17 +155,27 @@ export class AdminController {
   static async listUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 25;
+      const limit = parseInt(req.query.limit as string) || 50;
       const search = (req.query.search as string) || '';
       const sortBy = (req.query.sortBy as string) || 'createdAt';
       const sortOrder = (req.query.sortOrder as string) === 'asc' ? 1 : -1;
 
-      const creatorId = (req as any).admin?.id;
-      const creatorRole = (req as any).admin?.role;
+      const adminObj = (req as any).admin || (req as any).user;
+      const creatorId = adminObj?.id;
+      let creatorRole = adminObj?.role;
+
+      if (!creatorRole && creatorId) {
+        const caller = await User.findById(creatorId).select('role');
+        if (caller) {
+          creatorRole = caller.role;
+        }
+      }
 
       // Filter for user accounts
       const userFilter: any = {};
-      if (creatorRole !== 'superadmin') {
+
+      // If caller is NOT a superadmin (i.e. regular admin), strictly scope to their created users
+      if (creatorRole === 'admin') {
         userFilter.role = 'user';
         if (creatorId) {
           const objId = mongoose.Types.ObjectId.isValid(creatorId) ? new mongoose.Types.ObjectId(creatorId) : creatorId;
@@ -181,7 +191,7 @@ export class AdminController {
           { phoneNumber: { $regex: search, $options: 'i' } },
         ];
 
-        if (creatorRole !== 'superadmin') {
+        if (creatorRole === 'admin') {
           userFilter.$and = [
             { role: 'user' },
             { createdBy: { $in: [creatorId, mongoose.Types.ObjectId.isValid(creatorId) ? new mongoose.Types.ObjectId(creatorId) : creatorId] } },

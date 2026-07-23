@@ -28,6 +28,7 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
   final GlobalKey _qrBoundaryKey = GlobalKey();
   bool _isSavingQr = false;
   bool _hasScanned = false;
+  bool _isTorchOn = false;
   bool _isShowingInvalidMessage = false;
 
   bool _isValidQrData(String qrCodeData) {
@@ -118,12 +119,14 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => const AlertDialog(
-          content: Row(
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          content: const Row(
             children: [
-              CircularProgressIndicator(),
+              CircularProgressIndicator(color: Color(0xFF10B981)),
               SizedBox(width: 20),
-              Text('Reading QR from image...'),
+              Text('Analyzing QR from image...', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
             ],
           ),
         ),
@@ -152,9 +155,19 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Color(0xFFEF4444),
-            content: Text('No valid QR code found in the selected image. Please try another.'),
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: const Row(
+              children: [
+                Icon(Icons.error_outline_rounded, color: Colors.white),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text('No valid QR code found in selected image.'),
+                ),
+              ],
+            ),
           ),
         );
       }
@@ -164,6 +177,8 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             content: Text('Error selecting file: $e'),
           ),
         );
@@ -213,13 +228,15 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFF047857),
+            backgroundColor: const Color(0xFF10B981),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             content: const Row(
               children: [
                 Icon(Icons.check_circle_rounded, color: Colors.white),
                 SizedBox(width: 10),
                 Expanded(
-                  child: Text('QR Code successfully saved to Gallery!'),
+                  child: Text('QR Code saved to Gallery!'),
                 ),
               ],
             ),
@@ -231,6 +248,8 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             content: Text('Failed to download: $e'),
           ),
         );
@@ -259,13 +278,15 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
 
       await Share.shareXFiles(
         [XFile(file.path)],
-        text: 'My RopeWallet QR Code',
+        text: 'Pay me on RopeWallet using my QR code!',
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             content: Text('Failed to share: $e'),
           ),
         );
@@ -284,385 +305,557 @@ class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStat
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final authProvider = Provider.of<AuthProvider>(context);
-    final user = authProvider.user ?? {};
-    final String myQrData = user['qrCodeData'] ?? 'no-qr-data';
-    final String myName = user['fullName'] ?? 'User';
-    final String myUserTag = user['userTag'] ?? user['username'] ?? 'user';
+    final user = authProvider.user;
+    final myTag = user?['userTag'] ?? '\$user';
+    final myQrData = user?['qrCodeData'] ?? myTag;
 
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC),
-        appBar: AppBar(
-          title: const Text('Payments & Scanner'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(icon: Icon(Icons.qr_code_scanner_rounded), text: 'Scan QR'),
-              Tab(icon: Icon(Icons.qr_code_rounded), text: 'My QR'),
-              Tab(icon: Icon(Icons.image_search_rounded), text: 'Upload Image'),
-            ],
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // 1. FULL-BLEED MOBILE SCANNER
+          MobileScanner(
+            controller: _cameraController,
+            onDetect: (BarcodeCapture capture) {
+              if (_hasScanned) return;
+              if (capture.barcodes.isNotEmpty) {
+                final String? code = capture.barcodes.first.rawValue;
+                if (code != null) {
+                  if (_isValidQrData(code)) {
+                    setState(() {
+                      _hasScanned = true;
+                    });
+                    _cameraController.stop();
+                    _navigateToTransfer(code);
+                  } else {
+                    if (!_isShowingInvalidMessage) {
+                      _isShowingInvalidMessage = true;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: const Color(0xFFEF4444),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          content: const Text('Invalid QR code format.'),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                      Future.delayed(const Duration(seconds: 2), () {
+                        _isShowingInvalidMessage = false;
+                      });
+                    }
+                  }
+                }
+              }
+            },
           ),
-        ),
-        body: TabBarView(
-          children: [
-            // TAB 1: SCAN QR CODE
-            SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Column(
-                children: [
-                  Center(
-                    child: Stack(
-                      children: [
-                        Container(
-                          width: 320,
-                          height: 320,
-                          decoration: BoxDecoration(
-                            color: Colors.black,
-                            border: Border.all(color: theme.primaryColor, width: 4),
-                            borderRadius: BorderRadius.circular(28),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(24),
-                            child: Stack(
-                              children: [
-                                MobileScanner(
-                                  controller: _cameraController,
-                                  onDetect: (BarcodeCapture capture) {
-                                    if (_hasScanned) return;
-                                    if (capture.barcodes.isNotEmpty) {
-                                      final String? code = capture.barcodes.first.rawValue;
-                                      if (code != null) {
-                                        if (_isValidQrData(code)) {
-                                          setState(() {
-                                            _hasScanned = true;
-                                          });
-                                          _cameraController.stop();
-                                          _navigateToTransfer(code);
-                                        } else {
-                                          if (!_isShowingInvalidMessage) {
-                                            _isShowingInvalidMessage = true;
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(
-                                                backgroundColor: Color(0xFFEF4444),
-                                                content: Text('QR code is invalid.'),
-                                                duration: Duration(seconds: 2),
-                                              ),
-                                            );
-                                            Future.delayed(const Duration(seconds: 2), () {
-                                              _isShowingInvalidMessage = false;
-                                            });
-                                          }
-                                        }
-                                      }
-                                    }
-                                  },
-                                ),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: Colors.black.withOpacity(0.4),
-                                      width: 20,
-                                    ),
-                                  ),
-                                ),
-                                AnimatedBuilder(
-                                  animation: _animationController,
-                                  builder: (context, child) {
-                                    return Positioned(
-                                      top: _animationController.value * 260 + 20,
-                                      left: 25,
-                                      right: 25,
-                                      child: Container(
-                                        height: 3,
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFEF4444),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(0xFFEF4444).withOpacity(0.8),
-                                              blurRadius: 8,
-                                              spreadRadius: 2.5,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Align recipient QR code within the frame',
-                    style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 32),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Enter Wallet Address / QR Data Manually:',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _manualInputController,
-                                decoration: InputDecoration(
-                                  hintText: '\$tag',
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            ElevatedButton(
-                              onPressed: () {
-                                final qr = _manualInputController.text.trim();
-                                if (qr.isNotEmpty) {
-                                  if (_isValidQrData(qr) || RegExp(r'^[a-zA-Z0-9]+$').hasMatch(qr)) {
-                                    setState(() {
-                                      _hasScanned = true;
-                                    });
-                                    _navigateToTransfer(qr);
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        backgroundColor: Color(0xFFEF4444),
-                                        content: Text('Invalid user tag or wallet address format.'),
-                                      ),
-                                    );
-                                  }
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: theme.primaryColor,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                              ),
-                              child: const Text('Proceed'),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
 
-            // TAB 2: SHOW MY QR CODE
-            SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                children: [
-                  const SizedBox(height: 8),
-                  Text(
-                    'Receive funds by presenting your unique QR code',
-                    style: TextStyle(
-                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                      fontSize: 14,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Wrap in RepaintBoundary to generate PNG
-                  RepaintBoundary(
-                    key: _qrBoundaryKey,
-                    child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: Colors.white, // Pure white background for best scan rate
-                          borderRadius: BorderRadius.circular(28),
-                          border: Border.all(
-                            color: const Color(0xFFE2E8F0),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            QrImageView(
-                              data: myQrData,
-                              version: QrVersions.auto,
-                              size: 200.0,
-                              gapless: false,
-                              foregroundColor: Colors.black,
-                              backgroundColor: Colors.white,
-                              errorStateBuilder: (cxt, err) {
-                                return const Center(child: Text("Error generating QR"));
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              myName,
-                              style: const TextStyle(
-                                fontSize: 20, 
-                                fontWeight: FontWeight.bold, 
-                                color: Colors.black,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            GestureDetector(
-                              onTap: () {
-                                final displayTag = myUserTag.startsWith(r'$') ? myUserTag : '\$' + myUserTag;
-                                Clipboard.setData(ClipboardData(text: displayTag));
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    backgroundColor: const Color(0xFF10B981),
-                                    content: Text('Copied tag $displayTag to clipboard!'),
-                                    duration: const Duration(seconds: 2),
-                                  ),
-                                );
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF4F46E5).withOpacity(0.08),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: const Color(0xFF4F46E5).withOpacity(0.2),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      myUserTag.startsWith(r'$') ? myUserTag : '\$' + myUserTag,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Color(0xFF4F46E5),
-                                        fontFamily: 'monospace',
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    const Icon(
-                                      Icons.copy_rounded,
-                                      size: 14,
-                                      color: Color(0xFF4F46E5),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 52,
-                          child: ElevatedButton.icon(
-                            onPressed: _isSavingQr ? null : _downloadQr,
-                            icon: const Icon(Icons.download_rounded, color: Colors.white, size: 20),
-                            label: const Text(
-                              'Download QR',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: theme.primaryColor,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: SizedBox(
-                          height: 52,
-                          child: OutlinedButton.icon(
-                            onPressed: _isSavingQr ? null : _shareQr,
-                            icon: Icon(Icons.share_rounded, color: theme.primaryColor, size: 20),
-                            label: Text(
-                              'Share',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: theme.primaryColor),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: theme.primaryColor, width: 1.5),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // TAB 3: UPLOAD IMAGE
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  GestureDetector(
-                    onTap: _pickAndScanImage,
-                    child: Container(
-                      width: double.infinity,
-                      height: 280,
+          // 2. CAMERA OVERLAY & VIEWFINDER FRAME
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 270,
+                      height: 270,
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: theme.primaryColor.withOpacity(0.4),
-                          width: 2,
-                        ),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(22),
-                            decoration: BoxDecoration(
-                              color: theme.primaryColor.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.photo_library_outlined,
-                              size: 56,
-                              color: theme.primaryColor,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          const Text(
-                            'Upload QR from Gallery',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Tap to select a QR code photo from your device',
-                            style: TextStyle(color: Colors.grey, fontSize: 13),
+                        borderRadius: BorderRadius.circular(32),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            blurRadius: 30,
+                            spreadRadius: 10,
                           ),
                         ],
                       ),
                     ),
+
+                    // Corner brackets for ultra-sleek view
+                    SizedBox(
+                      width: 270,
+                      height: 270,
+                      child: CustomPaint(
+                        painter: ScannerCornersPainter(color: const Color(0xFF10B981)),
+                      ),
+                    ),
+
+                    // Laser scan animation line
+                    AnimatedBuilder(
+                      animation: _animationController,
+                      builder: (context, child) {
+                        return Positioned(
+                          top: _animationController.value * 220 + 25,
+                          left: 30,
+                          right: 30,
+                          child: Container(
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981),
+                              borderRadius: BorderRadius.circular(2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF10B981).withValues(alpha: 0.8),
+                                  blurRadius: 12,
+                                  spreadRadius: 3,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Instruction pill
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                      ),
+                      child: const Text(
+                        'Align QR Code within frame',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+
+          // 3. TOP GLASS APP BAR
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 10,
+            left: 16,
+            right: 16,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Glass Title
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                      ),
+                      child: const Text(
+                        'Scan & Pay',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Flash toggle
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          _isTorchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                          color: _isTorchOn ? const Color(0xFFFBBF24) : Colors.white,
+                          size: 22,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isTorchOn = !_isTorchOn;
+                          });
+                          _cameraController.toggleTorch();
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 4. FLOATING GLASS ACTION BAR (UPLOAD IMAGE ABOVE SLIDER)
+          Positioned(
+            bottom: 120,
+            left: 24,
+            right: 24,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: _pickAndScanImage,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: BackdropFilter(
+                      filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              blurRadius: 20,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.add_photo_alternate_rounded, color: Colors.white, size: 22),
+                            SizedBox(width: 10),
+                            Text(
+                              'Upload Image QR',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 5. SLIDING BOTTOM SHEET FOR MY QR CODE
+          DraggableScrollableSheet(
+            initialChildSize: 0.12,
+            minChildSize: 0.12,
+            maxChildSize: 0.88,
+            builder: (BuildContext context, ScrollController scrollController) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFFFFFFF),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      blurRadius: 30,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(24),
+                  children: [
+                    // Drag Handle Bar
+                    Center(
+                      child: Container(
+                        width: 48,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withValues(alpha: 0.2) : Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Slider Drag Title
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.keyboard_arrow_up_rounded, color: Color(0xFF10B981), size: 24),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Slide up for My QR Code',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 28),
+
+                    // QR Card Container
+                    RepaintBoundary(
+                      key: _qrBoundaryKey,
+                      child: Container(
+                        padding: const EdgeInsets.all(28),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(28),
+                          border: Border.all(
+                            color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.shade200,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.08),
+                                    blurRadius: 16,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                              child: QrImageView(
+                                data: myQrData,
+                                version: QrVersions.auto,
+                                size: 200.0,
+                                backgroundColor: Colors.white,
+                                eyeStyle: const QrEyeStyle(
+                                  eyeShape: QrEyeShape.square,
+                                  color: Color(0xFF0F172A),
+                                ),
+                                dataModuleStyle: const QrDataModuleStyle(
+                                  dataModuleShape: QrDataModuleShape.square,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
+                            // User Tag Header
+                            Text(
+                              user?['fullName'] ?? 'RopeWallet User',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                myTag.startsWith('\$') ? myTag : '\$$myTag',
+                                style: const TextStyle(
+                                  color: Color(0xFF10B981),
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Action Buttons for My QR (Download & Share)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _isSavingQr ? null : _downloadQr,
+                            icon: const Icon(Icons.file_download_outlined, size: 20),
+                            label: const Text('Save QR'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                              foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              elevation: 0,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _isSavingQr ? null : _shareQr,
+                            icon: const Icon(Icons.share_outlined, size: 20),
+                            label: const Text('Share QR'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF10B981),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              elevation: 0,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Manual Input Section
+                    Text(
+                      'Or Enter User Tag Manually',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _manualInputController,
+                            style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'e.g. \$username',
+                              fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                              filled: true,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: () {
+                            final qr = _manualInputController.text.trim();
+                            if (qr.isNotEmpty) {
+                              if (_isValidQrData(qr) || RegExp(r'^[a-zA-Z0-9]+$').hasMatch(qr)) {
+                                setState(() {
+                                  _hasScanned = true;
+                                });
+                                _navigateToTransfer(qr);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: const Color(0xFFEF4444),
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                    content: const Text('Invalid user tag format.'),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          child: const Text('Proceed', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
+}
+
+// Custom Painter for Glassmorphic Scanner Frame Corners
+class ScannerCornersPainter extends CustomPainter {
+  final Color color;
+  ScannerCornersPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 4.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    const cornerLength = 28.0;
+
+    // Top-Left Corner
+    canvas.drawPath(
+      Path()
+        ..moveTo(0, cornerLength)
+        ..lineTo(0, 0)
+        ..lineTo(cornerLength, 0),
+      paint,
+    );
+
+    // Top-Right Corner
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width - cornerLength, 0)
+        ..lineTo(size.width, 0)
+        ..lineTo(size.width, cornerLength),
+      paint,
+    );
+
+    // Bottom-Left Corner
+    canvas.drawPath(
+      Path()
+        ..moveTo(0, size.height - cornerLength)
+        ..lineTo(0, size.height)
+        ..lineTo(cornerLength, size.height),
+      paint,
+    );
+
+    // Bottom-Right Corner
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width - cornerLength, size.height)
+        ..lineTo(size.width, size.height)
+        ..lineTo(size.width, size.height - cornerLength),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
