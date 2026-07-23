@@ -45,7 +45,9 @@ export default function Dashboard() {
         setData(res.data);
       } else {
         setError(res.error || 'Failed to fetch dashboard data');
-        if (res.error?.includes('session') || res.error?.includes('auth')) {
+        if (res.error?.includes('Superadmin') || res.error?.includes('403') || res.error?.includes('Forbidden')) {
+          router.push('/admin/users');
+        } else if (res.error?.includes('session') || res.error?.includes('auth')) {
           router.push('/');
         }
       }

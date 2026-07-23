@@ -157,7 +157,7 @@ class _SetPinPageState extends State<SetPinPage> {
                   const SizedBox(height: 8),
 
                   Text(
-                    'Your account requires a 4-digit PIN to authorize money transfers and cash withdrawals. This step cannot be skipped.',
+                    'Your account requires a 6-digit PIN to authorize money transfers and cash withdrawals. You must set a PIN or log out.',
                     style: TextStyle(
                       color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                       fontSize: 14,
@@ -170,11 +170,11 @@ class _SetPinPageState extends State<SetPinPage> {
                   TextFormField(
                     controller: _pinController,
                     keyboardType: TextInputType.number,
-                    maxLength: 4,
+                    maxLength: 6,
                     obscureText: _obscurePin,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: InputDecoration(
-                      labelText: 'New 4-Digit PIN',
+                      labelText: 'New 6-Digit PIN',
                       prefixIcon: const Icon(Icons.pin_outlined),
                       suffixIcon: IconButton(
                         icon: Icon(_obscurePin ? Icons.visibility_off : Icons.visibility),
@@ -185,7 +185,7 @@ class _SetPinPageState extends State<SetPinPage> {
                     ),
                     validator: (val) {
                       if (val == null || val.trim().isEmpty) return 'PIN is required';
-                      if (val.trim().length != 4) return 'PIN must be exactly 4 digits';
+                      if (val.trim().length != 6) return 'PIN must be exactly 6 digits';
                       return null;
                     },
                   ),
@@ -195,11 +195,11 @@ class _SetPinPageState extends State<SetPinPage> {
                   TextFormField(
                     controller: _confirmPinController,
                     keyboardType: TextInputType.number,
-                    maxLength: 4,
+                    maxLength: 6,
                     obscureText: _obscureConfirmPin,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: InputDecoration(
-                      labelText: 'Confirm 4-Digit PIN',
+                      labelText: 'Confirm 6-Digit PIN',
                       prefixIcon: const Icon(Icons.pin_outlined),
                       suffixIcon: IconButton(
                         icon: Icon(_obscureConfirmPin ? Icons.visibility_off : Icons.visibility),
@@ -235,9 +235,24 @@ class _SetPinPageState extends State<SetPinPage> {
                               child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                             )
                           : const Text(
-                              'Save PIN & Continue',
+                              'Save 6-Digit PIN & Continue',
                               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                             ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Bottom Logout Option
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: () async {
+                        await authProvider.logout();
+                      },
+                      icon: const Icon(Icons.logout, size: 18, color: Color(0xFFEF4444)),
+                      label: const Text(
+                        'I don\'t want to set a PIN right now (Log Out)',
+                        style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
                     ),
                   ),
                 ],

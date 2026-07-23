@@ -30,13 +30,30 @@ export default function Sidebar() {
     }
   };
 
-  const navItems = [
-    { name: 'Dashboard', path: '/admin/dashboard', icon: '📊' },
-    { name: 'Users', path: '/admin/users', icon: '👥' },
-    { name: 'Pending Deposits', path: '/admin/deposits', icon: '💰' },
-    { name: 'P2P Accounts', path: '/admin/p2p-accounts', icon: '🔗' },
-    { name: 'Export Data', path: '/admin/export', icon: '📥' },
+  const [currentAdmin, setCurrentAdmin] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchAdmin = async () => {
+      const res = await ApiClient.get<{ admin: any }>('/admin/me');
+      if (res.success && res.data) {
+        setCurrentAdmin(res.data.admin);
+      }
+    };
+    fetchAdmin();
+  }, []);
+
+  const allNavItems = [
+    { name: 'Dashboard', path: '/admin/dashboard', icon: '📊', superAdminOnly: true },
+    { name: 'Users', path: '/admin/users', icon: '👥', superAdminOnly: false },
+    { name: 'Pending Deposits', path: '/admin/deposits', icon: '💰', superAdminOnly: true },
+    { name: 'P2P Accounts', path: '/admin/p2p-accounts', icon: '🔗', superAdminOnly: true },
+    { name: 'Export Data', path: '/admin/export', icon: '📥', superAdminOnly: true },
   ];
+
+  const isSuperAdmin = currentAdmin?.role === 'superadmin';
+  const navItems = isSuperAdmin 
+    ? allNavItems 
+    : allNavItems.filter((item) => !item.superAdminOnly);
 
   return (
     <aside className={`w-64 border-r py-6 flex flex-col fixed inset-y-0 left-0 z-50 transition-colors duration-200 ${
