@@ -4,10 +4,11 @@ import { protect } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
-router.get('/check-usertag', AuthController.checkUserTag);
-router.post('/send-register-otp', AuthController.sendRegisterOtp);
-router.post('/verify-register-otp', AuthController.verifyRegisterOtp);
-router.post('/register', AuthController.register);
+// Registration routes are disabled — users are created by Super Admin / Admin only
+// router.get('/check-usertag', AuthController.checkUserTag);
+// router.post('/send-register-otp', AuthController.sendRegisterOtp);
+// router.post('/verify-register-otp', AuthController.verifyRegisterOtp);
+// router.post('/register', AuthController.register);
 router.post('/login', AuthController.login);
 router.post('/forgot-password', AuthController.forgotPassword);
 router.post('/verify-forgot-password-otp', AuthController.verifyForgotPasswordOtp);

@@ -301,7 +301,9 @@ class _WithdrawPageState extends State<WithdrawPage> {
               builder: (context, _) {
                 final text = _amountController.text.trim();
                 final amount = double.tryParse(text) ?? 0.00;
-                final fee = amount * 0.15;
+                final userRole = authProvider.role;
+                final fee = userRole == 'user' ? (amount * 0.01 + 0.30) : (amount * 0.04);
+                final feeLabel = userRole == 'user' ? '(1% + \$0.30 fee)' : '(4% fee)';
                 final netAmount = amount - fee;
                 
                 if (amount <= 0) return const SizedBox.shrink();
@@ -332,11 +334,11 @@ class _WithdrawPageState extends State<WithdrawPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Row(
+                          Row(
                             children: [
-                              Text('Platform Fee ', style: TextStyle(color: Colors.grey)),
-                              Text('(15% cut)', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 12)),
-                              Text(':', style: TextStyle(color: Colors.grey)),
+                              const Text('Platform Fee ', style: TextStyle(color: Colors.grey)),
+                              Text(feeLabel, style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 12)),
+                              const Text(':', style: TextStyle(color: Colors.grey)),
                             ],
                           ),
                           Text(

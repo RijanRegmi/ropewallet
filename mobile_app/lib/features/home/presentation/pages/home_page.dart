@@ -17,6 +17,7 @@ import 'cash_app_transfer_page.dart';
 import 'venmo_transfer_page.dart';
 import 'bank_transfer_page.dart';
 import 'usdt_transfer_page.dart';
+import '../../../admin/presentation/pages/admin_portal_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -28,7 +29,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   bool _isInit = false;
   List<dynamic> _activeP2pAccounts = [];
-  bool _isLoadingP2pAccounts = true;
 
   @override
   void didChangeDependencies() {
@@ -49,7 +49,6 @@ class _HomePageState extends State<HomePage> {
           if (mounted) {
             setState(() {
               _activeP2pAccounts = data['data'];
-              _isLoadingP2pAccounts = false;
             });
           }
           return;
@@ -88,7 +87,6 @@ class _HomePageState extends State<HomePage> {
 
     final user = authProvider.user ?? {};
     final fullName = user['fullName'] ?? 'Wallet User';
-    final email = user['email'] ?? '';
     final balance = user['walletBalance'] ?? 0.00;
     final qrData = user['qrCodeData'] ?? 'no-qr-data';
     final profileImage = user['profileImage'] ?? '';
@@ -283,6 +281,71 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               const SizedBox(height: 28),
+
+              // Admin Management Portal Banner Card
+              if (authProvider.isAdmin) ...[
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AdminPortalPage()),
+                    );
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF4F46E5).withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 24),
+                            ),
+                            const SizedBox(width: 14),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  authProvider.isSuperAdmin ? 'Super Admin Portal' : 'Admin Portal',
+                                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 2),
+                                const Text(
+                                  'Users, Deposits, P2P Accounts & Analytics',
+                                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
 
               // Action Cards (Scan, Send, Deposit, Withdraw, Link Card, Share)
               Row(

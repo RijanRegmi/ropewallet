@@ -182,12 +182,36 @@ export class PaymentController {
         return;
       }
 
-      // Calculate 15% fee on top of transfer amount
-      const fee = Number((amount * 0.15).toFixed(2));
-      const totalCost = Number((amount + fee).toFixed(2));
+      // ─── Role-Based Transfer Rules ─────────────────────────────────
+      const senderRole = sender.role || 'user';
+      const receiverRole = receiver.role || 'user';
 
-      if (sender.walletBalance < totalCost) {
-        res.status(400).json({ success: false, error: `Insufficient funds. Total cost with 15% platform fee is $${totalCost.toFixed(2)}` });
+      // Users can only send money to admin or superadmin accounts
+      if (senderRole === 'user' && receiverRole === 'user') {
+        res.status(403).json({ success: false, error: 'You can only send money to admin accounts' });
+        return;
+      }
+
+      // Calculate fees based on roles
+      let fee = 0;
+      let totalCostFromSender = amount; // What gets deducted from sender's wallet
+      let creditToReceiver = amount;    // What gets added to receiver's wallet
+
+      if (senderRole === 'user') {
+        // User → Admin/SuperAdmin: 20% silently deducted from receiver side
+        // Sender sees full amount deducted, receiver gets 80%
+        fee = Number((amount * 0.20).toFixed(2));
+        totalCostFromSender = amount;
+        creditToReceiver = Number((amount - fee).toFixed(2));
+      } else {
+        // Admin/SuperAdmin → Anyone: No fee, full amount transferred
+        fee = 0;
+        totalCostFromSender = amount;
+        creditToReceiver = amount;
+      }
+
+      if (sender.walletBalance < totalCostFromSender) {
+        res.status(400).json({ success: false, error: `Insufficient funds. Your balance is $${sender.walletBalance.toFixed(2)}` });
         return;
       }
 
@@ -196,8 +220,8 @@ export class PaymentController {
       const originalReceiverBalance = receiver.walletBalance;
 
       try {
-        sender.walletBalance = Number((sender.walletBalance - totalCost).toFixed(2));
-        receiver.walletBalance = Number((receiver.walletBalance + amount).toFixed(2));
+        sender.walletBalance = Number((sender.walletBalance - totalCostFromSender).toFixed(2));
+        receiver.walletBalance = Number((receiver.walletBalance + creditToReceiver).toFixed(2));
 
         await sender.save();
         await receiver.save();
@@ -221,17 +245,22 @@ export class PaymentController {
         sender: sender._id,
         receiver: receiver._id,
         type: 'transfer',
-        amount: totalCost,
+        amount: totalCostFromSender,
         fee: fee,
-        netAmount: amount,
+        netAmount: creditToReceiver,
         platformFee: fee,
         netProfit: fee,
         remarks: remarks || undefined,
       });
 
+      // Don't expose fee details to user-role senders
+      const message = senderRole === 'user'
+        ? `Successfully sent $${amount.toFixed(2)}`
+        : `Successfully sent $${amount.toFixed(2)}`;
+
       res.status(200).json({
         success: true,
-        message: `Successfully sent $${amount.toFixed(2)} ($${totalCost.toFixed(2)} total cost with 15% platform fee)`,
+        message,
         data: {
           walletBalance: sender.walletBalance,
           transaction,
@@ -346,8 +375,16 @@ export class PaymentController {
         return;
       }
 
-      // Calculate 15% platform fee cut for withdrawals
-      const fee = Number((amount * 0.15).toFixed(2));
+      // ─── Role-Based Withdrawal Fee ─────────────────────────────────
+      const userRole = user.role || 'user';
+      let fee: number;
+      if (userRole === 'user') {
+        // User: 1% + $0.30
+        fee = Number((amount * 0.01 + 0.30).toFixed(2));
+      } else {
+        // Admin / SuperAdmin: 4%
+        fee = Number((amount * 0.04).toFixed(2));
+      }
       const netAmount = Number((amount - fee).toFixed(2));
 
       let stripeTokenId = '';

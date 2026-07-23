@@ -70,4 +70,20 @@ class ApiClient {
       throw Exception('Connection failed: Check if server is running ($e)');
     }
   }
+
+  Future<http.Response> put(String endpoint, [Map<String, dynamic>? body]) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    final headers = await _getHeaders();
+
+    try {
+      final response = await http.put(
+        url,
+        headers: headers,
+        body: body != null ? jsonEncode(body) : null,
+      );
+      return response;
+    } catch (e) {
+      throw Exception('Connection failed: Check if server is running ($e)');
+    }
+  }
 }

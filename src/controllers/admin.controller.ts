@@ -228,33 +228,88 @@ export class AdminController {
 
   static async createUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { firstName, lastName, middleName, email, phoneNumber, userTag, password } = req.body;
+      const { firstName, lastName, middleName, email, phoneNumber, userTag, password, role, transactionPin } = req.body;
+      const creatorRole = (req as any).admin?.role || 'admin';
 
-      if (!firstName || !lastName || !email || !phoneNumber || !userTag || !password) {
-        res.status(400).json({ success: false, error: 'All required fields must be provided' });
+      if (!firstName || !lastName || !email || !phoneNumber || !password) {
+        res.status(400).json({ success: false, error: 'First name, last name, email, phone number, and password are required' });
         return;
       }
 
-      const existing = await User.findOne({ $or: [{ email }, { userTag }, { phoneNumber }] });
-      if (existing) {
-        res.status(400).json({ success: false, error: 'User with this email, tag, or phone number already exists' });
+      const targetRole = role || 'user';
+
+      if (!['user', 'admin', 'superadmin'].includes(targetRole)) {
+        res.status(400).json({ success: false, error: 'Invalid user role specified' });
         return;
       }
 
-      const qrCodeData = crypto.randomUUID();
+      // Admins can ONLY create 'user' role accounts. Only Super Admins can create 'admin' or 'superadmin' accounts.
+      if (creatorRole !== 'superadmin' && targetRole !== 'user') {
+        res.status(403).json({ success: false, error: 'Admins can only create regular user accounts' });
+        return;
+      }
 
-      const user = await User.create({
-        firstName,
-        lastName,
-        middleName,
-        email,
-        phoneNumber,
-        userTag: userTag.toLowerCase(),
+      const emailNorm = email.toLowerCase().trim();
+      const phoneNorm = phoneNumber.trim();
+
+      // Check existing email or phone
+      const existingEmailOrPhone = await User.findOne({ $or: [{ email: emailNorm }, { phoneNumber: phoneNorm }] });
+      if (existingEmailOrPhone) {
+        res.status(400).json({ success: false, error: 'User with this email or phone number already exists' });
+        return;
+      }
+
+      // Generate or validate userTag
+      let finalTag = userTag ? userTag.trim().toLowerCase() : '';
+      if (finalTag) {
+        if (!finalTag.startsWith('$')) {
+          finalTag = `$${finalTag}`;
+        }
+        const existingTag = await User.findOne({ userTag: finalTag });
+        if (existingTag) {
+          res.status(400).json({ success: false, error: 'User tag already taken' });
+          return;
+        }
+      } else {
+        // Auto-generate tag
+        let isUnique = false;
+        let attempts = 0;
+        const cleanFirst = firstName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        while (!isUnique && attempts < 100) {
+          const randomNum = Math.floor(100 + Math.random() * 900);
+          finalTag = `$${cleanFirst}${randomNum}`;
+          const existing = await User.findOne({ userTag: finalTag });
+          if (!existing) isUnique = true;
+          attempts++;
+        }
+      }
+
+      const qrCodeData = finalTag;
+
+      const newUser = await User.create({
+        firstName: firstName.trim(),
+        middleName: middleName?.trim() || undefined,
+        lastName: lastName.trim(),
+        email: emailNorm,
+        phoneNumber: phoneNorm,
+        userTag: finalTag,
         password,
+        role: targetRole,
+        transactionPin: transactionPin ? transactionPin.trim() : undefined,
         qrCodeData,
       });
 
-      res.status(201).json({ success: true, data: { user } });
+      res.status(201).json({
+        success: true,
+        message: `${targetRole.toUpperCase()} account created successfully`,
+        data: {
+          id: newUser._id.toString(),
+          fullName: newUser.fullName,
+          email: newUser.email,
+          userTag: newUser.userTag,
+          role: newUser.role,
+        },
+      });
     } catch (error) {
       next(error);
     }
@@ -288,6 +343,19 @@ export class AdminController {
 
   static async deleteUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      const creatorId = (req as any).admin?.id;
+      const creatorRole = (req as any).admin?.role;
+
+      if (creatorRole !== 'superadmin') {
+        res.status(403).json({ success: false, error: 'Only Super Admins can delete accounts' });
+        return;
+      }
+
+      if (req.params.id === creatorId) {
+        res.status(400).json({ success: false, error: 'Super Admin cannot delete their own logged-in account' });
+        return;
+      }
+
       const user = await User.findByIdAndDelete(req.params.id);
       if (!user) {
         res.status(404).json({ success: false, error: 'User not found' });

@@ -130,10 +130,6 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
         ? (user['walletBalance'] as num).toDouble() 
         : 0.00;
 
-    // Calculate live pricing breakdown
-    final double fee = _amount * 0.15;
-    final double netAmount = _amount - fee;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Send Money'),
@@ -248,9 +244,8 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                   if (amount == null || amount <= 0) {
                     return 'Please enter a valid amount';
                   }
-                  final totalCost = amount * 1.15;
-                  if (totalCost > userBalance) {
-                    return 'Insufficient balance (Total cost is \$${totalCost.toStringAsFixed(2)})';
+                  if (amount > userBalance) {
+                    return 'Insufficient balance';
                   }
                   return null;
                 },
@@ -300,37 +295,6 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Row(
-                          children: [
-                            Text('Platform Fee ', style: TextStyle(color: Colors.grey)),
-                            Text('(15% added)', style: TextStyle(color: Color(0xFFF59E0B), fontWeight: FontWeight.bold, fontSize: 12)),
-                            Text(':', style: TextStyle(color: Colors.grey)),
-                          ],
-                        ),
-                        Text(
-                          '+\$${fee.toStringAsFixed(2)}',
-                          style: const TextStyle(color: Color(0xFFF59E0B), fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Total Cost (Sender Pays):', style: TextStyle(color: Colors.grey)),
-                        Text(
-                          '\$${(_amount + fee).toStringAsFixed(2)}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12.0),
-                      child: Divider(color: Colors.transparent, height: 1),
-                    ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [

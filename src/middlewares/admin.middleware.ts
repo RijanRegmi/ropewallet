@@ -52,7 +52,7 @@ export const adminProtect = async (req: Request, res: Response, next: NextFuncti
     }
 
     // Attach admin info to request
-    (req as any).admin = { id: decoded.id, role: decoded.role };
+    (req as any).admin = { id: admin._id.toString(), role: admin.role };
     next();
   } catch (error) {
     if (req.originalUrl.startsWith('/api')) {

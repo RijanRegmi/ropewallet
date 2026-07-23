@@ -18,6 +18,9 @@ class AuthProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _token != null;
+  String get role => _user?['role'] ?? 'user';
+  bool get isAdmin => role == 'admin' || role == 'superadmin';
+  bool get isSuperAdmin => role == 'superadmin';
 
   void clearError() {
     _errorMessage = null;

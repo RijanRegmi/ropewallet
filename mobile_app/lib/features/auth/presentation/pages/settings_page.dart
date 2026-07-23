@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:ropewallet/core/theme/theme_provider.dart';
 import 'package:ropewallet/features/auth/providers/auth_provider.dart';
+import 'create_user_page.dart';
+import '../../../admin/presentation/pages/admin_portal_page.dart';
 import '../../providers/security_provider.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -154,6 +156,47 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
           const SizedBox(height: 28),
+
+          // Section: Admin Management
+          if (authProvider.isAdmin) ...[
+            _buildSectionHeader('Admin Management Portal', isDark),
+            const SizedBox(height: 12),
+            Container(
+              decoration: _buildCardDecoration(isDark),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF4F46E5)),
+                    title: Text(authProvider.isSuperAdmin ? 'Super Admin Portal Dashboard' : 'Admin Portal Dashboard', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: const Text('Manage overview stats, users, deposits & P2P accounts'),
+                    trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AdminPortalPage()),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.person_add_alt_1_outlined, color: Color(0xFF10B981)),
+                    title: const Text('Create User Account', style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(authProvider.isSuperAdmin
+                        ? 'Create User, Admin, or Super Admin'
+                        : 'Create regular User account'),
+                    trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const CreateUserPage()),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 28),
+          ],
 
           // Section: About App
           _buildSectionHeader('App Information', isDark),

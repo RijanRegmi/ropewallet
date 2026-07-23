@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../providers/wallet_provider.dart';
 
 class ReceiptPage extends StatefulWidget {
   final Map<String, dynamic> transaction;
@@ -279,7 +277,6 @@ class _ReceiptPageState extends State<ReceiptPage> {
 
   @override
   Widget build(BuildContext context) {
-    final walletProvider = Provider.of<WalletProvider>(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 

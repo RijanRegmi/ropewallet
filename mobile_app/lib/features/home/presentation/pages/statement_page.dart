@@ -16,7 +16,6 @@ class StatementPage extends StatelessWidget {
 
     final user = authProvider.user ?? {};
     final transactions = walletProvider.transactions;
-    final isBalanceHidden = walletProvider.isBalanceHidden;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC),
