@@ -1894,7 +1894,8 @@ export class AdminController {
 
         const tbody = document.getElementById('usersBody');
         tbody.innerHTML = '';
-        data.data.users.forEach(u => {
+        const allUsers = [...(data.data.admins || []), ...(data.data.users || [])];
+        allUsers.forEach(u => {
           const statusBadge = u.isFrozen
             ? '<span class="badge badge-danger">Frozen</span>'
             : '<span class="badge badge-success">Active</span>';
@@ -2027,6 +2028,15 @@ export class AdminController {
         showToast(res.success ? 'User deleted' : res.error, res.success ? 'success' : 'error');
         loadUsers(currentPage);
       }
+
+      window.openCreateModal = openCreateModal;
+      window.openEditModal = openEditModal;
+      window.closeModal = closeModal;
+      window.autoGenerateTag = autoGenerateTag;
+      window.toggleFreeze = toggleFreeze;
+      window.toggleRole = toggleRole;
+      window.deleteUser = deleteUser;
+      window.loadUsers = loadUsers;
 
       loadUsers();
     </script>`;
