@@ -22,7 +22,12 @@ app.use(async (req, res, next) => {
     next();
   } catch (error: any) {
     console.error('Database connection middleware error:', error);
-    res.status(500).json({ success: false, error: `Database connection failed: ${error.message || 'Check MONGODB_URI on Vercel'}` });
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        error: `Database Connection Failed: ${error.message || 'Check MONGODB_URI in Vercel Environment Variables'}`
+      });
+    }
   }
 });
 

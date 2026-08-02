@@ -12,15 +12,23 @@ export const connectDB = async (): Promise<void> => {
   if (isConnected || mongoose.connection.readyState >= 1) {
     return;
   }
+
+  const mongoUri = process.env.MONGODB_URI || (process.env.VERCEL ? '' : 'mongodb://localhost:27017/wallet');
+
+  if (!mongoUri) {
+    const msg = 'MONGODB_URI is not defined. Please add MONGODB_URI in Vercel Dashboard -> Settings -> Environment Variables.';
+    console.error(`[DB Error] ${msg}`);
+    throw new Error(msg);
+  }
+
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/wallet';
     await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of hanging 30s
+      serverSelectionTimeoutMS: 5000, // 5s timeout
     });
     isConnected = true;
     console.log('MongoDB Connected successfully.');
-  } catch (error) {
+  } catch (error: any) {
     console.error('MongoDB connection error:', error);
-    throw error;
+    throw new Error(`MongoDB connection failed: ${error.message || 'Invalid URI or Network IP Blocked'}`);
   }
 };
