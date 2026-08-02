@@ -180,19 +180,9 @@ export class AdminController {
         }
       }
 
-      // Filter for regular user accounts vs admin accounts based on role
-      let userFilter: any = {};
-      let adminFilter: any = {};
-
-      if (creatorRole === 'superadmin') {
-        // Superadmin sees all regular users + all admin/host/superadmin accounts
-        userFilter = { role: { $nin: ['admin', 'host', 'superadmin'] } };
-        adminFilter = { role: { $in: ['admin', 'host', 'superadmin'] } };
-      } else {
-        // Regular host/admin sees only regular users created by themselves
-        userFilter = { role: 'user', createdBy: creatorId };
-        adminFilter = { _id: null };
-      }
+      // Filter for regular user accounts vs admin/host accounts
+      let userFilter: any = { role: { $nin: ['admin', 'host', 'superadmin'] } };
+      let adminFilter: any = { role: { $in: ['admin', 'host', 'superadmin'] } };
 
       if (search) {
         const searchConditions = [
@@ -250,11 +240,6 @@ export class AdminController {
       const user = await User.findById(req.params.id).select('-savedCard.cardNumber -savedCard.cvc');
       if (!user) {
         res.status(404).json({ success: false, error: 'User not found' });
-        return;
-      }
-
-      if (creatorRole !== 'superadmin' && (!user.createdBy || user.createdBy.toString() !== creatorId)) {
-        res.status(403).json({ success: false, error: 'Not authorized to access this user details' });
         return;
       }
 
@@ -375,11 +360,6 @@ export class AdminController {
         return;
       }
 
-      if (creatorRole !== 'superadmin' && (!user.createdBy || user.createdBy.toString() !== creatorId)) {
-        res.status(403).json({ success: false, error: 'Not authorized to edit this user' });
-        return;
-      }
-
       if (firstName !== undefined) user.firstName = firstName;
       if (lastName !== undefined) user.lastName = lastName;
       if (middleName !== undefined) user.middleName = middleName;
@@ -433,11 +413,6 @@ export class AdminController {
         return;
       }
 
-      if (creatorRole !== 'superadmin' && (!user.createdBy || user.createdBy.toString() !== adminId)) {
-        res.status(403).json({ success: false, error: 'Not authorized to freeze this account' });
-        return;
-      }
-
       user.isFrozen = true;
       user.frozenAt = new Date();
       user.frozenBy = adminId;
@@ -452,16 +427,10 @@ export class AdminController {
   static async unfreezeUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const adminId = (req as any).admin.id;
-      const creatorRole = (req as any).admin.role;
 
       const user = await User.findById(req.params.id);
       if (!user) {
         res.status(404).json({ success: false, error: 'User not found' });
-        return;
-      }
-
-      if (creatorRole !== 'superadmin' && (!user.createdBy || user.createdBy.toString() !== adminId)) {
-        res.status(403).json({ success: false, error: 'Not authorized to unfreeze this account' });
         return;
       }
 

@@ -41,7 +41,7 @@ export const adminProtect = async (req: Request, res: Response, next: NextFuncti
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as AdminJwtPayload;
 
-    const admin = await User.findOne({ _id: decoded.id, role: { $in: ['admin', 'superadmin'] } });
+    const admin = await User.findOne({ _id: decoded.id, role: { $in: ['admin', 'host', 'superadmin'] } });
     if (!admin || admin.isFrozen) {
       if (req.originalUrl.startsWith('/api')) {
         next(new CustomError('Admin account not found or inactive', 401));
