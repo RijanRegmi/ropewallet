@@ -308,7 +308,7 @@ export class P2PController {
   // ─── Get Receiver Profile by Tag (generates token on the fly) ────
   static async getReceiverProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      let tag = req.params.tag.trim();
+      let tag = String(req.params.tag).trim();
       const { amount, note } = req.query;
 
       let cleanBase = tag;
