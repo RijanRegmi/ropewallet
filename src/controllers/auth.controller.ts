@@ -17,6 +17,20 @@ export class AuthController {
     }
   }
 
+  static async checkEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email } = req.query;
+      if (!email) {
+        res.status(400).json({ success: false, error: 'Please provide an email to check' });
+        return;
+      }
+      const available = await AuthService.checkEmailAvailability(email as string);
+      res.status(200).json({ success: true, available });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async sendRegisterOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email } = req.body;

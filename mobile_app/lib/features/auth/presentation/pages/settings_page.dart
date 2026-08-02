@@ -230,14 +230,9 @@ class _SettingsPageState extends State<SettingsPage> {
           // Logout Button
           SizedBox(
             width: double.infinity,
-            height: 52,
+            height: 56,
             child: ElevatedButton.icon(
-              onPressed: () async {
-                await authProvider.logout();
-                if (mounted) {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                }
-              },
+              onPressed: () => AuthProvider.confirmAndLogout(context),
               icon: const Icon(Icons.logout_rounded, color: Colors.white),
               label: const Text(
                 'Log Out',
@@ -245,6 +240,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFEF4444),
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),

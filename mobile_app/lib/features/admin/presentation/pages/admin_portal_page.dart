@@ -824,18 +824,18 @@ class _AdminPortalPageState extends State<AdminPortalPage> with SingleTickerProv
             child: _isLoadingUsers
                 ? const Center(child: CircularProgressIndicator())
                 : allUsers.isEmpty
-                    ? const Center(child: Text('No users found.'))
+                    ? const Center(child: Text('No customers found.'))
                     : ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         itemCount: allUsers.length,
                         itemBuilder: (context, index) {
                           final u = allUsers[index];
-                          final role = u['role'] ?? 'user';
+                          final role = u['role'] ?? 'customer';
                           final isFrozen = u['isFrozen'] == true;
 
-                          Color roleColor = Colors.grey;
+                          Color roleColor = const Color(0xFF10B981);
                           if (role == 'superadmin') roleColor = const Color(0xFFEF4444);
-                          if (role == 'admin') roleColor = const Color(0xFF8B5CF6);
+                          if (role == 'host' || role == 'admin') roleColor = const Color(0xFF8B5CF6);
 
                           return Container(
                             margin: const EdgeInsets.only(bottom: 10),

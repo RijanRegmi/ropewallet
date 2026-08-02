@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:provider/provider.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
+import '../../home/providers/wallet_provider.dart';
+import '../presentation/pages/login_page.dart';
 
 class AuthProvider with ChangeNotifier {
   final ApiClient _apiClient = ApiClient();
@@ -69,9 +72,13 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(String email, String password, {WalletProvider? walletProvider}) async {
     _isLoading = true;
     _errorMessage = null;
+    // Wipe previous user session immediately to prevent state leaking
+    _user = null;
+    _token = null;
+    walletProvider?.reset();
     notifyListeners();
 
     try {
@@ -116,6 +123,22 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await _apiClient.get(
         '${ApiConstants.checkUserTag}?userTag=${Uri.encodeComponent(userTag)}',
+      );
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return responseData['available'] == true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Check Email Availability
+  Future<bool> checkEmailAvailability(String email) async {
+    try {
+      final response = await _apiClient.get(
+        '${ApiConstants.checkEmail}?email=${Uri.encodeComponent(email.trim())}',
       );
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -585,10 +608,69 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<void> logout() async {
+  Future<void> logout({WalletProvider? walletProvider}) async {
     _token = null;
     _user = null;
+    _isLoading = false;
+    _errorMessage = null;
     await _secureStorage.delete(key: 'auth_token');
+    walletProvider?.reset();
     notifyListeners();
+  }
+
+  // Show "Are you sure?" dialog, perform logout, wipe providers, and redirect to LoginPage
+  static Future<void> confirmAndLogout(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        final theme = Theme.of(dialogContext);
+        final isDark = theme.brightness == Brightness.dark;
+        return AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Row(
+            children: [
+              Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 28),
+              SizedBox(width: 12),
+              Text('Log Out', style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: const Text(
+            'Are you sure you want to log out of your RopeWallet account?',
+            style: TextStyle(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Log Out', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true && context.mounted) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+
+      await authProvider.logout(walletProvider: walletProvider);
+
+      if (context.mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+          (route) => false,
+        );
+      }
+    }
   }
 }

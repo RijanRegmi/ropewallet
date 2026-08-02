@@ -74,7 +74,7 @@ export const superAdminOnly = (req: Request, res: Response, next: NextFunction):
       next(new CustomError('Superadmin access required', 403));
       return;
     }
-    res.status(403).send('Access denied: Superadmin only');
+    res.status(403).send("Access denied: You don't have permission");
     return;
   }
   next();

@@ -22,14 +22,8 @@ export class AdminController {
         return;
       }
 
-      const admin = await User.findOne({ email, role: { $in: ['superadmin', 'host'] } }).select('+password');
+      const admin = await User.findOne({ email }).select('+password');
       if (!admin || admin.isFrozen) {
-        res.status(401).json({ success: false, error: 'Invalid credentials' });
-        return;
-      }
-
-      const isMatch = await admin.comparePassword(password);
-      if (!isMatch) {
         res.status(401).json({ success: false, error: 'Invalid credentials' });
         return;
       }
@@ -38,8 +32,14 @@ export class AdminController {
       if (admin.role !== 'superadmin') {
         res.status(403).json({
           success: false,
-          error: 'Access denied: Only Superadmin can log in to the Web Admin Portal. Hosts must log in using the Mobile App.',
+          error: "Access denied: You don't have permission",
         });
+        return;
+      }
+
+      const isMatch = await admin.comparePassword(password);
+      if (!isMatch) {
+        res.status(401).json({ success: false, error: 'Invalid credentials' });
         return;
       }
 
@@ -1900,39 +1900,86 @@ export class AdminController {
         const tbody = document.getElementById('usersBody');
         tbody.innerHTML = '';
         const allUsers = [...(data.data.admins || []), ...(data.data.users || [])];
+
         allUsers.forEach(function(u) {
-          const statusBadge = u.isFrozen
-            ? '<span class="badge badge-danger">Frozen</span>'
-            : '<span class="badge badge-success">Active</span>';
-          const freezeBtn = u.isFrozen
-            ? '<button class="btn-icon btn-icon-success" onclick="toggleFreeze(\'' + u._id + '\', false)" title="Unfreeze Account"><i class="fas fa-lock-open"></i></button>'
-            : '<button class="btn-icon btn-icon-warning" onclick="toggleFreeze(\'' + u._id + '\', true)" title="Freeze Account"><i class="fas fa-lock"></i></button>';
+          const tr = document.createElement('tr');
 
-          const roleSelect = '<select style="background:#1F2937;color:#F9FAFB;border:1px solid #374151;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;outline:none;" onchange="toggleRole(\'' + u._id + '\', this.value)">' +
-                '<option value="customer"' + (u.role === 'customer' || u.role === 'user' ? ' selected' : '') + '>Customer</option>' +
-                '<option value="host"' + (u.role === 'host' || u.role === 'admin' ? ' selected' : '') + '>Host</option>' +
-                '<option value="superadmin"' + (u.role === 'superadmin' ? ' selected' : '') + '>Superadmin</option>' +
-              '</select>';
+          // Name
+          const tdName = document.createElement('td');
+          const strong = document.createElement('strong');
+          strong.textContent = u.fullName || (u.firstName ? u.firstName + ' ' + (u.lastName || '') : u.email || 'User');
+          tdName.appendChild(strong);
+          tr.appendChild(tdName);
 
-          const name = u.fullName || (u.firstName ? u.firstName + ' ' + (u.lastName || '') : u.email || 'User');
+          // Email
+          const tdEmail = document.createElement('td');
+          tdEmail.textContent = u.email || '-';
+          tr.appendChild(tdEmail);
+
+          // Tag
+          const tdTag = document.createElement('td');
           const userTag = u.userTag ? (u.userTag.startsWith('$') ? u.userTag : '$' + u.userTag) : '-';
-          const balance = Number(u.walletBalance || 0).toFixed(2);
-          const dateStr = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-';
+          tdTag.textContent = userTag;
+          tr.appendChild(tdTag);
 
-          tbody.innerHTML += '<tr>' +
-            '<td><strong>' + name + '</strong></td>' +
-            '<td>' + (u.email || '-') + '</td>' +
-            '<td>' + userTag + '</td>' +
-            '<td>$' + balance + '</td>' +
-            '<td>' + statusBadge + '</td>' +
-            '<td>' + roleSelect + '</td>' +
-            '<td>' + dateStr + '</td>' +
-            '<td style="display:flex;gap:8px;">' +
-              '<button class="btn-icon btn-icon-primary" onclick="openEditModal(\'' + u._id + '\')" title="Edit User"><i class="fas fa-edit"></i></button>' +
-              freezeBtn +
-              '<button class="btn-icon btn-icon-danger" onclick="deleteUser(\'' + u._id + '\')" title="Delete User"><i class="fas fa-trash"></i></button>' +
-            '</td>' +
-          '</tr>';
+          // Balance
+          const tdBalance = document.createElement('td');
+          tdBalance.textContent = '$' + Number(u.walletBalance || 0).toFixed(2);
+          tr.appendChild(tdBalance);
+
+          // Status
+          const tdStatus = document.createElement('td');
+          const spanStatus = document.createElement('span');
+          spanStatus.className = u.isFrozen ? 'badge badge-danger' : 'badge badge-success';
+          spanStatus.textContent = u.isFrozen ? 'Frozen' : 'Active';
+          tdStatus.appendChild(spanStatus);
+          tr.appendChild(tdStatus);
+
+          // Role
+          const tdRole = document.createElement('td');
+          const selectRole = document.createElement('select');
+          selectRole.style.cssText = 'background:#1F2937;color:#F9FAFB;border:1px solid #374151;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;outline:none;';
+          selectRole.innerHTML = '<option value="customer">Customer</option><option value="host">Host</option><option value="superadmin">Superadmin</option>';
+          selectRole.value = (u.role === 'user' || u.role === 'customer') ? 'customer' : (u.role === 'admin' || u.role === 'host') ? 'host' : 'superadmin';
+          selectRole.onchange = function() { toggleRole(u._id, selectRole.value); };
+          tdRole.appendChild(selectRole);
+          tr.appendChild(tdRole);
+
+          // Joined Date
+          const tdDate = document.createElement('td');
+          tdDate.textContent = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-';
+          tr.appendChild(tdDate);
+
+          // Actions
+          const tdActions = document.createElement('td');
+          tdActions.style.cssText = 'display:flex;gap:8px;';
+
+          // Edit Button
+          const btnEdit = document.createElement('button');
+          btnEdit.className = 'btn-icon btn-icon-primary';
+          btnEdit.title = 'Edit User';
+          btnEdit.innerHTML = '<i class="fas fa-edit"></i>';
+          btnEdit.onclick = function() { openEditModal(u._id); };
+          tdActions.appendChild(btnEdit);
+
+          // Freeze Button
+          const btnFreeze = document.createElement('button');
+          btnFreeze.className = u.isFrozen ? 'btn-icon btn-icon-success' : 'btn-icon btn-icon-warning';
+          btnFreeze.title = u.isFrozen ? 'Unfreeze Account' : 'Freeze Account';
+          btnFreeze.innerHTML = u.isFrozen ? '<i class="fas fa-lock-open"></i>' : '<i class="fas fa-lock"></i>';
+          btnFreeze.onclick = function() { toggleFreeze(u._id, !u.isFrozen); };
+          tdActions.appendChild(btnFreeze);
+
+          // Delete Button
+          const btnDelete = document.createElement('button');
+          btnDelete.className = 'btn-icon btn-icon-danger';
+          btnDelete.title = 'Delete User';
+          btnDelete.innerHTML = '<i class="fas fa-trash"></i>';
+          btnDelete.onclick = function() { deleteUser(u._id); };
+          tdActions.appendChild(btnDelete);
+
+          tr.appendChild(tdActions);
+          tbody.appendChild(tr);
         });
 
         // Pagination

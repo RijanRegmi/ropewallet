@@ -28,6 +28,15 @@ class WalletProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // Reset provider state when switching accounts or logging out
+  void reset() {
+    _transactions = [];
+    _isLoading = false;
+    _errorMessage = null;
+    _isBalanceHidden = true;
+    notifyListeners();
+  }
+
   // Fetch transaction history
   Future<void> fetchTransactions() async {
     _isLoading = true;

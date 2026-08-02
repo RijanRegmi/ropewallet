@@ -22,6 +22,11 @@ export class AuthService {
     return !existing;
   }
 
+  static async checkEmailAvailability(email: string): Promise<boolean> {
+    const existing = await User.findOne({ email: email.toLowerCase().trim() });
+    return !existing;
+  }
+
   static async verifyOtp(email: string, code: string): Promise<boolean> {
     const emailNorm = email.toLowerCase().trim();
     const otpRecord = await Otp.findOne({ email: emailNorm });

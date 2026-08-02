@@ -120,9 +120,7 @@ class _SetPinPageState extends State<SetPinPage> {
           backgroundColor: Colors.transparent,
           actions: [
             TextButton.icon(
-              onPressed: () async {
-                await authProvider.logout();
-              },
+              onPressed: () => AuthProvider.confirmAndLogout(context),
               icon: const Icon(Icons.logout, size: 18, color: Colors.grey),
               label: const Text('Log Out', style: TextStyle(color: Colors.grey)),
             ),
@@ -245,9 +243,7 @@ class _SetPinPageState extends State<SetPinPage> {
                   // Bottom Logout Option
                   Center(
                     child: TextButton.icon(
-                      onPressed: () async {
-                        await authProvider.logout();
-                      },
+                      onPressed: () => AuthProvider.confirmAndLogout(context),
                       icon: const Icon(Icons.logout, size: 18, color: Color(0xFFEF4444)),
                       label: const Text(
                         'I don\'t want to set a PIN right now (Log Out)',

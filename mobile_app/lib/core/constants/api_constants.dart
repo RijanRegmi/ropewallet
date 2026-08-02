@@ -42,6 +42,7 @@ class ApiConstants {
   static const String login = '/auth/login';
   static const String profile = '/auth/me';
   static const String checkUserTag = '/auth/check-usertag';
+  static const String checkEmail = '/auth/check-email';
   static const String sendRegisterOtp = '/auth/send-register-otp';
   static const String forgotPassword = '/auth/forgot-password';
   static const String resetPassword = '/auth/reset-password';

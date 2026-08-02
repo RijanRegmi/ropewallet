@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/security_provider.dart';
+import '../../../home/providers/wallet_provider.dart';
+import '../../../home/presentation/pages/home_page.dart';
+import 'set_pin_page.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'forgot_password_page.dart';
 
@@ -29,9 +32,12 @@ class _LoginPageState extends State<LoginPage> {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+
     final success = await authProvider.login(
       _emailController.text.trim(),
       _passwordController.text,
+      walletProvider: walletProvider,
     );
 
     if (success) {
@@ -43,6 +49,14 @@ class _LoginPageState extends State<LoginPage> {
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
+        );
+
+        final hasPin = authProvider.user?['hasPin'] == true;
+        final targetPage = hasPin ? const HomePage() : const SetPinPage();
+
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => targetPage),
+          (route) => false,
         );
       }
     } else {
@@ -79,7 +93,8 @@ class _LoginPageState extends State<LoginPage> {
 
       if (savedEmail != null && savedPassword != null) {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final success = await authProvider.login(savedEmail, savedPassword);
+        final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+        final success = await authProvider.login(savedEmail, savedPassword, walletProvider: walletProvider);
         if (success && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -88,6 +103,14 @@ class _LoginPageState extends State<LoginPage> {
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
+          );
+
+          final hasPin = authProvider.user?['hasPin'] == true;
+          final targetPage = hasPin ? const HomePage() : const SetPinPage();
+
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => targetPage),
+            (route) => false,
           );
         } else if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -209,6 +232,7 @@ class _LoginPageState extends State<LoginPage> {
                         // Email input
                         TextFormField(
                           controller: _emailController,
+                          enabled: !authProvider.isLoading,
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.next,
                           decoration: InputDecoration(
@@ -233,9 +257,10 @@ class _LoginPageState extends State<LoginPage> {
                         // Password input
                         TextFormField(
                           controller: _passwordController,
+                          enabled: !authProvider.isLoading,
                           obscureText: _obscurePassword,
                           textInputAction: TextInputAction.done,
-                          onFieldSubmitted: (_) => _submit(),
+                          onFieldSubmitted: (_) => authProvider.isLoading ? null : _submit(),
                           decoration: InputDecoration(
                             labelText: 'Password',
                             prefixIcon: const Icon(Icons.lock_outline_rounded),
@@ -246,7 +271,7 @@ class _LoginPageState extends State<LoginPage> {
                               icon: Icon(
                                 _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                               ),
-                              onPressed: () {
+                              onPressed: authProvider.isLoading ? null : () {
                                 setState(() {
                                   _obscurePassword = !_obscurePassword;
                                 });
@@ -269,7 +294,7 @@ class _LoginPageState extends State<LoginPage> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () {
+                            onPressed: authProvider.isLoading ? null : () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
@@ -292,25 +317,36 @@ class _LoginPageState extends State<LoginPage> {
                         // Submit Button
                         SizedBox(
                           width: double.infinity,
-                          height: 52,
+                          height: 56,
                           child: ElevatedButton(
                             onPressed: authProvider.isLoading ? null : _submit,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: theme.primaryColor,
                               foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               elevation: 0,
                             ),
                             child: authProvider.isLoading
-                                ? const SizedBox(
-                                    height: 24,
-                                    width: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                    ),
+                                ? const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        ),
+                                      ),
+                                      SizedBox(width: 12),
+                                      Text(
+                                        'Logging in...',
+                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                      ),
+                                    ],
                                   )
                                 : const Text(
                                     'Log In',
@@ -324,7 +360,7 @@ class _LoginPageState extends State<LoginPage> {
                           const SizedBox(height: 16),
                           SizedBox(
                             width: double.infinity,
-                            height: 52,
+                            height: 56,
                             child: OutlinedButton.icon(
                               onPressed: authProvider.isLoading ? null : _loginWithBiometrics,
                               icon: Icon(Icons.fingerprint_rounded, color: theme.primaryColor, size: 24),
@@ -337,6 +373,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               ),
                               style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),

@@ -4,8 +4,8 @@ import { protect } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
-// Registration routes are disabled — users are created by Super Admin / Admin only
-// router.get('/check-usertag', AuthController.checkUserTag);
+router.get('/check-usertag', AuthController.checkUserTag);
+router.get('/check-email', AuthController.checkEmail);
 // router.post('/send-register-otp', AuthController.sendRegisterOtp);
 // router.post('/verify-register-otp', AuthController.verifyRegisterOtp);
 // router.post('/register', AuthController.register);

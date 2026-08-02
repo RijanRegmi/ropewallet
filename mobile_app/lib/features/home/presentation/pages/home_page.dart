@@ -28,15 +28,20 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool _isInit = false;
+  String? _currentUserId;
   List<dynamic> _activeP2pAccounts = [];
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_isInit) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userId = authProvider.user?['_id'] ?? authProvider.user?['id'];
+    
+    if (!_isInit || (userId != null && _currentUserId != userId)) {
+      _currentUserId = userId;
+      _isInit = true;
       Provider.of<WalletProvider>(context, listen: false).fetchTransactions();
       _fetchActiveP2pAccounts();
-      _isInit = true;
     }
   }
 
