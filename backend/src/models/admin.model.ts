@@ -40,14 +40,10 @@ const adminSchema = new Schema<IAdmin>(
   }
 );
 
-adminSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  try {
+adminSchema.pre('save', async function (this: any) {
+  if (this.isModified('password') && this.password) {
     const salt = await bcryptjs.genSalt(12);
-    this.password = await bcryptjs.hash(this.password!, salt);
-    next();
-  } catch (error: any) {
-    next(error);
+    this.password = await bcryptjs.hash(this.password, salt);
   }
 });
 
