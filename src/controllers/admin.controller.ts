@@ -22,7 +22,7 @@ export class AdminController {
         return;
       }
 
-      const admin = await User.findOne({ email, role: { $in: ['admin', 'superadmin'] } }).select('+password');
+      const admin = await User.findOne({ email, role: { $in: ['superadmin', 'host', 'admin'] } }).select('+password');
       if (!admin || admin.isFrozen) {
         res.status(401).json({ success: false, error: 'Invalid credentials' });
         return;
@@ -31,6 +31,15 @@ export class AdminController {
       const isMatch = await admin.comparePassword(password);
       if (!isMatch) {
         res.status(401).json({ success: false, error: 'Invalid credentials' });
+        return;
+      }
+
+      // Restrict Web Admin Portal login strictly to Superadmin
+      if (admin.role !== 'superadmin') {
+        res.status(403).json({
+          success: false,
+          error: 'Access denied: Only Superadmin can log in to the Web Admin Portal. Hosts must log in using the Mobile App.',
+        });
         return;
       }
 
@@ -176,11 +185,11 @@ export class AdminController {
       let adminFilter: any = {};
 
       if (creatorRole === 'superadmin') {
-        // Superadmin sees all regular users + all admin/superadmin accounts
-        userFilter = { role: { $nin: ['admin', 'superadmin'] } };
-        adminFilter = { role: { $in: ['admin', 'superadmin'] } };
+        // Superadmin sees all regular users + all admin/host/superadmin accounts
+        userFilter = { role: { $nin: ['admin', 'host', 'superadmin'] } };
+        adminFilter = { role: { $in: ['admin', 'host', 'superadmin'] } };
       } else {
-        // Regular admin sees only regular users created by themselves
+        // Regular host/admin sees only regular users created by themselves
         userFilter = { role: 'user', createdBy: creatorId };
         adminFilter = { _id: null };
       }
@@ -277,14 +286,14 @@ export class AdminController {
 
       const targetRole = role || 'user';
 
-      if (!['user', 'admin', 'superadmin'].includes(targetRole)) {
+      if (!['user', 'host', 'admin', 'superadmin'].includes(targetRole)) {
         res.status(400).json({ success: false, error: 'Invalid user role specified' });
         return;
       }
 
-      // Admins can ONLY create 'user' role accounts. Only Super Admins can create 'admin' or 'superadmin' accounts.
+      // Admins/Hosts can ONLY create 'user' role accounts. Only Super Admins can create 'host', 'admin', or 'superadmin' accounts.
       if (creatorRole !== 'superadmin' && targetRole !== 'user') {
-        res.status(403).json({ success: false, error: 'Admins can only create regular user accounts' });
+        res.status(403).json({ success: false, error: 'Hosts can only create regular user accounts' });
         return;
       }
 
@@ -478,8 +487,8 @@ export class AdminController {
         return;
       }
 
-      if (!role || !['user', 'admin', 'superadmin'].includes(role)) {
-        res.status(400).json({ success: false, error: 'Invalid role. Must be user, admin or superadmin' });
+      if (!role || !['user', 'host', 'admin', 'superadmin'].includes(role)) {
+        res.status(400).json({ success: false, error: 'Invalid role. Must be user, host, admin or superadmin' });
         return;
       }
 
@@ -1892,7 +1901,7 @@ export class AdminController {
 
           const roleSelect = '<select style="background:#1F2937;color:#F9FAFB;border:1px solid #374151;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;outline:none;" onchange="toggleRole(\'' + u._id + '\', this.value)">' +
                 '<option value="user"' + (u.role === 'user' ? ' selected' : '') + '>User</option>' +
-                '<option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>Admin</option>' +
+                '<option value="host"' + (u.role === 'host' || u.role === 'admin' ? ' selected' : '') + '>Host</option>' +
                 '<option value="superadmin"' + (u.role === 'superadmin' ? ' selected' : '') + '>Superadmin</option>' +
               '</select>';
 
@@ -2056,7 +2065,11 @@ export class AdminController {
         });
       }
 
-      loadUsers();
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        loadUsers();
+      } else {
+        document.addEventListener('DOMContentLoaded', () => loadUsers());
+      }
     </script>`;
 
     return AdminController.adminShell('Users', 'users', content);

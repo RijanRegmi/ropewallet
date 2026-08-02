@@ -28,7 +28,7 @@ interface User {
   phoneNumber: string;
   walletBalance: number;
   isFrozen: boolean;
-  role: 'user' | 'admin' | 'superadmin';
+  role: 'user' | 'host' | 'admin' | 'superadmin';
   createdAt: string;
   profileImage?: string;
 }
@@ -436,7 +436,7 @@ export default function UsersManagement() {
                                 }`}
                               >
                                 <option value="user">User</option>
-                                <option value="admin">Admin</option>
+                                <option value="host">Host</option>
                                 <option value="superadmin">Super Admin</option>
                               </select>
                             )}

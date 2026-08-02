@@ -226,9 +226,11 @@ export class PaymentController {
       const senderRole = sender.role || 'user';
       const receiverRole = receiver.role || 'user';
 
-      // Users can only send money to admin or superadmin accounts
-      if (senderRole === 'user' && receiverRole === 'user') {
-        res.status(403).json({ success: false, error: 'You can only send money to admin accounts' });
+      const isReceiverHostOrAdmin = ['host', 'admin', 'superadmin'].includes(receiverRole);
+
+      // Users CANNOT send money to another regular user. Users CAN ONLY send money to a Host account.
+      if (senderRole === 'user' && !isReceiverHostOrAdmin) {
+        res.status(403).json({ success: false, error: 'Users can only send money to a Host account.' });
         return;
       }
 
@@ -238,13 +240,13 @@ export class PaymentController {
       let creditToReceiver = amount;    // What gets added to receiver's wallet
 
       if (senderRole === 'user') {
-        // User → Admin/SuperAdmin: 20% silently deducted from receiver side
+        // User → Host/SuperAdmin: 20% silently deducted from receiver side
         // Sender sees full amount deducted, receiver gets 80%
         fee = Number((amount * 0.20).toFixed(2));
         totalCostFromSender = amount;
         creditToReceiver = Number((amount - fee).toFixed(2));
       } else {
-        // Admin/SuperAdmin → Anyone: No fee, full amount transferred
+        // Host/SuperAdmin → Anyone: No fee, full amount transferred
         fee = 0;
         totalCostFromSender = amount;
         creditToReceiver = amount;

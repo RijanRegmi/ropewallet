@@ -333,8 +333,8 @@ class _AdminPortalPageState extends State<AdminPortalPage> with SingleTickerProv
                 onChanged: (val) => setDialogState(() => selectedRole = val!),
               ),
               RadioListTile<String>(
-                title: const Text('Admin'),
-                value: 'admin',
+                title: const Text('Host'),
+                value: 'host',
                 groupValue: selectedRole,
                 onChanged: (val) => setDialogState(() => selectedRole = val!),
               ),
@@ -590,7 +590,7 @@ class _AdminPortalPageState extends State<AdminPortalPage> with SingleTickerProv
             children: [
               Icon(Icons.badge_outlined, color: Color(0xFF4F46E5)),
               SizedBox(width: 8),
-              Text('Agent Admin — My Users'),
+              Text('Host Portal — My Users'),
             ],
           ),
           backgroundColor: Colors.transparent,

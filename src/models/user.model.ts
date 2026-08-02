@@ -119,7 +119,7 @@ const userSchema = new Schema<IUser>(
     usedCardFingerprints: [{ type: String }],
     role: {
       type: String,
-      enum: ['user', 'admin', 'superadmin'],
+      enum: ['user', 'host', 'admin', 'superadmin'],
       default: 'user',
     },
   },
