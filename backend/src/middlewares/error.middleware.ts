@@ -34,11 +34,13 @@ export const errorHandler = (
   } else {
     // Log unexpected errors
     console.error('Unhandled server error:', err);
+    message = err.message || 'Internal Server Error';
   }
 
   res.status(statusCode).json({
     success: false,
     error: message,
+    details: err.message,
     stack: process.env.NODE_ENV === 'production' ? undefined : err.stack,
   });
 };

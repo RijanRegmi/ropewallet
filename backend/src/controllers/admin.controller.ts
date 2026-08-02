@@ -22,7 +22,28 @@ export class AdminController {
         return;
       }
 
-      const admin = await User.findOne({ email }).select('+password');
+      let admin: any = await User.findOne({ email }).select('+password');
+
+      // Auto-seed default superadmin account if it doesn't exist in MongoDB Atlas yet
+      if (!admin && email.toLowerCase() === 'admin@ropewallet.com') {
+        try {
+          await User.create({
+            firstName: 'RopeWallet',
+            lastName: 'Admin',
+            userTag: 'admin',
+            email: 'admin@ropewallet.com',
+            password: 'RopeAdmin@2024',
+            phoneNumber: '0000000000',
+            qrCodeData: 'admin-qr',
+            role: 'superadmin',
+            isFrozen: false,
+          });
+          admin = await User.findOne({ email }).select('+password');
+        } catch (e) {
+          console.error('Auto-seed superadmin error:', e);
+        }
+      }
+
       if (!admin || admin.isFrozen) {
         res.status(401).json({ success: false, error: 'Invalid credentials' });
         return;

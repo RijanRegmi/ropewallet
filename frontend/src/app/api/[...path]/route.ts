@@ -80,8 +80,12 @@ function runExpress(req: NextRequest): Promise<Response> {
 
       // Call Express app
       app(reqStream, resMock);
-    } catch (err) {
-      reject(err);
+    } catch (err: any) {
+      console.error('API Route execution error:', err);
+      resolve(new Response(JSON.stringify({ success: false, error: err.message || 'Server execution error' }), {
+        status: 500,
+        headers: { 'content-type': 'application/json' }
+      }));
     }
   });
 }
