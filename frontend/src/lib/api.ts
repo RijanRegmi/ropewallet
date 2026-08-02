@@ -28,10 +28,24 @@ export async function apiRequest<T>(
     }
 
     const res = await fetch(`${apiBase}${endpoint}`, opts);
+
+    // Safely check if response is JSON
+    const contentType = res.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await res.text();
+      console.error(`Non-JSON API response from ${apiBase}${endpoint} (Status ${res.status}):`, text);
+      return {
+        success: false,
+        error: res.status === 404
+          ? 'Backend API route not found (404)'
+          : `Server error (${res.status}): ${res.statusText || 'Unexpected server response'}`,
+      };
+    }
+
     const data = await res.json();
     return data;
   } catch (err: any) {
-    console.error('API Error:', err);
+    console.error('API Network Error:', err);
     return { success: false, error: err.message || 'Network error occurred' };
   }
 }
