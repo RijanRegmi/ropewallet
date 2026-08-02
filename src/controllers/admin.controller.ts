@@ -171,41 +171,46 @@ export class AdminController {
         }
       }
 
-      // Filter for regular user accounts
-      let userFilter: any = { role: 'user' };
+      // Filter for regular user accounts vs admin accounts based on role
+      let userFilter: any = {};
+      let adminFilter: any = {};
 
-      // Filter for admin accounts (only superadmin sees admin accounts)
-      let adminFilter: any = creatorRole === 'superadmin'
-        ? { role: { $in: ['admin', 'superadmin'] } }
-        : { _id: null };
+      if (creatorRole === 'superadmin') {
+        // Superadmin sees all regular users + all admin/superadmin accounts
+        userFilter = { role: { $nin: ['admin', 'superadmin'] } };
+        adminFilter = { role: { $in: ['admin', 'superadmin'] } };
+      } else {
+        // Regular admin sees only regular users created by themselves
+        userFilter = { role: 'user', createdBy: creatorId };
+        adminFilter = { _id: null };
+      }
 
       if (search) {
         const searchConditions = [
           { fullName: { $regex: search, $options: 'i' } },
+          { firstName: { $regex: search, $options: 'i' } },
+          { lastName: { $regex: search, $options: 'i' } },
           { email: { $regex: search, $options: 'i' } },
           { userTag: { $regex: search, $options: 'i' } },
           { phoneNumber: { $regex: search, $options: 'i' } },
         ];
 
-        userFilter = {
-          role: 'user',
-          $or: searchConditions,
-        };
-
+        userFilter.$or = searchConditions;
         if (creatorRole === 'superadmin') {
-          adminFilter = {
-            role: { $in: ['admin', 'superadmin'] },
-            $or: searchConditions,
-          };
+          adminFilter.$or = searchConditions;
         }
       }
 
       const [admins, users, totalUsers] = await Promise.all([
-        User.find(adminFilter).sort({ createdAt: -1 }).select('-savedCard'),
+        User.find(adminFilter)
+          .sort({ createdAt: -1 })
+          .populate('createdBy', 'firstName lastName email userTag role')
+          .select('-savedCard'),
         User.find(userFilter)
           .sort({ [sortBy]: sortOrder } as any)
           .skip((page - 1) * limit)
           .limit(limit)
+          .populate('createdBy', 'firstName lastName email userTag role')
           .select('-savedCard'),
         User.countDocuments(userFilter),
       ]);
