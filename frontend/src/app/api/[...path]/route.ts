@@ -30,6 +30,21 @@ function runExpress(req: NextRequest): Promise<Response> {
       reqStream.method = req.method;
       reqStream.headers = Object.fromEntries(req.headers.entries());
 
+      let _query: any = {};
+      let _body: any = undefined;
+      Object.defineProperty(reqStream, 'query', {
+        get: () => _query,
+        set: (val) => { _query = val; },
+        configurable: true,
+        enumerable: true,
+      });
+      Object.defineProperty(reqStream, 'body', {
+        get: () => _body,
+        set: (val) => { _body = val; },
+        configurable: true,
+        enumerable: true,
+      });
+
       // Create mock response object
       const resHeaders = new Headers();
       let statusCode = 200;
