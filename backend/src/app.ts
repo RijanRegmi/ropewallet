@@ -18,6 +18,21 @@ const app = express();
 // Enable trust proxy for Vercel / reverse proxy environment (required by express-rate-limit)
 app.set('trust proxy', 1);
 
+// Health & Environment verification endpoint (runs before DB connection middleware)
+app.get(['/api/health', '/health'], (req, res) => {
+  res.json({
+    success: true,
+    message: 'RopeWallet API Service Active',
+    isVercel: !!process.env.VERCEL,
+    envCheck: {
+      hasMongoUri: !!process.env.MONGODB_URI,
+      hasJwtSecret: !!process.env.JWT_SECRET,
+      hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
+      hasCardEncryptionKey: !!process.env.CARD_ENCRYPTION_KEY,
+    }
+  });
+});
+
 // Ensure DB is connected for every request (critical for serverless)
 app.use(async (req, res, next) => {
   try {
@@ -92,20 +107,6 @@ app.get('/', (req, res) => {
   res.json({ success: true, message: 'RopeWallet Layered REST API Service Running' });
 });
 
-// Health & Environment verification endpoint
-app.get(['/api/health', '/health'], (req, res) => {
-  res.json({
-    success: true,
-    message: 'RopeWallet API Service Active',
-    isVercel: !!process.env.VERCEL,
-    envCheck: {
-      hasMongoUri: !!process.env.MONGODB_URI,
-      hasJwtSecret: !!process.env.JWT_SECRET,
-      hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
-      hasCardEncryptionKey: !!process.env.CARD_ENCRYPTION_KEY,
-    }
-  });
-});
 
 
 // ─── API Routes ────────────────────────────────────────────────
