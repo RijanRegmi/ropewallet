@@ -195,9 +195,7 @@ export class AdminController {
         ];
 
         userFilter.$or = searchConditions;
-        if (creatorRole === 'superadmin') {
-          adminFilter.$or = searchConditions;
-        }
+        adminFilter.$or = searchConditions;
       }
 
       const [admins, users, totalUsers] = await Promise.all([
@@ -1860,13 +1858,13 @@ export class AdminController {
         const tbody = document.getElementById('usersBody');
         tbody.innerHTML = '';
         const allUsers = [...(data.data.admins || []), ...(data.data.users || [])];
-        allUsers.forEach(u => {
+        allUsers.forEach(function(u) {
           const statusBadge = u.isFrozen
             ? '<span class="badge badge-danger">Frozen</span>'
             : '<span class="badge badge-success">Active</span>';
           const freezeBtn = u.isFrozen
-            ? '<button class="btn-icon btn-icon-success" onclick="toggleFreeze(\\'' + u._id + '\\', false)" title="Unfreeze Account"><i class="fas fa-lock-open"></i></button>'
-            : '<button class="btn-icon btn-icon-warning" onclick="toggleFreeze(\\'' + u._id + '\\', true)" title="Freeze Account"><i class="fas fa-lock"></i></button>';
+            ? '<button class="btn-icon btn-icon-success" onclick="toggleFreeze(\'' + u._id + '\', false)" title="Unfreeze Account"><i class="fas fa-lock-open"></i></button>'
+            : '<button class="btn-icon btn-icon-warning" onclick="toggleFreeze(\'' + u._id + '\', true)" title="Freeze Account"><i class="fas fa-lock"></i></button>';
 
           const roleSelect = '<select style="background:#1F2937;color:#F9FAFB;border:1px solid #374151;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;outline:none;" onchange="toggleRole(\'' + u._id + '\', this.value)">' +
                 '<option value="user"' + (u.role === 'user' ? ' selected' : '') + '>User</option>' +
@@ -1874,18 +1872,23 @@ export class AdminController {
                 '<option value="superadmin"' + (u.role === 'superadmin' ? ' selected' : '') + '>Superadmin</option>' +
               '</select>';
 
+          const name = u.fullName || (u.firstName ? u.firstName + ' ' + (u.lastName || '') : u.email || 'User');
+          const userTag = u.userTag ? (u.userTag.startsWith('$') ? u.userTag : '$' + u.userTag) : '-';
+          const balance = Number(u.walletBalance || 0).toFixed(2);
+          const dateStr = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-';
+
           tbody.innerHTML += '<tr>' +
-            '<td><strong>' + (u.fullName || u.firstName + ' ' + u.lastName) + '</strong></td>' +
-            '<td>' + u.email + '</td>' +
-            '<td>@' + u.userTag + '</td>' +
-            '<td>$' + Number(u.walletBalance).toFixed(2) + '</td>' +
+            '<td><strong>' + name + '</strong></td>' +
+            '<td>' + (u.email || '-') + '</td>' +
+            '<td>' + userTag + '</td>' +
+            '<td>$' + balance + '</td>' +
             '<td>' + statusBadge + '</td>' +
             '<td>' + roleSelect + '</td>' +
-            '<td>' + new Date(u.createdAt).toLocaleDateString() + '</td>' +
+            '<td>' + dateStr + '</td>' +
             '<td style="display:flex;gap:8px;">' +
-              '<button class="btn-icon btn-icon-primary" onclick="openEditModal(\\'' + u._id + '\\')" title="Edit User"><i class="fas fa-edit"></i></button>' +
+              '<button class="btn-icon btn-icon-primary" onclick="openEditModal(\'' + u._id + '\')" title="Edit User"><i class="fas fa-edit"></i></button>' +
               freezeBtn +
-              '<button class="btn-icon btn-icon-danger" onclick="deleteUser(\\'' + u._id + '\\')" title="Delete User"><i class="fas fa-trash"></i></button>' +
+              '<button class="btn-icon btn-icon-danger" onclick="deleteUser(\'' + u._id + '\')" title="Delete User"><i class="fas fa-trash"></i></button>' +
             '</td>' +
           '</tr>';
         });
