@@ -131,12 +131,11 @@ const userSchema = new Schema<IUser>(
 );
 
 // Auto generate fullName
-userSchema.pre('save', function (this: any, next) {
+userSchema.pre('save', function (this: any) {
   if (this.isModified('firstName') || this.isModified('lastName') || this.isModified('middleName')) {
     const middle = this.middleName ? ` ${this.middleName}` : '';
     this.fullName = `${this.firstName}${middle} ${this.lastName}`;
   }
-  next();
 });
 
 // Hash password before saving if it has been modified

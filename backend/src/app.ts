@@ -10,9 +10,6 @@ import paymentRoutes from './routes/payment.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import p2pRoutes from './routes/p2p.routes.js';
 import { PaymentController } from './controllers/payment.controller.js';
-import { AdminController } from './controllers/admin.controller.js';
-import { P2PController } from './controllers/p2p.controller.js';
-import { adminProtect } from './middlewares/admin.middleware.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import { connectDB } from './config/db.js';
 
@@ -33,7 +30,7 @@ app.use(async (req, res, next) => {
 app.use(helmet({
   contentSecurityPolicy: false, // Allow inline scripts for admin portal
 }));
-app.use(mongoSanitize()); // Prevent NoSQL Injection
+app.use(mongoSanitize() as any); // Prevent NoSQL Injection
 app.use(cookieParser());  // Parse cookies for admin auth
 
 // CORS configuration
@@ -61,7 +58,7 @@ const globalLimiter = rateLimit({
   legacyHeaders: false,
   message: { success: false, error: 'Too many requests from this IP, please try again after 15 minutes' },
 });
-app.use('/api', globalLimiter);
+app.use('/api', globalLimiter as any);
 
 // Strict Rate Limiter for Authentication (Max 10 requests per 15 mins)
 const authLimiter = rateLimit({
@@ -79,7 +76,7 @@ app.get('/', (req, res) => {
 
 // ─── API Routes ────────────────────────────────────────────────
 app.post('/api/webhook', PaymentController.handleWebhook);
-app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/auth', authLimiter as any, authRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/p2p', p2pRoutes);
