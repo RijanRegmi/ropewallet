@@ -1,277 +1,246 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Sidebar from '@/components/Sidebar';
-import Toast, { ToastMessage } from '@/components/Toast';
-import { ApiClient } from '@/lib/api';
+import { apiRequest } from '@/lib/api';
+import { TransactionModel, DepositListResponse } from '@/models/transaction.model';
+import DeclineModal from '@/components/DeclineModal';
+import ConfirmModal from '@/components/ConfirmModal';
+import Toast from '@/components/Toast';
+import { Check, X } from 'lucide-react';
 
-interface Deposit {
-  _id: string;
-  amount: number;
-  status: string;
-  paymentMethod: string;
-  createdAt: string;
-  receiver?: {
-    fullName?: string;
-    userTag?: string;
-  };
-  payerInfo?: {
-    name?: string;
-    email?: string;
-    platform?: string;
-  };
-}
-
-export default function PendingDeposits() {
-  const [deposits, setDeposits] = useState<Deposit[]>([]);
-  const [statusFilter, setStatusFilter] = useState('pending');
+export default function DepositsPage() {
+  const [deposits, setDeposits] = useState<TransactionModel[]>([]);
+  const [statusFilter, setStatusFilter] = useState<'pending' | 'completed' | 'declined' | 'all'>('pending');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const router = useRouter();
 
-  // Decline modal states
-  const [showDeclineModal, setShowDeclineModal] = useState(false);
-  const [declineTargetId, setDeclineTargetId] = useState('');
-  const [declineReason, setDeclineReason] = useState('');
+  // Decline modal & toast
+  const [declineTargetId, setDeclineTargetId] = useState<string | null>(null);
+  const [isDeclineOpen, setIsDeclineOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState({ text: '', type: 'success' as 'success' | 'error' });
 
-  const addToast = (message: string, type: 'success' | 'error') => {
-    const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, message, type }]);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
-
-  const fetchDeposits = async () => {
-    setLoading(true);
-    const res = await ApiClient.get<{ deposits: Deposit[] }>(
-      `/admin/deposits?status=${statusFilter}`
-    );
-    if (res.success && res.data) {
-      setDeposits(res.data.deposits);
-    } else {
-      addToast(res.error || 'Failed to fetch deposits queue', 'error');
-      if (res.error?.includes('session') || res.error?.includes('auth')) {
-        router.push('/');
-      }
-    }
-    setLoading(false);
-  };
+  // Confirmation Modal state
+  const [approveConfirmState, setApproveConfirmState] = useState<{
+    isOpen: boolean;
+    depositId: string | null;
+    amount: number;
+    userName: string;
+    loading: boolean;
+  }>({
+    isOpen: false,
+    depositId: null,
+    amount: 0,
+    userName: '',
+    loading: false,
+  });
 
   useEffect(() => {
-    fetchDeposits();
-  }, [statusFilter]);
+    fetchDeposits(page, statusFilter);
+  }, [page, statusFilter]);
 
-  const handleApprove = async (id: string) => {
-    if (!confirm("Approve this P2P deposit? The recipient's wallet will be credited (minus the 15% platform fee).")) return;
-    const res = await ApiClient.put<any>(`/admin/deposits/${id}/approve`);
-    if (res.success) {
-      addToast(res.message || 'Deposit approved and credited', 'success');
-      fetchDeposits();
-    } else {
-      addToast(res.error || 'Failed to approve deposit', 'error');
+  const fetchDeposits = async (p: number, s: string) => {
+    setLoading(true);
+    const res = await apiRequest<DepositListResponse['data']>(`/admin/deposits?page=${p}&status=${s}`);
+    setLoading(false);
+
+    if (res.success && res.data) {
+      setDeposits(res.data.deposits || []);
+      setTotalPages(res.data.pagination?.totalPages || 1);
     }
   };
 
-  const openDeclineModal = (id: string) => {
-    setDeclineTargetId(id);
-    setDeclineReason('');
-    setShowDeclineModal(true);
+  const showToast = (text: string, type: 'success' | 'error' = 'success') => {
+    setToastMsg({ text, type });
+    setTimeout(() => setToastMsg({ text: '', type: 'success' }), 4000);
   };
 
-  const handleDecline = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const res = await ApiClient.put<any>(`/admin/deposits/${declineTargetId}/decline`, {
-      reason: declineReason,
+  const promptApprove = (d: TransactionModel) => {
+    setApproveConfirmState({
+      isOpen: true,
+      depositId: d._id,
+      amount: d.amount,
+      userName: d.receiver?.fullName || d.receiver?.userTag || 'User',
+      loading: false,
     });
+  };
+
+  const handleApproveConfirm = async () => {
+    if (!approveConfirmState.depositId) return;
+    setApproveConfirmState((prev) => ({ ...prev, loading: true }));
+    const res = await apiRequest(`/admin/deposits/${approveConfirmState.depositId}/approve`, 'PUT');
+    setApproveConfirmState((prev) => ({ ...prev, isOpen: false, loading: false }));
+
     if (res.success) {
-      addToast('Deposit request declined successfully', 'success');
-      setShowDeclineModal(false);
-      fetchDeposits();
+      showToast('Deposit approved successfully');
+      fetchDeposits(page, statusFilter);
     } else {
-      addToast(res.error || 'Failed to decline deposit', 'error');
+      showToast(res.error || 'Failed to approve deposit', 'error');
     }
   };
 
   return (
-    <div className="min-h-screen bg-dark-bg flex">
-      {/* Navigation Sidebar */}
-      <Sidebar />
+    <div className="space-y-6 animate-fade-in">
+      <Toast message={toastMsg.text} type={toastMsg.type} />
 
-      {/* Main Content */}
-      <div className="flex-1 ml-64 p-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-2xl font-bold text-dark-text">Pending Deposits</h2>
-            <p className="text-sm text-dark-text-secondary mt-1">
-              Approve or decline manual P2P deposits (Chime, Venmo)
-            </p>
-          </div>
-          <div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-dark-surface border border-dark-border text-dark-text px-4 py-2.5 rounded-xl text-sm font-semibold outline-none cursor-pointer focus:border-primary"
-            >
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-              <option value="declined">Declined</option>
-              <option value="all">All Deposits</option>
-            </select>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Pending Deposits</h2>
+          <p className="text-sm text-gray-400 mt-1">Review, approve, or decline P2P user deposit submissions</p>
         </div>
 
-        {loading && (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary border-r-2" />
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-semibold text-gray-400">Filter Status:</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value as any);
+              setPage(1);
+            }}
+            className="px-3.5 py-2 bg-[#1F2937] border border-gray-700 rounded-xl text-sm font-medium text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+          >
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+            <option value="declined">Declined</option>
+            <option value="all">All Deposits</option>
+          </select>
+        </div>
+      </div>
 
-        {!loading && (
-          <div className="bg-dark-surface border border-dark-border rounded-2xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.2)]">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-dark-surface-2/40 text-[11px] font-bold text-dark-text-secondary uppercase tracking-wider border-b border-dark-border">
-                    <th className="py-4.5 px-6">Date Registered</th>
-                    <th className="py-4.5 px-6">Payer Name</th>
-                    <th className="py-4.5 px-6">Platform</th>
-                    <th className="py-4.5 px-6">Amount</th>
-                    <th className="py-4.5 px-6">Recipient User</th>
-                    <th className="py-4.5 px-6">Status</th>
-                    {statusFilter === 'pending' && <th className="py-4.5 px-6 text-right">Actions</th>}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-dark-border">
-                  {deposits.map((d) => {
-                    const payerName = d.payerInfo?.name || d.payerInfo?.email || 'Unknown Payer';
-                    const platform = d.paymentMethod || d.payerInfo?.platform || 'chime';
-                    const recipient = d.receiver?.fullName || d.receiver?.userTag || '-';
-
-                    return (
-                      <tr key={d._id} className="hover:bg-primary/2 transition-colors">
-                        <td className="py-4 px-6 text-sm text-dark-text">
-                          {new Date(d.createdAt).toLocaleString()}
-                        </td>
-                        <td className="py-4 px-6 text-sm font-semibold text-dark-text">
-                          {payerName}
-                        </td>
-                        <td className="py-4 px-6 text-sm">
-                          <span className="inline-block px-2.5 py-1 text-xs font-bold bg-info/10 text-info rounded-lg uppercase">
-                            {platform}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6 text-sm font-bold text-dark-text">
-                          ${Number(d.amount).toFixed(2)}
-                        </td>
-                        <td className="py-4 px-6 text-sm text-dark-text font-medium">
-                          {recipient}
-                        </td>
-                        <td className="py-4 px-6 text-sm">
-                          <span
-                            className={`inline-block px-2.5 py-1 text-xs font-bold rounded-lg ${
-                              d.status === 'completed'
-                                ? 'bg-success/15 text-success'
-                                : d.status === 'pending'
-                                ? 'bg-warning/15 text-warning'
-                                : 'bg-danger/15 text-danger'
-                            }`}
+      <div className="bg-[#111827] border border-[#1F2937] rounded-2xl overflow-hidden shadow-lg">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-gray-300">
+            <thead className="bg-[#1F2937]/50 text-xs uppercase text-gray-400 font-semibold">
+              <tr>
+                <th className="px-6 py-3.5">Date & Time</th>
+                <th className="px-6 py-3.5">Payer Info</th>
+                <th className="px-6 py-3.5">Platform</th>
+                <th className="px-6 py-3.5">Amount</th>
+                <th className="px-6 py-3.5">Recipient User</th>
+                <th className="px-6 py-3.5">Status</th>
+                <th className="px-6 py-3.5 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#1F2937]">
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-400">
+                    <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mx-auto mb-2"></div>
+                    Loading deposits...
+                  </td>
+                </tr>
+              ) : deposits.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-400">
+                    No deposits found for this status.
+                  </td>
+                </tr>
+              ) : (
+                deposits.map((d) => (
+                  <tr key={d._id} className="hover:bg-gray-800/30 transition-all">
+                    <td className="px-6 py-4 text-xs text-gray-400">
+                      {new Date(d.createdAt).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 font-medium text-white">
+                      {d.payerInfo?.name || d.payerInfo?.email || 'Unknown'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 capitalize">
+                        {d.paymentMethod || d.payerInfo?.platform || 'P2P'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 font-extrabold text-white text-base">
+                      ${Number(d.amount).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 font-medium text-gray-200">
+                      {d.receiver?.fullName || d.receiver?.userTag || '-'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`px-2.5 py-1 text-xs font-semibold rounded-lg border capitalize ${
+                          d.status === 'completed'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : d.status === 'pending'
+                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                            : 'bg-red-500/10 text-red-400 border-red-500/20'
+                        }`}
+                      >
+                        {d.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      {d.status === 'pending' ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => promptApprove(d)}
+                            title="Approve this deposit"
+                            className="cursor-pointer flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold rounded-lg shadow transition-all"
                           >
-                            {d.status}
-                          </span>
-                        </td>
-                        {statusFilter === 'pending' && (
-                          <td className="py-4 px-6">
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={() => handleApprove(d._id)}
-                                className="px-3 py-1.5 bg-success hover:bg-success-hover text-white text-xs font-bold rounded-lg cursor-pointer transition-all"
-                              >
-                                ✓ Approve
-                              </button>
-                              <button
-                                onClick={() => openDeclineModal(d._id)}
-                                className="px-3 py-1.5 bg-danger hover:bg-danger/80 text-white text-xs font-bold rounded-lg cursor-pointer transition-all"
-                              >
-                                ✗ Decline
-                              </button>
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })}
-                  {deposits.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="py-12 text-center text-dark-text-secondary text-sm">
-                        No pending deposit confirmations found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                            <Check className="w-3.5 h-3.5" /> Approve
+                          </button>
+                          <button
+                            onClick={() => {
+                              setDeclineTargetId(d._id);
+                              setIsDeclineOpen(true);
+                            }}
+                            title="Decline this deposit"
+                            className="cursor-pointer flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-500 active:scale-95 text-white text-xs font-bold rounded-lg shadow transition-all"
+                          >
+                            <X className="w-3.5 h-3.5" /> Decline
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-500 italic">Processed</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 p-4 border-t border-[#1F2937]">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`cursor-pointer px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all active:scale-95 ${
+                  p === page
+                    ? 'bg-indigo-600 text-white border-indigo-500'
+                    : 'bg-gray-800 text-gray-300 border-gray-700 hover:border-gray-500 hover:text-white'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
           </div>
         )}
       </div>
 
-      {/* Decline Reason Modal */}
-      {showDeclineModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-[400px] p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center mb-6 pb-4 border-b border-dark-border">
-              <h3 className="font-extrabold text-lg text-dark-text">Decline Deposit</h3>
-              <button
-                onClick={() => setShowDeclineModal(false)}
-                className="text-dark-text-secondary hover:text-dark-text text-xl font-bold cursor-pointer"
-              >
-                &times;
-              </button>
-            </div>
+      <DeclineModal
+        isOpen={isDeclineOpen}
+        depositId={declineTargetId}
+        onClose={() => setIsDeclineOpen(false)}
+        onSuccess={(msg) => {
+          showToast(msg);
+          fetchDeposits(page, statusFilter);
+        }}
+      />
 
-            <form onSubmit={handleDecline} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-dark-text-secondary uppercase">
-                  Decline Reason (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Why is this deposit request being declined?"
-                  value={declineReason}
-                  onChange={(e) => setDeclineReason(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-dark-bg border border-dark-border rounded-xl text-dark-text text-sm outline-none focus:border-primary"
-                  autoFocus
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-dark-border">
-                <button
-                  type="button"
-                  onClick={() => setShowDeclineModal(false)}
-                  className="px-5 py-2.5 bg-dark-bg border border-dark-border hover:bg-dark-surface-2 text-dark-text text-sm font-bold rounded-xl cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-danger hover:bg-danger/80 text-white text-sm font-bold rounded-xl cursor-pointer"
-                >
-                  Confirm Decline
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Toast notifications */}
-      <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3">
-        {toasts.map((t) => (
-          <Toast key={t.id} toast={t} onClose={removeToast} />
-        ))}
-      </div>
+      {/* UI Confirmation Modal for Approve Deposit */}
+      <ConfirmModal
+        isOpen={approveConfirmState.isOpen}
+        type="info"
+        title="Approve Deposit Confirmation"
+        message={`Are you sure you want to approve the $${Number(approveConfirmState.amount).toFixed(2)} deposit for ${approveConfirmState.userName}? $${Number(approveConfirmState.amount).toFixed(2)} will be credited to their wallet balance immediately.`}
+        confirmText="Approve Deposit"
+        cancelText="Cancel"
+        loading={approveConfirmState.loading}
+        onConfirm={handleApproveConfirm}
+        onClose={() => setApproveConfirmState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

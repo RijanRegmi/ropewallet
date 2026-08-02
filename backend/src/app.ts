@@ -74,22 +74,8 @@ const authLimiter = rateLimit({
 
 // Welcome root endpoint
 app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to RopeWallet Backend API!' });
+  res.json({ success: true, message: 'RopeWallet Layered REST API Service Running' });
 });
-
-// ─── Admin Portal Pages (Server-Rendered HTML) ─────────────────
-app.get('/admin', AdminController.renderLoginPage);
-app.get('/admin/dashboard', adminProtect, AdminController.renderDashboardPage);
-app.get('/admin/users', adminProtect, AdminController.renderUsersPage);
-app.get('/admin/deposits', adminProtect, AdminController.renderDepositsPage);
-app.get('/admin/p2p-accounts', adminProtect, AdminController.renderP2PAccountsPage);
-app.get('/admin/logout', AdminController.logout);
-
-// ─── P2P Payment Pages (Public, Server-Rendered HTML) ──────────
-app.get('/pay', P2PController.renderPaymentPage);
-app.get('/pay/success', P2PController.renderPaymentSuccess);
-app.get('/success', PaymentController.renderSuccess);
-app.get('/cancel', PaymentController.renderCancel);
 
 // ─── API Routes ────────────────────────────────────────────────
 app.post('/api/webhook', PaymentController.handleWebhook);

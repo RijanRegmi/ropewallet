@@ -4,8 +4,12 @@ import { adminProtect } from '../middlewares/admin.middleware.js';
 
 const router = Router();
 
-// Public: Login
+// Public: Login & Logout
 router.post('/login', AdminController.login);
+router.post('/logout', (req, res) => {
+  res.clearCookie('admin_token', { httpOnly: true, sameSite: 'lax' });
+  res.json({ success: true, message: 'Logged out' });
+});
 
 // Protected: All below require admin auth
 router.use(adminProtect);

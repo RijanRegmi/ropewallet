@@ -1,307 +1,206 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Sidebar from '@/components/Sidebar';
-import Toast, { ToastMessage } from '@/components/Toast';
-import { ApiClient } from '@/lib/api';
+import { apiRequest } from '@/lib/api';
+import { P2PAccountModel, P2PListResponse } from '@/models/p2p-account.model';
+import P2PModal from '@/components/P2PModal';
+import ConfirmModal from '@/components/ConfirmModal';
+import Toast from '@/components/Toast';
+import { Plus, Edit, Trash2, Link as LinkIcon, CheckCircle2, XCircle } from 'lucide-react';
 
-interface P2PAccount {
-  _id: string;
-  platform: 'chime' | 'venmo' | 'cashapp';
-  handle: string;
-  displayName: string;
-  isActive: boolean;
-}
-
-export default function P2PAccounts() {
-  const [accounts, setAccounts] = useState<P2PAccount[]>([]);
+export default function P2PAccountsPage() {
+  const [accounts, setAccounts] = useState<P2PAccountModel[]>([]);
   const [loading, setLoading] = useState(true);
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const router = useRouter();
 
-  // Modal states
-  const [showModal, setShowModal] = useState(false);
-  const [editId, setEditId] = useState('');
-  const [platform, setPlatform] = useState<'chime' | 'venmo' | 'cashapp'>('chime');
-  const [handle, setHandle] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [isActive, setIsActive] = useState(true);
+  // Modal & Toast states
+  const [selectedAccount, setSelectedAccount] = useState<P2PAccountModel | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState({ text: '', type: 'success' as 'success' | 'error' });
 
-  const addToast = (message: string, type: 'success' | 'error') => {
-    const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, message, type }]);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
-
-  const fetchAccounts = async () => {
-    setLoading(true);
-    const res = await ApiClient.get<{ accounts: P2PAccount[] }>('/admin/p2p-accounts');
-    if (res.success && res.data) {
-      setAccounts(res.data.accounts);
-    } else {
-      addToast(res.error || 'Failed to load P2P accounts list', 'error');
-      if (res.error?.includes('session') || res.error?.includes('auth')) {
-        router.push('/');
-      }
-    }
-    setLoading(false);
-  };
+  // Confirmation Modal State
+  const [deleteConfirmState, setDeleteConfirmState] = useState<{
+    isOpen: boolean;
+    accountId: string | null;
+    accountHandle: string;
+    loading: boolean;
+  }>({
+    isOpen: false,
+    accountId: null,
+    accountHandle: '',
+    loading: false,
+  });
 
   useEffect(() => {
     fetchAccounts();
   }, []);
 
-  const openAddModal = () => {
-    setEditId('');
-    setPlatform('chime');
-    setHandle('');
-    setDisplayName('');
-    setIsActive(true);
-    setShowModal(true);
-  };
+  const fetchAccounts = async () => {
+    setLoading(true);
+    const res = await apiRequest<P2PListResponse['data']>('/admin/p2p-accounts');
+    setLoading(false);
 
-  const openEditModal = (account: P2PAccount) => {
-    setEditId(account._id);
-    setPlatform(account.platform);
-    setHandle(account.handle);
-    setDisplayName(account.displayName);
-    setIsActive(account.isActive);
-    setShowModal(true);
-  };
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const body = { platform, handle, displayName, isActive };
-
-    if (editId) {
-      const res = await ApiClient.put(`/admin/p2p-accounts/${editId}`, body);
-      if (res.success) {
-        addToast('P2P Account configuration saved', 'success');
-        setShowModal(false);
-        fetchAccounts();
-      } else {
-        addToast(res.error || 'Failed to save account config', 'error');
-      }
-    } else {
-      const res = await ApiClient.post('/admin/p2p-accounts', body);
-      if (res.success) {
-        addToast('New P2P Account configured successfully', 'success');
-        setShowModal(false);
-        fetchAccounts();
-      } else {
-        addToast(res.error || 'Failed to create P2P account', 'error');
-      }
+    if (res.success && res.data) {
+      setAccounts(res.data.accounts || []);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this P2P Account configuration? Payers will no longer see it.')) return;
-    const res = await ApiClient.delete(`/admin/p2p-accounts/${id}`);
+  const showToast = (text: string, type: 'success' | 'error' = 'success') => {
+    setToastMsg({ text, type });
+    setTimeout(() => setToastMsg({ text: '', type: 'success' }), 4000);
+  };
+
+  const promptDeleteAccount = (acc: P2PAccountModel) => {
+    setDeleteConfirmState({
+      isOpen: true,
+      accountId: acc._id,
+      accountHandle: acc.handle,
+      loading: false,
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirmState.accountId) return;
+    setDeleteConfirmState((prev) => ({ ...prev, loading: true }));
+    const res = await apiRequest(`/admin/p2p-accounts/${deleteConfirmState.accountId}`, 'DELETE');
+    setDeleteConfirmState((prev) => ({ ...prev, isOpen: false, loading: false }));
+
     if (res.success) {
-      addToast('P2P Account configuration deleted', 'success');
+      showToast('P2P Account deleted');
       fetchAccounts();
     } else {
-      addToast(res.error || 'Failed to delete account configuration', 'error');
+      showToast(res.error || 'Failed to delete account', 'error');
     }
   };
 
-  const platformIcons = { chime: '🏦', venmo: '💜', cashapp: '💚' };
-  const platformColors = { chime: '#00D54B', venmo: '#3D95CE', cashapp: '#00D632' };
+  const platformColors: Record<string, string> = {
+    chime: 'border-emerald-500 text-emerald-400',
+    venmo: 'border-blue-500 text-blue-400',
+    cashapp: 'border-green-500 text-green-400',
+  };
 
   return (
-    <div className="min-h-screen bg-dark-bg flex">
-      {/* Navigation Sidebar */}
-      <Sidebar />
+    <div className="space-y-6 animate-fade-in">
+      <Toast message={toastMsg.text} type={toastMsg.type} />
 
-      {/* Main Content */}
-      <div className="flex-1 ml-64 p-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-2xl font-bold text-dark-text">P2P Accounts</h2>
-            <p className="text-sm text-dark-text-secondary mt-1">
-              Configure copyable handles (Chime, Venmo, Cash App) for manual P2P deposits
-            </p>
-          </div>
-          <button
-            onClick={openAddModal}
-            className="px-5 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-bold rounded-xl active:scale-[0.98] transition-all cursor-pointer"
-          >
-            + Add Account
-          </button>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-white">P2P Payment Accounts</h2>
+          <p className="text-sm text-gray-400 mt-1">Configure handles & automation rules for Chime, Venmo, and Cash App</p>
         </div>
 
-        {loading && (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary border-r-2" />
-          </div>
-        )}
-
-        {!loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {accounts.map((a) => {
-              const icon = platformIcons[a.platform] || '💳';
-              const color = platformColors[a.platform] || '#6366F1';
-
-              return (
-                <div
-                  key={a._id}
-                  className="bg-dark-surface border border-dark-border rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all relative overflow-hidden"
-                  style={{ borderLeft: `4px solid ${color}` }}
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <span className="text-xs font-bold text-dark-text-secondary flex items-center gap-1.5">
-                      {icon} {a.platform.toUpperCase()}
-                    </span>
-                    <span
-                      className={`px-2 py-0.5 text-[10px] font-bold rounded ${
-                        a.isActive
-                          ? 'bg-success/15 text-success border border-success/20'
-                          : 'bg-danger/15 text-danger border border-danger/20'
-                      }`}
-                    >
-                      {a.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-
-                  <div className="text-xl font-extrabold mb-1" style={{ color }}>
-                    {a.handle}
-                  </div>
-                  <div className="text-xs text-dark-text-secondary font-medium">
-                    Name: {a.displayName}
-                  </div>
-
-                  <div className="flex gap-2 mt-6">
-                    <button
-                      onClick={() => openEditModal(a)}
-                      className="px-3.5 py-1.5 bg-dark-bg hover:bg-dark-surface-2 border border-dark-border text-dark-text text-xs font-bold rounded-lg cursor-pointer transition-all"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(a._id)}
-                      className="px-3.5 py-1.5 bg-dark-bg hover:bg-danger/10 border border-dark-border hover:border-danger/30 text-danger text-xs font-bold rounded-lg cursor-pointer transition-all"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-
-            {accounts.length === 0 && (
-              <div className="col-span-full bg-dark-surface border border-dark-border rounded-2xl p-12 text-center text-dark-text-secondary text-sm">
-                No handles configured yet. Add Chime/Venmo details to support manual deposits.
-              </div>
-            )}
-          </div>
-        )}
+        <button
+          onClick={() => {
+            setSelectedAccount(null);
+            setIsModalOpen(true);
+          }}
+          title="Add a new P2P payment account"
+          className="cursor-pointer flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 active:scale-95 text-white font-bold text-sm rounded-xl shadow-lg transition-all"
+        >
+          <Plus className="w-4 h-4" />
+          Add Account
+        </button>
       </div>
 
-      {/* Add / Edit P2P Account Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-[420px] p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center mb-6 pb-4 border-b border-dark-border">
-              <h3 className="font-extrabold text-lg text-dark-text">
-                {editId ? 'Edit P2P Account' : 'Add P2P Account'}
-              </h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-dark-text-secondary hover:text-dark-text text-xl font-bold cursor-pointer"
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[40vh]">
+          <div className="w-10 h-10 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
+        </div>
+      ) : accounts.length === 0 ? (
+        <div className="bg-[#111827] border border-[#1F2937] rounded-2xl p-12 text-center text-gray-400">
+          <LinkIcon className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+          <h3 className="text-base font-bold text-gray-200">No P2P Accounts Configured</h3>
+          <p className="text-xs text-gray-400 mt-1">Add your first Chime, Venmo, or Cash App payment account to start receiving guest payments.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {accounts.map((acc) => {
+            const colorClass = platformColors[acc.platform] || 'border-indigo-500 text-indigo-400';
+            return (
+              <div
+                key={acc._id}
+                className={`bg-[#111827] border-l-4 border-t border-r border-b border-[#1F2937] p-5 rounded-2xl shadow-lg flex flex-col justify-between hover:-translate-y-1 transition-all ${colorClass}`}
               >
-                &times;
-              </button>
-            </div>
+                <div>
+                  <div className="flex justify-between items-start mb-3">
+                    <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-gray-800 border border-gray-700 text-gray-300">
+                      {acc.platform}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {acc.isActive ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                          <CheckCircle2 className="w-3 h-3" /> Active
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-400 bg-red-500/10 px-2 py-0.5 rounded-md">
+                          <XCircle className="w-3 h-3" /> Inactive
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-            <form onSubmit={handleSave} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-dark-text-secondary uppercase">
-                  Platform
-                </label>
-                <select
-                  value={platform}
-                  onChange={(e) => setPlatform(e.target.value as any)}
-                  required
-                  className="w-full px-4 py-2.5 bg-dark-bg border border-dark-border rounded-xl text-dark-text text-sm font-semibold outline-none cursor-pointer focus:border-primary"
-                >
-                  <option value="chime">Chime</option>
-                  <option value="venmo">Venmo</option>
-                  <option value="cashapp">Cash App</option>
-                </select>
-              </div>
+                  <div className="text-xl font-extrabold text-white font-mono">{acc.handle}</div>
+                  <div className="text-sm font-medium text-gray-300 mt-1">{acc.displayName}</div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-dark-text-secondary uppercase">
-                  Handle / Username
-                </label>
-                <input
-                  type="text"
-                  placeholder="@username or email"
-                  value={handle}
-                  onChange={(e) => setHandle(e.target.value)}
-                  required
-                  className="w-full px-4 py-2.5 bg-dark-bg border border-dark-border rounded-xl text-dark-text text-sm outline-none focus:border-primary"
-                  autoFocus
-                />
-              </div>
+                  {acc.directPayUrl && (
+                    <div className="text-xs text-indigo-400 mt-2 truncate font-mono">
+                      🔗 {acc.directPayUrl}
+                    </div>
+                  )}
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-dark-text-secondary uppercase">
-                  Display Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. RopeWallet Inc."
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  required
-                  className="w-full px-4 py-2.5 bg-dark-bg border border-dark-border rounded-xl text-dark-text text-sm outline-none focus:border-primary"
-                />
-              </div>
+                  {acc.isAutoVerifyEnabled && (
+                    <div className="mt-3 inline-block px-2.5 py-1 bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 text-xs font-semibold rounded-lg">
+                      ⚡ Auto Email Verification
+                    </div>
+                  )}
+                </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={isActive}
-                  onChange={(e) => setIsActive(e.target.checked)}
-                  className="w-4 h-4 rounded text-primary border-dark-border bg-dark-bg outline-none cursor-pointer"
-                />
-                <label htmlFor="isActive" className="text-xs font-bold text-dark-text-secondary uppercase cursor-pointer">
-                  Activate this account handle
-                </label>
+                <div className="flex items-center gap-2 pt-5 border-t border-[#1F2937] mt-5">
+                  <button
+                    onClick={() => {
+                      setSelectedAccount(acc);
+                      setIsModalOpen(true);
+                    }}
+                    title="Edit this account"
+                    className="cursor-pointer flex-1 flex items-center justify-center gap-1 py-2 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white active:scale-95 text-xs font-bold rounded-xl transition-all"
+                  >
+                    <Edit className="w-3.5 h-3.5" /> Edit
+                  </button>
+                  <button
+                    onClick={() => promptDeleteAccount(acc)}
+                    title="Delete this account"
+                    className="cursor-pointer flex-1 flex items-center justify-center gap-1 py-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white active:scale-95 text-xs font-bold rounded-xl transition-all"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Delete
+                  </button>
+                </div>
               </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-dark-border">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-5 py-2.5 bg-dark-bg border border-dark-border hover:bg-dark-surface-2 text-dark-text text-sm font-bold rounded-xl cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-bold rounded-xl cursor-pointer"
-                >
-                  {editId ? 'Save Changes' : 'Configure Account'}
-                </button>
-              </div>
-            </form>
-          </div>
+            );
+          })}
         </div>
       )}
 
-      {/* Toast notifications */}
-      <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3">
-        {toasts.map((t) => (
-          <Toast key={t.id} toast={t} onClose={removeToast} />
-        ))}
-      </div>
+      <P2PModal
+        isOpen={isModalOpen}
+        account={selectedAccount}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={(msg) => {
+          showToast(msg);
+          fetchAccounts();
+        }}
+      />
+
+      {/* Delete P2P Account UI Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirmState.isOpen}
+        type="danger"
+        title="Delete P2P Payment Account"
+        message={`Are you sure you want to delete the P2P account "${deleteConfirmState.accountHandle}"? Guest payments will no longer route to this account.`}
+        confirmText="Delete Account"
+        cancelText="Cancel"
+        loading={deleteConfirmState.loading}
+        onConfirm={handleDeleteConfirm}
+        onClose={() => setDeleteConfirmState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

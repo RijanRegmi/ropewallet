@@ -1,40 +1,22 @@
 'use client';
 
-import { useEffect } from 'react';
-
-export interface ToastMessage {
-  id: string;
-  message: string;
-  type: 'success' | 'error';
-}
-
 interface ToastProps {
-  toast: ToastMessage;
-  onClose: (id: string) => void;
+  message: string;
+  type?: 'success' | 'error';
+  onClose?: () => void;
 }
 
-export default function Toast({ toast, onClose }: ToastProps) {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onClose(toast.id);
-    }, 4000);
-    return () => clearTimeout(timer);
-  }, [toast.id, onClose]);
+export default function Toast({ message, type = 'success', onClose }: ToastProps) {
+  if (!message) return null;
 
   return (
-    <div
-      className={`px-5 py-3.5 rounded-xl text-sm font-semibold text-white shadow-2xl transition-all duration-300 min-w-[300px] border border-white/10 ${
-        toast.type === 'success' ? 'bg-success/95' : 'bg-danger/95'
-      }`}
-    >
-      <div className="flex justify-between items-center gap-4">
-        <span>{toast.message}</span>
-        <button
-          onClick={() => onClose(toast.id)}
-          className="text-white/60 hover:text-white text-lg font-bold cursor-pointer"
-        >
-          &times;
-        </button>
+    <div className="fixed top-6 right-6 z-[2000] flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-2xl transition-all animate-slide-in">
+      <div
+        className={`px-4 py-3 rounded-xl font-medium text-sm text-white shadow-lg ${
+          type === 'success' ? 'bg-emerald-600' : 'bg-red-600'
+        }`}
+      >
+        {message}
       </div>
     </div>
   );

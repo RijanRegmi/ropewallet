@@ -1,112 +1,109 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { ApiClient } from '@/lib/api';
+import { usePathname } from 'next/navigation';
+import { LayoutDashboard, Users, CreditCard, Link as LinkIcon, Download, LogOut } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import ConfirmModal from '@/components/ConfirmModal';
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const { admin, logout } = useAuth();
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
-  useEffect(() => {
-    const checkTheme = () => {
-      const savedTheme = localStorage.getItem('admin-theme') || 'dark';
-      setIsDarkMode(savedTheme === 'dark');
-    };
-    checkTheme();
-    window.addEventListener('theme-change', checkTheme);
-    return () => window.removeEventListener('theme-change', checkTheme);
-  }, []);
-
-  const handleLogout = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (confirm('Are you sure you want to logout?')) {
-      const res = await ApiClient.get('/admin/logout');
-      // Delete local cookies/token if any
-      document.cookie = 'admin_token=; Max-Age=0; path=/;';
-      router.push('/');
-    }
-  };
-
-  const [currentAdmin, setCurrentAdmin] = useState<any>(null);
-
-  useEffect(() => {
-    const fetchAdmin = async () => {
-      const res = await ApiClient.get<{ admin: any }>('/admin/me');
-      if (res.success && res.data) {
-        setCurrentAdmin(res.data.admin);
-      }
-    };
-    fetchAdmin();
-  }, []);
-
-  const allNavItems = [
-    { name: 'Dashboard', path: '/admin/dashboard', icon: '📊', superAdminOnly: true },
-    { name: 'Users', path: '/admin/users', icon: '👥', superAdminOnly: false },
-    { name: 'Pending Deposits', path: '/admin/deposits', icon: '💰', superAdminOnly: true },
-    { name: 'P2P Accounts', path: '/admin/p2p-accounts', icon: '🔗', superAdminOnly: true },
-    { name: 'Export Data', path: '/admin/export', icon: '📥', superAdminOnly: true },
+  const navItems = [
+    { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+    { name: 'Users', href: '/admin/users', icon: Users },
+    { name: 'Pending Deposits', href: '/admin/deposits', icon: CreditCard },
+    { name: 'P2P Accounts', href: '/admin/p2p-accounts', icon: LinkIcon },
   ];
 
-  const isSuperAdmin = currentAdmin?.role === 'superadmin';
-  const navItems = isSuperAdmin 
-    ? allNavItems 
-    : allNavItems.filter((item) => !item.superAdminOnly);
+  const initials = admin?.fullName
+    ? admin.fullName.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
+    : 'A';
 
   return (
-    <aside className={`w-64 border-r py-6 flex flex-col fixed inset-y-0 left-0 z-50 transition-colors duration-200 ${
-      isDarkMode 
-        ? 'bg-[#000000] border-zinc-900 text-white' 
-        : 'bg-[#FFFFFF] border-slate-200 text-black'
-    }`}>
-      {/* Sidebar Logo */}
-      <div className={`px-6 pb-6 border-b mb-4 ${isDarkMode ? 'border-zinc-900' : 'border-slate-200'}`}>
-        <h1 className="text-xl font-extrabold bg-gradient-to-r from-primary to-primary-hover bg-clip-text text-transparent">
-          RopeWallet
-        </h1>
-        <span className={`text-[10px] uppercase tracking-[2px] font-bold ${isDarkMode ? 'text-zinc-500' : 'text-slate-400'}`}>
-          Admin Portal
-        </span>
-      </div>
+    <>
+      <aside className="w-64 bg-[#111827] border-r border-[#1F2937] flex flex-col fixed inset-y-0 z-50">
+        {/* Brand */}
+        <div className="p-6 border-b border-[#1F2937]">
+          <h1 className="text-xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+            RopeWallet
+          </h1>
+          <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Admin Portal</span>
+        </div>
 
-      {/* Navigation items */}
-      <nav className="flex-1 flex flex-col gap-1">
-        {navItems.map((item) => {
-          const isActive = pathname === item.path;
-          return (
-            <Link
-              key={item.path}
-              href={item.path}
-              className={`flex items-center gap-3 px-6 py-3 text-sm font-medium transition-all duration-200 border-l-3 ${
-                isActive
-                  ? 'text-primary bg-primary/8 border-primary font-semibold'
-                  : isDarkMode
-                    ? 'text-zinc-400 hover:text-white hover:bg-zinc-900 border-transparent'
-                    : 'text-slate-600 hover:text-black hover:bg-slate-50 border-transparent'
-              }`}
-            >
-              <span className="text-lg w-6 text-center">{item.icon}</span>
-              {item.name}
-            </Link>
-          );
-        })}
-      </nav>
+        {/* Nav */}
+        <nav className="flex-1 py-4 space-y-1 px-3">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all ${
+                  isActive
+                    ? 'bg-indigo-600/15 text-indigo-400 border-l-[3px] border-indigo-500'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                }`}
+              >
+                <Icon className="w-5 h-5 flex-shrink-0" />
+                {item.name}
+              </Link>
+            );
+          })}
 
-      {/* Sidebar Footer */}
-      <div className={`mt-auto px-6 border-t pt-4 ${isDarkMode ? 'border-zinc-900' : 'border-slate-200'}`}>
-        <button
-          onClick={handleLogout}
-          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all duration-200 cursor-pointer font-semibold text-sm ${
-            isDarkMode
-              ? 'border-zinc-800 text-zinc-400 hover:text-danger hover:border-danger/30 hover:bg-danger/5'
-              : 'border-slate-200 text-slate-600 hover:text-danger hover:border-danger/30 hover:bg-danger/5'
-          }`}
-        >
-          Logout
-        </button>
-      </div>
-    </aside>
+          {/* Export link */}
+          <a
+            href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/admin/export/transactions`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-xl transition-all"
+          >
+            <Download className="w-5 h-5" />
+            Export Data
+          </a>
+        </nav>
+
+        {/* Admin profile + logout */}
+        <div className="p-4 border-t border-[#1F2937] space-y-3">
+          {admin && (
+            <div className="flex items-center gap-3 px-2">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-md">
+                {initials}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white truncate">{admin.fullName}</p>
+                <p className="text-xs text-gray-500 capitalize truncate">{admin.role}</p>
+              </div>
+            </div>
+          )}
+          <button
+            onClick={() => setIsLogoutModalOpen(true)}
+            className="cursor-pointer flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-semibold text-gray-300 hover:text-white bg-gray-800/60 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-400 rounded-xl border border-gray-700 transition-all duration-200 active:scale-95"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* Modern UI Logout Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isLogoutModalOpen}
+        type="logout"
+        title="Sign Out Confirmation"
+        message="Are you sure you want to log out of the RopeWallet Admin Portal? You will need to sign in again to access the dashboard."
+        confirmText="Sign Out"
+        cancelText="Stay Logged In"
+        onConfirm={() => {
+          setIsLogoutModalOpen(false);
+          logout();
+        }}
+        onClose={() => setIsLogoutModalOpen(false)}
+      />
+    </>
   );
 }
