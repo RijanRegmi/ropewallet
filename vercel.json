@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "outputDirectory": "frontend/.next",
+  "outputDirectory": "frontend/.next, backend/",
   "rewrites": [
     {
       "source": "/api/(.*)",
@@ -8,5 +8,3 @@
     }
   ]
 }
-
-
