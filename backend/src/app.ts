@@ -15,6 +15,9 @@ import { connectDB } from './config/db.js';
 
 const app = express();
 
+// Enable trust proxy for Vercel / reverse proxy environment (required by express-rate-limit)
+app.set('trust proxy', 1);
+
 // Ensure DB is connected for every request (critical for serverless)
 app.use(async (req, res, next) => {
   try {
@@ -61,6 +64,7 @@ const globalLimiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false },
   message: { success: false, error: 'Too many requests from this IP, please try again after 15 minutes' },
 });
 app.use('/api', globalLimiter as any);
@@ -71,6 +75,7 @@ const authLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false },
   message: { success: false, error: 'Too many authentication attempts, please try again after 15 minutes' },
 });
 
@@ -86,6 +91,22 @@ app.use((req, res, next) => {
 app.get('/', (req, res) => {
   res.json({ success: true, message: 'RopeWallet Layered REST API Service Running' });
 });
+
+// Health & Environment verification endpoint
+app.get(['/api/health', '/health'], (req, res) => {
+  res.json({
+    success: true,
+    message: 'RopeWallet API Service Active',
+    isVercel: !!process.env.VERCEL,
+    envCheck: {
+      hasMongoUri: !!process.env.MONGODB_URI,
+      hasJwtSecret: !!process.env.JWT_SECRET,
+      hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
+      hasCardEncryptionKey: !!process.env.CARD_ENCRYPTION_KEY,
+    }
+  });
+});
+
 
 // ─── API Routes ────────────────────────────────────────────────
 app.post(['/api/webhook', '/webhook'], PaymentController.handleWebhook);
