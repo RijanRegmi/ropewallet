@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { Stream } from 'stream';
+import { Readable, Stream } from 'stream';
 // @ts-ignore
 import app from '../../../../../backend/dist/app.js';
 
@@ -23,20 +23,12 @@ function runExpress(req: NextRequest): Promise<Response> {
         }
       }
 
-      // Create stream for req
-      const reqStream: any = new Stream.Readable();
+      // Create standard Node.js Readable stream from request body
+      const reqStream: any = bodyBuffer && bodyBuffer.length > 0 ? Readable.from(bodyBuffer) : Readable.from([]);
       reqStream.url = reqPath;
       reqStream.originalUrl = reqPath;
       reqStream.method = req.method;
       reqStream.headers = Object.fromEntries(req.headers.entries());
-      reqStream._read = () => {
-        if (bodyBuffer) {
-          reqStream.push(bodyBuffer);
-          bodyBuffer = null;
-        } else {
-          reqStream.push(null);
-        }
-      };
 
       // Create mock response object
       const resHeaders = new Headers();
