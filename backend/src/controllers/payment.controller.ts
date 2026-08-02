@@ -5,7 +5,7 @@ import { User } from '../models/user.model.js';
 import { Transaction } from '../models/transaction.model.js';
 import { CustomError } from '../middlewares/error.middleware.js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy_key_for_initialization_12345');
 
 export class PaymentController {
   static async deposit(req: Request, res: Response, next: NextFunction): Promise<void> {
