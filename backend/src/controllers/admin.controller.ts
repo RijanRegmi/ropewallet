@@ -49,12 +49,14 @@ export class AdminController {
         { expiresIn: '24h' }
       );
 
+      const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
+
       // Set httpOnly cookie for web portal + return token for API
       res.cookie('admin_token', token, {
         httpOnly: true,
-        secure: false,
-        sameSite: 'lax',
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        secure: isProd,
+        sameSite: isProd ? 'none' : 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
       res.json({ success: true, token, admin: { id: admin._id, email: admin.email, fullName: admin.fullName, role: admin.role } });

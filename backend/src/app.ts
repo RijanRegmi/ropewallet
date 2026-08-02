@@ -27,7 +27,7 @@ app.use(async (req, res, next) => {
 });
 
 // Security Middlewares
-app.use(helmet({
+app.use((helmet as any)({
   contentSecurityPolicy: false, // Allow inline scripts for admin portal
 }));
 app.use(mongoSanitize() as any); // Prevent NoSQL Injection
