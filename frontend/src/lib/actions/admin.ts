@@ -3,7 +3,14 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://ropewallet.com/api';
+const getBackendApiUrl = () => {
+  if (process.env.BACKEND_API_URL) return process.env.BACKEND_API_URL;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}/api`;
+  return 'https://ropewallet.com/api';
+};
+
+const BACKEND_API_URL = getBackendApiUrl();
+
 
 /**
  * Admin Server Actions

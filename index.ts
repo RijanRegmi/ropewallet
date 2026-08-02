@@ -1,4 +1,5 @@
 import express from 'express';
-import app from './backend/src/app.js';
+import app from './backend/dist/app.js';
 
 export default app;
+
