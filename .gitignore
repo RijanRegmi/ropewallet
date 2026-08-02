@@ -4,6 +4,9 @@ node_modules/
 # Production/Build outputs
 dist/
 out/
+*.apk
+*.tsbuildinfo
+
 
 # Environment files
 .env

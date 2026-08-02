@@ -171,17 +171,13 @@ export class AdminController {
         }
       }
 
-      // Filter for user accounts
-      const userFilter: any = {};
+      // Filter for regular user accounts
+      let userFilter: any = { role: 'user' };
 
-      // If caller is NOT a superadmin (i.e. regular admin), strictly scope to their created users
-      if (creatorRole === 'admin') {
-        userFilter.role = 'user';
-        if (creatorId) {
-          const objId = mongoose.Types.ObjectId.isValid(creatorId) ? new mongoose.Types.ObjectId(creatorId) : creatorId;
-          userFilter.createdBy = { $in: [creatorId, objId] };
-        }
-      }
+      // Filter for admin accounts (only superadmin sees admin accounts)
+      let adminFilter: any = creatorRole === 'superadmin'
+        ? { role: { $in: ['admin', 'superadmin'] } }
+        : { _id: null };
 
       if (search) {
         const searchConditions = [
@@ -191,31 +187,17 @@ export class AdminController {
           { phoneNumber: { $regex: search, $options: 'i' } },
         ];
 
-        if (creatorRole === 'admin') {
-          userFilter.$and = [
-            { role: 'user' },
-            { createdBy: { $in: [creatorId, mongoose.Types.ObjectId.isValid(creatorId) ? new mongoose.Types.ObjectId(creatorId) : creatorId] } },
-            { $or: searchConditions },
-          ];
-          delete userFilter.role;
-          delete userFilter.createdBy;
-        } else {
-          userFilter.$or = searchConditions;
+        userFilter = {
+          role: 'user',
+          $or: searchConditions,
+        };
+
+        if (creatorRole === 'superadmin') {
+          adminFilter = {
+            role: { $in: ['admin', 'superadmin'] },
+            $or: searchConditions,
+          };
         }
-      }
-
-      // Filter for admins list (only superadmin sees admins list)
-      const adminFilter: any = creatorRole === 'superadmin'
-        ? { role: { $in: ['admin', 'superadmin'] } }
-        : { _id: null };
-
-      if (search && creatorRole === 'superadmin') {
-        adminFilter.$or = [
-          { fullName: { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } },
-          { userTag: { $regex: search, $options: 'i' } },
-          { phoneNumber: { $regex: search, $options: 'i' } },
-        ];
       }
 
       const [admins, users, totalUsers] = await Promise.all([
@@ -237,7 +219,7 @@ export class AdminController {
             page,
             limit,
             total: totalUsers,
-            totalPages: Math.ceil(totalUsers / limit),
+            totalPages: Math.ceil(totalUsers / limit) || 1,
           },
         },
       });
@@ -1948,37 +1930,61 @@ export class AdminController {
       }
 
       function openCreateModal() {
-        document.getElementById('modalTitle').textContent = 'Create User';
-        document.getElementById('submitBtn').textContent = 'Create User';
-        document.getElementById('editUserId').value = '';
-        document.getElementById('passwordGroup').style.display = 'block';
-        document.getElementById('balanceGroup').style.display = 'none';
-        document.getElementById('userForm').reset();
-        document.getElementById('uTag').value = '$user' + Math.floor(100 + Math.random() * 900);
-        document.getElementById('userModal').classList.add('active');
+        try {
+          document.getElementById('modalTitle').textContent = 'Create User';
+          document.getElementById('submitBtn').textContent = 'Create User';
+          document.getElementById('editUserId').value = '';
+          document.getElementById('passwordGroup').style.display = 'block';
+          document.getElementById('balanceGroup').style.display = 'none';
+          document.getElementById('userForm').reset();
+          document.getElementById('uTag').value = '$user' + Math.floor(100 + Math.random() * 900);
+          const modal = document.getElementById('userModal');
+          if (modal) {
+            modal.style.display = 'flex';
+            modal.classList.add('active');
+          }
+        } catch (err) {
+          console.error('Error opening create modal:', err);
+        }
       }
 
       async function openEditModal(id) {
-        const data = await api('/api/admin/users/' + id);
-        if (!data.success) return;
-        const u = data.data.user;
-        document.getElementById('modalTitle').textContent = 'Edit User';
-        document.getElementById('submitBtn').textContent = 'Save Changes';
-        document.getElementById('editUserId').value = id;
-        document.getElementById('passwordGroup').style.display = 'none';
-        document.getElementById('balanceGroup').style.display = 'block';
-        document.getElementById('uFirstName').value = u.firstName || '';
-        document.getElementById('uLastName').value = u.lastName || '';
-        document.getElementById('uMiddleName').value = u.middleName || '';
-        document.getElementById('uEmail').value = u.email || '';
-        document.getElementById('uPhone').value = u.phoneNumber || '';
-        document.getElementById('uTag').value = u.userTag || '';
-        document.getElementById('uBalance').value = u.walletBalance || 0;
-        document.getElementById('userModal').classList.add('active');
+        try {
+          const data = await api('/api/admin/users/' + id);
+          if (!data.success) return;
+          const u = data.data.user;
+          document.getElementById('modalTitle').textContent = 'Edit User';
+          document.getElementById('submitBtn').textContent = 'Save Changes';
+          document.getElementById('editUserId').value = id;
+          document.getElementById('passwordGroup').style.display = 'none';
+          document.getElementById('balanceGroup').style.display = 'block';
+          document.getElementById('uFirstName').value = u.firstName || '';
+          document.getElementById('uLastName').value = u.lastName || '';
+          document.getElementById('uMiddleName').value = u.middleName || '';
+          document.getElementById('uEmail').value = u.email || '';
+          document.getElementById('uPhone').value = u.phoneNumber || '';
+          document.getElementById('uTag').value = u.userTag || '';
+          document.getElementById('uBalance').value = u.walletBalance || 0;
+          const modal = document.getElementById('userModal');
+          if (modal) {
+            modal.style.display = 'flex';
+            modal.classList.add('active');
+          }
+        } catch (err) {
+          console.error('Error opening edit modal:', err);
+        }
       }
 
       function closeModal() {
-        document.getElementById('userModal').classList.remove('active');
+        try {
+          const modal = document.getElementById('userModal');
+          if (modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('active');
+          }
+        } catch (err) {
+          console.error('Error closing modal:', err);
+        }
       }
 
       document.getElementById('userForm').addEventListener('submit', async (e) => {
@@ -2037,6 +2043,13 @@ export class AdminController {
       window.toggleRole = toggleRole;
       window.deleteUser = deleteUser;
       window.loadUsers = loadUsers;
+
+      const modalOverlay = document.getElementById('userModal');
+      if (modalOverlay) {
+        modalOverlay.addEventListener('click', (e) => {
+          if (e.target === modalOverlay) closeModal();
+        });
+      }
 
       loadUsers();
     </script>`;
