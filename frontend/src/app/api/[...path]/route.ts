@@ -30,6 +30,16 @@ function runExpress(req: NextRequest): Promise<Response> {
       reqStream.method = req.method;
       reqStream.headers = Object.fromEntries(req.headers.entries());
 
+      // Mock socket / connection for Express req.ip and rate-limiters
+      const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || '127.0.0.1';
+      const mockSocket = {
+        remoteAddress: clientIp,
+        encrypted: true,
+      };
+
+      reqStream.socket = mockSocket;
+      reqStream.connection = mockSocket;
+
       let _query: any = {};
       let _body: any = undefined;
       Object.defineProperty(reqStream, 'query', {
