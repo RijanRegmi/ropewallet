@@ -17,6 +17,7 @@
     "start": "concurrently -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\" \"npm start --prefix backend\" \"npm start --prefix frontend\""
   },
   "dependencies": {
+    "@vercel/node": "^5.1.10",
     "typescript": "^5.9.3"
   },
   "devDependencies": {
