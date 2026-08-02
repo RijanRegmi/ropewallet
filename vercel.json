@@ -1,10 +1,15 @@
 {
   "framework": "nextjs",
-  "outputDirectory": "frontend/.next, backend/",
+  "outputDirectory": "frontend/.next",
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "backend/dist/**"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api"
+      "destination": "/api/index.ts"
     }
   ]
 }
