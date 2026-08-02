@@ -23,6 +23,7 @@
     "otp-generator": "^4.0.1",
     "qrcode": "^1.5.4",
     "stripe": "^18.0.0",
+    "typescript": "^5.9.3",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
@@ -36,7 +37,6 @@
     "@types/nodemailer": "^7.0.9",
     "@types/qrcode": "^1.5.5",
     "@types/uuid": "^10.0.0",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "tsx": "^4.21.0"
   }
 }
