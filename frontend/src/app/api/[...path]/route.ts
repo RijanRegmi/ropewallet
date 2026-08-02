@@ -26,6 +26,7 @@ function runExpress(req: NextRequest): Promise<Response> {
       // Create stream for req
       const reqStream: any = new Stream.Readable();
       reqStream.url = reqPath;
+      reqStream.originalUrl = reqPath;
       reqStream.method = req.method;
       reqStream.headers = Object.fromEntries(req.headers.entries());
       reqStream._read = () => {

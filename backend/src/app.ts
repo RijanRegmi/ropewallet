@@ -66,7 +66,8 @@ app.use(cors({
 app.use(express.json({
   limit: '10kb',
   verify: (req: any, res, buf) => {
-    if (req.originalUrl.startsWith('/api/webhook') || req.originalUrl.startsWith('/api/p2p')) {
+    const url = req.originalUrl || req.url || '';
+    if (url.startsWith('/api/webhook') || url.startsWith('/api/p2p')) {
       req.rawBody = buf;
     }
   }
