@@ -195,13 +195,14 @@ export class AdminController {
       }
 
       if (search) {
+        const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const searchConditions = [
-          { fullName: { $regex: search, $options: 'i' } },
-          { firstName: { $regex: search, $options: 'i' } },
-          { lastName: { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } },
-          { userTag: { $regex: search, $options: 'i' } },
-          { phoneNumber: { $regex: search, $options: 'i' } },
+          { fullName: { $regex: escapedSearch, $options: 'i' } },
+          { firstName: { $regex: escapedSearch, $options: 'i' } },
+          { lastName: { $regex: escapedSearch, $options: 'i' } },
+          { email: { $regex: escapedSearch, $options: 'i' } },
+          { userTag: { $regex: escapedSearch, $options: 'i' } },
+          { phoneNumber: { $regex: escapedSearch, $options: 'i' } },
         ];
 
         userFilter.$or = searchConditions;
@@ -1271,9 +1272,9 @@ export class AdminController {
       container.appendChild(toast);
       setTimeout(() => toast.remove(), 4000);
     }
-    async function api(url, method = 'GET', body = null) {
+    async function api(url, method = 'GET', body = null, showLoader = false) {
       const loader = document.getElementById('loadingOverlay');
-      if (loader) loader.classList.add('active');
+      if (loader && showLoader) loader.classList.add('active');
       try {
         const opts = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' };
         if (body) opts.body = JSON.stringify(body);
@@ -1283,9 +1284,49 @@ export class AdminController {
         console.error('API Error:', err);
         return { success: false, error: err.message };
       } finally {
-        if (loader) loader.classList.remove('active');
+        if (loader && showLoader) loader.classList.remove('active');
       }
     }
+
+    function navigateToTab(e, tabName) {
+      if (e && e.preventDefault) e.preventDefault();
+
+      // 1. Sidebar Nav Active State update
+      document.querySelectorAll('.sidebar .nav-item').forEach(function(el) {
+        el.classList.remove('active');
+      });
+      const activeNav = document.querySelector('.sidebar a[data-tab="' + tabName + '"]');
+      if (activeNav) activeNav.classList.add('active');
+
+      // 2. Hide all tab panels, show target panel instantly (0ms delay, ZERO reload!)
+      document.querySelectorAll('.tab-panel').forEach(function(el) {
+        el.style.display = 'none';
+      });
+      const targetPanel = document.getElementById('panel-' + tabName);
+      if (targetPanel) targetPanel.style.display = 'block';
+
+      // 3. Update Browser URL cleanly
+      const targetPath = tabName === 'p2p' ? '/admin/p2p-accounts' : '/admin/' + tabName;
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({ tab: tabName }, '', targetPath);
+      }
+
+      // 4. Background refresh tab content (NO full page loading overlay!)
+      if (tabName === 'dashboard' && typeof loadDashboardData === 'function') loadDashboardData();
+      if (tabName === 'users' && typeof loadUsers === 'function') loadUsers();
+      if (tabName === 'deposits' && typeof loadDeposits === 'function') loadDeposits();
+      if (tabName === 'p2p' && typeof loadAccounts === 'function') loadAccounts();
+    }
+
+    window.onpopstate = function(e) {
+      const path = window.location.pathname;
+      let tab = 'dashboard';
+      if (path.includes('users')) tab = 'users';
+      else if (path.includes('deposits')) tab = 'deposits';
+      else if (path.includes('p2p')) tab = 'p2p';
+      else if (path.includes('export')) tab = 'export';
+      navigateToTab(null, tab);
+    };
   </script>
 </head>
 <body>
@@ -1297,19 +1338,19 @@ export class AdminController {
       <h1>RopeWallet</h1>
       <span>Admin Portal</span>
     </div>
-    <a href="/admin/dashboard" class="nav-item ${activeTab === 'dashboard' ? 'active' : ''}">
+    <a href="/admin/dashboard" data-tab="dashboard" onclick="navigateToTab(event, 'dashboard')" class="nav-item ${activeTab === 'dashboard' ? 'active' : ''}">
       <span class="icon">📊</span> Dashboard
     </a>
-    <a href="/admin/users" class="nav-item ${activeTab === 'users' ? 'active' : ''}">
+    <a href="/admin/users" data-tab="users" onclick="navigateToTab(event, 'users')" class="nav-item ${activeTab === 'users' ? 'active' : ''}">
       <span class="icon">👥</span> Users
     </a>
-    <a href="/admin/deposits" class="nav-item ${activeTab === 'deposits' ? 'active' : ''}">
+    <a href="/admin/deposits" data-tab="deposits" onclick="navigateToTab(event, 'deposits')" class="nav-item ${activeTab === 'deposits' ? 'active' : ''}">
       <span class="icon">💰</span> Pending Deposits
     </a>
-    <a href="/admin/p2p-accounts" class="nav-item ${activeTab === 'p2p' ? 'active' : ''}">
+    <a href="/admin/p2p-accounts" data-tab="p2p" onclick="navigateToTab(event, 'p2p')" class="nav-item ${activeTab === 'p2p' ? 'active' : ''}">
       <span class="icon">🔗</span> P2P Accounts
     </a>
-    <a href="/admin/export" class="nav-item ${activeTab === 'export' ? 'active' : ''}">
+    <a href="/api/admin/export/transactions" data-tab="export" class="nav-item ${activeTab === 'export' ? 'active' : ''}">
       <span class="icon">📥</span> Export Data
     </a>
     <div class="sidebar-footer">
@@ -1804,7 +1845,7 @@ export class AdminController {
       <div style="display:flex;gap:12px;align-items:center;">
         <div class="search-bar">
           <span class="search-icon">🔍</span>
-          <input type="text" id="searchInput" placeholder="Search users..." oninput="loadUsers()">
+          <input type="text" id="searchInput" placeholder="Search by name, email, or tag ($username)..." oninput="handleUserSearchInput(this.value)">
         </div>
         <button class="btn btn-primary" onclick="openCreateModal()">+ New User</button>
       </div>
@@ -1890,10 +1931,36 @@ export class AdminController {
 
     <script>
       let currentPage = 1;
+      let userSearchDebounceTimer = null;
+
+      function filterUsersRealtime(val) {
+        const q = (val || '').toLowerCase().trim();
+        const rows = document.querySelectorAll('#usersBody tr');
+        rows.forEach(function(row) {
+          const text = row.innerText.toLowerCase();
+          if (!q || text.includes(q)) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
+          }
+        });
+      }
+
+      function handleUserSearchInput(val) {
+        // 1. Instant client-side DOM filter as letters are typed (0ms delay)
+        filterUsersRealtime(val);
+
+        // 2. Debounced API fetch after typing stops (250ms delay) to keep pagination accurate
+        clearTimeout(userSearchDebounceTimer);
+        userSearchDebounceTimer = setTimeout(function() {
+          loadUsers(1);
+        }, 250);
+      }
 
       async function loadUsers(page = 1) {
         currentPage = page;
-        const search = document.getElementById('searchInput').value;
+        const searchInput = document.getElementById('searchInput');
+        const search = searchInput ? searchInput.value : '';
         const data = await api('/api/admin/users?page=' + page + '&limit=15&search=' + encodeURIComponent(search));
         if (!data.success) return;
 

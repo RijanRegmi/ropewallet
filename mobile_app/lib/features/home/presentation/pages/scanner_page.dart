@@ -24,6 +24,7 @@ class ScannerPage extends StatefulWidget {
 class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin {
   late AnimationController _laserController;
   late AnimationController _sheetController;
+  late Animation<double> _sheetAnimation;
   final MobileScannerController _cameraController = MobileScannerController();
   final _manualInputController = TextEditingController();
   final GlobalKey _qrBoundaryKey = GlobalKey();
@@ -67,7 +68,11 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
     // Hardware-accelerated smooth bottom sheet animation controller
     _sheetController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 350),
+      duration: const Duration(milliseconds: 300),
+    );
+    _sheetAnimation = CurvedAnimation(
+      parent: _sheetController,
+      curve: Curves.fastOutSlowIn,
     );
   }
 
@@ -335,40 +340,42 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 1. FULL-BLEED MOBILE SCANNER
-          MobileScanner(
-            controller: _cameraController,
-            onDetect: (BarcodeCapture capture) {
-              if (_hasScanned) return;
-              if (capture.barcodes.isNotEmpty) {
-                final String? code = capture.barcodes.first.rawValue;
-                if (code != null) {
-                  if (_isValidQrData(code)) {
-                    setState(() {
-                      _hasScanned = true;
-                    });
-                    _cameraController.stop();
-                    _navigateToTransfer(code);
-                  } else {
-                    if (!_isShowingInvalidMessage) {
-                      _isShowingInvalidMessage = true;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: const Color(0xFFEF4444),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          content: const Text('Invalid QR code format.'),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                      Future.delayed(const Duration(seconds: 2), () {
-                        _isShowingInvalidMessage = false;
+          // 1. FULL-BLEED MOBILE SCANNER (ISOLATED COMPOSITOR LAYER FOR ZERO LAG)
+          RepaintBoundary(
+            child: MobileScanner(
+              controller: _cameraController,
+              onDetect: (BarcodeCapture capture) {
+                if (_hasScanned) return;
+                if (capture.barcodes.isNotEmpty) {
+                  final String? code = capture.barcodes.first.rawValue;
+                  if (code != null) {
+                    if (_isValidQrData(code)) {
+                      setState(() {
+                        _hasScanned = true;
                       });
+                      _cameraController.stop();
+                      _navigateToTransfer(code);
+                    } else {
+                      if (!_isShowingInvalidMessage) {
+                        _isShowingInvalidMessage = true;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: const Color(0xFFEF4444),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            content: const Text('Invalid QR code format.'),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                        Future.delayed(const Duration(seconds: 2), () {
+                          _isShowingInvalidMessage = false;
+                        });
+                      }
                     }
                   }
                 }
-              }
-            },
+              },
+            ),
           ),
 
           // 2. CAMERA VIEWFINDER WITH ROUNDED EMERALD CORNER BRACKETS
@@ -562,12 +569,9 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
 
           // 5. HARDWARE-ACCELERATED ULTRA-SMOOTH BOTTOM SLIDER (MY QR CODE)
           AnimatedBuilder(
-            animation: _sheetController,
+            animation: _sheetAnimation,
             builder: (context, child) {
-              final double value = CurvedAnimation(
-                parent: _sheetController,
-                curve: Curves.fastOutSlowIn,
-              ).value;
+              final double value = _sheetAnimation.value;
               final double collapsedHeight = 85.0;
               final double expandedHeight = size.height * 0.78;
               final double currentHeight = collapsedHeight + (expandedHeight - collapsedHeight) * value;
@@ -577,143 +581,182 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
                 left: 0,
                 right: 0,
                 height: currentHeight,
-                child: GestureDetector(
-                  onVerticalDragUpdate: (details) {
-                    if (details.primaryDelta! < -5) {
-                      if (!_isSheetExpanded) _toggleSheet();
-                    } else if (details.primaryDelta! > 5) {
-                      if (_isSheetExpanded) _toggleSheet();
-                    }
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFFFFFFF),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.6),
-                          blurRadius: 36,
-                          spreadRadius: 6,
-                        ),
-                      ],
-                    ),
-                    child: SingleChildScrollView(
-                      physics: value > 0.8 ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics(),
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        children: [
-                          // Tap/Drag Bar Header
-                          GestureDetector(
-                            onTap: _toggleSheet,
-                            behavior: HitTestBehavior.opaque,
-                            child: Column(
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 5,
-                                  decoration: BoxDecoration(
-                                    color: isDark ? Colors.white.withValues(alpha: 0.25) : Colors.grey.shade300,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      _isSheetExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_up_rounded,
-                                      color: const Color(0xFF10B981),
-                                      size: 26,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      _isSheetExpanded ? 'Tap to close My QR Code' : 'Slide up for My QR Code',
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
-                                        color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                child: RepaintBoundary(
+                  child: GestureDetector(
+                    onVerticalDragUpdate: (details) {
+                      if (details.primaryDelta! < -5) {
+                        if (!_isSheetExpanded) _toggleSheet();
+                      } else if (details.primaryDelta! > 5) {
+                        if (_isSheetExpanded) _toggleSheet();
+                      }
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFFFFFFF),
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.6),
+                            blurRadius: 36,
+                            spreadRadius: 6,
                           ),
-                          const SizedBox(height: 28),
-
-                          // QR Card Container
-                          RepaintBoundary(
-                            key: _qrBoundaryKey,
-                            child: Container(
-                              padding: const EdgeInsets.all(28),
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                                borderRadius: BorderRadius.circular(32),
-                                border: Border.all(
-                                  color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.shade200,
-                                ),
-                              ),
+                        ],
+                      ),
+                      child: SingleChildScrollView(
+                        physics: value > 0.8 ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          children: [
+                            // Tap/Drag Bar Header
+                            GestureDetector(
+                              onTap: _toggleSheet,
+                              behavior: HitTestBehavior.opaque,
                               child: Column(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(20),
+                                    width: 48,
+                                    height: 5,
                                     decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(24),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.08),
-                                          blurRadius: 20,
-                                          spreadRadius: 2,
+                                      color: isDark ? Colors.white.withValues(alpha: 0.25) : Colors.grey.shade300,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        _isSheetExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_up_rounded,
+                                        color: const Color(0xFF10B981),
+                                        size: 26,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        _isSheetExpanded ? 'Tap to close My QR Code' : 'Slide up for My QR Code',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
                                         ),
-                                      ],
-                                    ),
-                                    child: QrImageView(
-                                      data: myQrData,
-                                      version: QrVersions.auto,
-                                      size: 190.0,
-                                      backgroundColor: Colors.white,
-                                      eyeStyle: const QrEyeStyle(
-                                        eyeShape: QrEyeShape.square,
-                                        color: Color(0xFF0F172A),
                                       ),
-                                      dataModuleStyle: const QrDataModuleStyle(
-                                        dataModuleShape: QrDataModuleShape.square,
-                                        color: Color(0xFF0F172A),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
-
-                                  // User Tag Header
-                                  Text(
-                                    user?['fullName'] ?? 'RopeWallet User',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: Text(
-                                      myTag.startsWith('\$') ? myTag : '\$$myTag',
-                                      style: const TextStyle(
-                                        color: Color(0xFF10B981),
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 14,
-                                      ),
-                                    ),
+                                    ],
                                   ),
                                 ],
                               ),
                             ),
-                          ),
+                            const SizedBox(height: 28),
+
+                            // QR Card Container
+                            RepaintBoundary(
+                              key: _qrBoundaryKey,
+                              child: Container(
+                                padding: const EdgeInsets.all(28),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(32),
+                                  border: Border.all(
+                                    color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.shade200,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(24),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.08),
+                                            blurRadius: 20,
+                                            spreadRadius: 2,
+                                          ),
+                                        ],
+                                      ),
+                                      child: QrImageView(
+                                        data: myQrData,
+                                        version: QrVersions.auto,
+                                        size: 190.0,
+                                        backgroundColor: Colors.white,
+                                        eyeStyle: const QrEyeStyle(
+                                          eyeShape: QrEyeShape.square,
+                                          color: Color(0xFF0F172A),
+                                        ),
+                                        dataModuleStyle: const QrDataModuleStyle(
+                                          dataModuleShape: QrDataModuleShape.square,
+                                          color: Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+
+                                    // User Tag Header
+                                    Text(
+                                      user?['fullName'] ?? 'RopeWallet User',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    
+                                    // Interactive Click-To-Copy User Tag
+                                    GestureDetector(
+                                      onTap: () {
+                                        final cleanTag = myTag.startsWith('\$') ? myTag : '\$$myTag';
+                                        Clipboard.setData(ClipboardData(text: cleanTag));
+                                        HapticFeedback.lightImpact();
+                                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Row(
+                                              children: [
+                                                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                                                const SizedBox(width: 10),
+                                                Text('Tag $cleanTag copied to clipboard!'),
+                                              ],
+                                            ),
+                                            backgroundColor: const Color(0xFF10B981),
+                                            behavior: SnackBarBehavior.floating,
+                                            duration: const Duration(seconds: 2),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                          ),
+                                        );
+                                      },
+                                      child: MouseRegion(
+                                        cursor: SystemMouseCursors.click,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF10B981).withValues(alpha: 0.14),
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(
+                                              color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                myTag.startsWith('\$') ? myTag : '\$$myTag',
+                                                style: const TextStyle(
+                                                  color: Color(0xFF10B981),
+                                                  fontWeight: FontWeight.w800,
+                                                  fontSize: 15,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              const Icon(Icons.copy_rounded, color: Color(0xFF10B981), size: 16),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           const SizedBox(height: 24),
 
                           // Action Buttons for My QR (Download & Share)
@@ -821,7 +864,8 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
                     ),
                   ),
                 ),
-              );
+              ),
+            );
             },
           ),
         ],
