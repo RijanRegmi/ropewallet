@@ -37,7 +37,10 @@ export async function loginAction(state: any, formData: FormData) {
     }
 
     // Set cookie on server
-    const token = data.data.token;
+    const token = data.token || data.data?.token;
+    if (!token) {
+      return { success: false, error: 'Token missing in response' };
+    }
     const cookieStore = await cookies();
     cookieStore.set('admin_token', token, {
       path: '/',
