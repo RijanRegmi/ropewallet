@@ -130,8 +130,8 @@ const userSchema = new Schema<IUser>(
   }
 );
 
-// Auto-compile fullName before validation/save
-userSchema.pre('save', function (next) {
+// Auto generate fullName
+userSchema.pre('save', function (this: any, next) {
   if (this.isModified('firstName') || this.isModified('lastName') || this.isModified('middleName')) {
     const middle = this.middleName ? ` ${this.middleName}` : '';
     this.fullName = `${this.firstName}${middle} ${this.lastName}`;
@@ -140,30 +140,18 @@ userSchema.pre('save', function (next) {
 });
 
 // Hash password before saving if it has been modified
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
-    return next();
-  }
-  try {
+userSchema.pre('save', async function (this: any) {
+  if (this.isModified('password') && this.password) {
     const salt = await bcryptjs.genSalt(10);
-    this.password = await bcryptjs.hash(this.password!, salt);
-    next();
-  } catch (error: any) {
-    next(error);
+    this.password = await bcryptjs.hash(this.password, salt);
   }
 });
 
 // Hash PIN before saving if it has been modified
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('transactionPin') || !this.transactionPin) {
-    return next();
-  }
-  try {
+userSchema.pre('save', async function (this: any) {
+  if (this.isModified('transactionPin') && this.transactionPin) {
     const salt = await bcryptjs.genSalt(10);
     this.transactionPin = await bcryptjs.hash(this.transactionPin, salt);
-    next();
-  } catch (error: any) {
-    next(error);
   }
 });
 

@@ -272,7 +272,7 @@ export class P2PController {
             stripeFee,
             netProfit,
             status: 'completed',
-            paymentMethod: meta.platform || 'stripe',
+            paymentMethod: (meta.platform || 'stripe') as any,
             stripeSessionId: session.id,
             stripePaymentIntentId: session.payment_intent as string,
             paymentRequestToken: meta.paymentRequestToken,
