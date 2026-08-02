@@ -75,11 +75,11 @@ app.get('/', (req, res) => {
 });
 
 // ─── API Routes ────────────────────────────────────────────────
-app.post('/api/webhook', PaymentController.handleWebhook);
-app.use('/api/auth', authLimiter as any, authRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/p2p', p2pRoutes);
+app.post(['/api/webhook', '/webhook'], PaymentController.handleWebhook);
+app.use(['/api/auth', '/auth'], authLimiter as any, authRoutes);
+app.use(['/api/payments', '/payments'], paymentRoutes);
+app.use(['/api/admin', '/admin'], adminRoutes);
+app.use(['/api/p2p', '/p2p'], p2pRoutes);
 
 // Catch 404 routes
 app.use((req, res) => {
