@@ -14,6 +14,19 @@ export const connectDB = async (): Promise<void> => {
     await mongoose.connect(mongoUri);
     isConnected = true;
     console.log('MongoDB Connected successfully.');
+
+    // Migration: Convert legacy 'admin' to 'host' and 'user' to 'customer'
+    try {
+      const db = mongoose.connection.db;
+      if (db) {
+        const usersCollection = db.collection('users');
+        await usersCollection.updateMany({ role: 'admin' }, { $set: { role: 'host' } });
+        await usersCollection.updateMany({ role: 'user' }, { $set: { role: 'customer' } });
+        await usersCollection.updateMany({ role: { $exists: false } }, { $set: { role: 'customer' } });
+      }
+    } catch (migErr) {
+      console.warn('Role migration notice:', migErr);
+    }
   } catch (error) {
     console.error('MongoDB connection error:', error);
     throw error;

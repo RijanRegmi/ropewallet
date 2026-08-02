@@ -28,7 +28,7 @@ export interface AuthResponse {
     phoneNumber: string;
     walletBalance: number;
     qrCodeData: string;
-    role: 'user' | 'host' | 'admin' | 'superadmin';
+    role: 'customer' | 'host' | 'superadmin';
     createdAt: Date;
     hasPin?: boolean;
     profileImage?: string;

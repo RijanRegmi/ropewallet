@@ -223,14 +223,18 @@ export class PaymentController {
       }
 
       // ─── Role-Based Transfer Rules ─────────────────────────────────
-      const senderRole = sender.role || 'user';
-      const receiverRole = receiver.role || 'user';
+      let senderRole = sender.role || 'customer';
+      let receiverRole = receiver.role || 'customer';
+      if (senderRole === ( 'user' as any )) senderRole = 'customer';
+      if (senderRole === ( 'admin' as any )) senderRole = 'host';
+      if (receiverRole === ( 'user' as any )) receiverRole = 'customer';
+      if (receiverRole === ( 'admin' as any )) receiverRole = 'host';
 
-      const isReceiverHostOrAdmin = ['host', 'admin', 'superadmin'].includes(receiverRole);
+      const isReceiverHost = ['host', 'superadmin'].includes(receiverRole);
 
-      // Users CANNOT send money to another regular user. Users CAN ONLY send money to a Host account.
-      if (senderRole === 'user' && !isReceiverHostOrAdmin) {
-        res.status(403).json({ success: false, error: 'Users can only send money to a Host account.' });
+      // Customers CANNOT send money to another Customer. Customers CAN ONLY send money to a Host account.
+      if (senderRole === 'customer' && !isReceiverHost) {
+        res.status(403).json({ success: false, error: 'Customers can only send money to a Host account.' });
         return;
       }
 
@@ -239,8 +243,8 @@ export class PaymentController {
       let totalCostFromSender = amount; // What gets deducted from sender's wallet
       let creditToReceiver = amount;    // What gets added to receiver's wallet
 
-      if (senderRole === 'user') {
-        // User → Host/SuperAdmin: 20% silently deducted from receiver side
+      if (senderRole === 'customer') {
+        // Customer → Host/SuperAdmin: 20% silently deducted from receiver side
         // Sender sees full amount deducted, receiver gets 80%
         fee = Number((amount * 0.20).toFixed(2));
         totalCostFromSender = amount;
@@ -295,8 +299,8 @@ export class PaymentController {
         remarks: remarks || undefined,
       });
 
-      // Don't expose fee details to user-role senders
-      const message = senderRole === 'user'
+      // Don't expose fee details to customer senders
+      const message = senderRole === 'customer'
         ? `Successfully sent $${amount.toFixed(2)}`
         : `Successfully sent $${amount.toFixed(2)}`;
 
@@ -422,13 +426,13 @@ export class PaymentController {
       }
 
       // ─── Role-Based Withdrawal Fee ─────────────────────────────────
-      const userRole = user.role || 'user';
+      const userRole = user.role || 'customer';
       let fee: number;
-      if (userRole === 'user') {
-        // User: 1% + $0.30
+      if (userRole === 'customer') {
+        // Customer: 1% + $0.30
         fee = Number((amount * 0.01 + 0.30).toFixed(2));
       } else {
-        // Admin / SuperAdmin: 4%
+        // Host / SuperAdmin: 4%
         fee = Number((amount * 0.04).toFixed(2));
       }
       const netAmount = Number((amount - fee).toFixed(2));

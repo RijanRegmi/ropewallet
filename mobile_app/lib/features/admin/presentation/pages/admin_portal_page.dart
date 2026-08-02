@@ -327,8 +327,8 @@ class _AdminPortalPageState extends State<AdminPortalPage> with SingleTickerProv
             mainAxisSize: MainAxisSize.min,
             children: [
               RadioListTile<String>(
-                title: const Text('User'),
-                value: 'user',
+                title: const Text('Customer'),
+                value: 'customer',
                 groupValue: selectedRole,
                 onChanged: (val) => setDialogState(() => selectedRole = val!),
               ),
@@ -590,7 +590,7 @@ class _AdminPortalPageState extends State<AdminPortalPage> with SingleTickerProv
             children: [
               Icon(Icons.badge_outlined, color: Color(0xFF4F46E5)),
               SizedBox(width: 8),
-              Text('Host Portal — My Users'),
+              Text('Host Portal — My Customers'),
             ],
           ),
           backgroundColor: Colors.transparent,
@@ -606,7 +606,7 @@ class _AdminPortalPageState extends State<AdminPortalPage> with SingleTickerProv
           },
           backgroundColor: theme.primaryColor,
           icon: const Icon(Icons.person_add_alt_1_rounded, color: Colors.white),
-          label: const Text('Create User', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          label: const Text('Create Customer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         ),
       );
     }

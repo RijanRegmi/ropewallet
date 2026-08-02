@@ -435,7 +435,7 @@ export default function UsersManagement() {
                                     : 'bg-[#FFFFFF] border-slate-200 text-black focus:border-primary'
                                 }`}
                               >
-                                <option value="user">User</option>
+                                <option value="customer">Customer</option>
                                 <option value="host">Host</option>
                                 <option value="superadmin">Super Admin</option>
                               </select>
@@ -577,8 +577,8 @@ export default function UsersManagement() {
                                   : 'bg-[#FFFFFF] border-slate-200 text-black focus:border-primary'
                               }`}
                             >
-                              <option value="user">User</option>
-                              <option value="admin">Admin</option>
+                              <option value="customer">Customer</option>
+                              <option value="host">Host</option>
                               <option value="superadmin">Super Admin</option>
                             </select>
                           </td>

@@ -22,7 +22,7 @@ export class AdminController {
         return;
       }
 
-      const admin = await User.findOne({ email, role: { $in: ['superadmin', 'host', 'admin'] } }).select('+password');
+      const admin = await User.findOne({ email, role: { $in: ['superadmin', 'host'] } }).select('+password');
       if (!admin || admin.isFrozen) {
         res.status(401).json({ success: false, error: 'Invalid credentials' });
         return;
@@ -180,9 +180,19 @@ export class AdminController {
         }
       }
 
-      // Filter for regular user accounts vs admin/host accounts
-      let userFilter: any = { role: { $nin: ['admin', 'host', 'superadmin'] } };
-      let adminFilter: any = { role: { $in: ['admin', 'host', 'superadmin'] } };
+      // Filter for regular customer accounts vs admin/host accounts based on creator role
+      let userFilter: any = {};
+      let adminFilter: any = {};
+
+      if (creatorRole === 'superadmin') {
+        // Superadmin sees all customers + all host/superadmin accounts
+        userFilter = { role: { $in: ['customer', 'user'] } };
+        adminFilter = { role: { $in: ['host', 'admin', 'superadmin'] } };
+      } else {
+        // Host sees ONLY customers created by themselves
+        userFilter = { role: { $in: ['customer', 'user'] }, createdBy: creatorId };
+        adminFilter = { _id: null };
+      }
 
       if (search) {
         const searchConditions = [
@@ -267,16 +277,18 @@ export class AdminController {
         return;
       }
 
-      const targetRole = role || 'user';
+      let targetRole = role || 'customer';
+      if (targetRole === 'user') targetRole = 'customer';
+      if (targetRole === 'admin') targetRole = 'host';
 
-      if (!['user', 'host', 'admin', 'superadmin'].includes(targetRole)) {
-        res.status(400).json({ success: false, error: 'Invalid user role specified' });
+      if (!['customer', 'host', 'superadmin'].includes(targetRole)) {
+        res.status(400).json({ success: false, error: 'Invalid user role specified. Must be customer, host, or superadmin' });
         return;
       }
 
-      // Admins/Hosts can ONLY create 'user' role accounts. Only Super Admins can create 'host', 'admin', or 'superadmin' accounts.
-      if (creatorRole !== 'superadmin' && targetRole !== 'user') {
-        res.status(403).json({ success: false, error: 'Hosts can only create regular user accounts' });
+      // Hosts can ONLY create 'customer' role accounts. Only Super Admins can create 'host' or 'superadmin' accounts.
+      if (creatorRole !== 'superadmin' && targetRole !== 'customer') {
+        res.status(403).json({ success: false, error: 'Hosts can only create regular customer accounts' });
         return;
       }
 
@@ -358,6 +370,11 @@ export class AdminController {
         return;
       }
 
+      if (creatorRole !== 'superadmin' && user.createdBy?.toString() !== creatorId) {
+        res.status(403).json({ success: false, error: 'Hosts can only edit customer accounts created by themselves' });
+        return;
+      }
+
       if (firstName !== undefined) user.firstName = firstName;
       if (lastName !== undefined) user.lastName = lastName;
       if (middleName !== undefined) user.middleName = middleName;
@@ -379,21 +396,23 @@ export class AdminController {
       const creatorId = (req as any).admin?.id;
       const creatorRole = (req as any).admin?.role;
 
-      if (creatorRole !== 'superadmin') {
-        res.status(403).json({ success: false, error: 'Only Super Admins can delete accounts' });
-        return;
-      }
-
-      if (req.params.id === creatorId) {
-        res.status(400).json({ success: false, error: 'Super Admin cannot delete their own logged-in account' });
-        return;
-      }
-
-      const user = await User.findByIdAndDelete(req.params.id);
+      const user = await User.findById(req.params.id);
       if (!user) {
         res.status(404).json({ success: false, error: 'User not found' });
         return;
       }
+
+      if (creatorRole !== 'superadmin' && user.createdBy?.toString() !== creatorId) {
+        res.status(403).json({ success: false, error: 'Hosts can only delete customer accounts created by themselves' });
+        return;
+      }
+
+      if (req.params.id === creatorId) {
+        res.status(400).json({ success: false, error: 'Superadmin cannot delete their own logged-in account' });
+        return;
+      }
+
+      await User.findByIdAndDelete(req.params.id);
       res.json({ success: true, message: 'User deleted successfully' });
     } catch (error) {
       next(error);
@@ -411,6 +430,11 @@ export class AdminController {
         return;
       }
 
+      if (creatorRole !== 'superadmin' && user.createdBy?.toString() !== adminId) {
+        res.status(403).json({ success: false, error: 'Hosts can only freeze customer accounts created by themselves' });
+        return;
+      }
+
       user.isFrozen = true;
       user.frozenAt = new Date();
       user.frozenBy = adminId;
@@ -425,10 +449,16 @@ export class AdminController {
   static async unfreezeUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const adminId = (req as any).admin.id;
+      const creatorRole = (req as any).admin.role;
 
       const user = await User.findById(req.params.id);
       if (!user) {
         res.status(404).json({ success: false, error: 'User not found' });
+        return;
+      }
+
+      if (creatorRole !== 'superadmin' && user.createdBy?.toString() !== adminId) {
+        res.status(403).json({ success: false, error: 'Hosts can only unfreeze customer accounts created by themselves' });
         return;
       }
 
@@ -454,8 +484,12 @@ export class AdminController {
         return;
       }
 
-      if (!role || !['user', 'host', 'admin', 'superadmin'].includes(role)) {
-        res.status(400).json({ success: false, error: 'Invalid role. Must be user, host, admin or superadmin' });
+      let targetRole = role;
+      if (targetRole === 'user') targetRole = 'customer';
+      if (targetRole === 'admin') targetRole = 'host';
+
+      if (!targetRole || !['customer', 'host', 'superadmin'].includes(targetRole)) {
+        res.status(400).json({ success: false, error: 'Invalid role. Must be customer, host or superadmin' });
         return;
       }
 
@@ -470,10 +504,10 @@ export class AdminController {
         return;
       }
 
-      user.role = role;
+      user.role = targetRole;
       await user.save({ validateBeforeSave: false });
 
-      res.json({ success: true, message: `User role updated to ${role}`, data: { user } });
+      res.json({ success: true, message: `User role updated to ${targetRole}`, data: { user } });
     } catch (error) {
       next(error);
     }
@@ -706,7 +740,7 @@ export class AdminController {
     if (req.cookies?.admin_token) {
       try {
         const decoded = jwt.verify(req.cookies.admin_token, JWT_SECRET) as any;
-        const admin = await User.findOne({ _id: decoded.id, role: { $in: ['admin', 'superadmin'] } });
+        const admin = await User.findOne({ _id: decoded.id, role: { $in: ['superadmin', 'host'] } });
         if (admin && !admin.isFrozen) {
           res.redirect('/admin/dashboard');
           return;
@@ -1867,7 +1901,7 @@ export class AdminController {
             : '<button class="btn-icon btn-icon-warning" onclick="toggleFreeze(\'' + u._id + '\', true)" title="Freeze Account"><i class="fas fa-lock"></i></button>';
 
           const roleSelect = '<select style="background:#1F2937;color:#F9FAFB;border:1px solid #374151;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;outline:none;" onchange="toggleRole(\'' + u._id + '\', this.value)">' +
-                '<option value="user"' + (u.role === 'user' ? ' selected' : '') + '>User</option>' +
+                '<option value="customer"' + (u.role === 'customer' || u.role === 'user' ? ' selected' : '') + '>Customer</option>' +
                 '<option value="host"' + (u.role === 'host' || u.role === 'admin' ? ' selected' : '') + '>Host</option>' +
                 '<option value="superadmin"' + (u.role === 'superadmin' ? ' selected' : '') + '>Superadmin</option>' +
               '</select>';
