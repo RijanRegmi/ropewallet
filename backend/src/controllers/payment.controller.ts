@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import Stripe from 'stripe';
-import { TronWeb } from 'tronweb';
+// TronWeb is dynamically imported only when USDT withdrawal is triggered
+// to avoid crashing Vercel serverless cold starts (heavy native library)
 import { User } from '../models/user.model.js';
 import { Transaction } from '../models/transaction.model.js';
 import { CustomError } from '../middlewares/error.middleware.js';
@@ -558,6 +559,8 @@ export class PaymentController {
               ? { 'TRON-PRO-API-KEY': process.env.TRONGRID_API_KEY } 
               : undefined;
 
+            // Dynamic import to avoid crashing serverless cold start
+            const { TronWeb } = await import('tronweb');
             const tronWeb = new TronWeb({
               fullHost,
               headers,
