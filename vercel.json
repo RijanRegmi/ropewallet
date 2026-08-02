@@ -1,5 +1,4 @@
 {
-  "outputDirectory": "frontend/.next",
   "rewrites": [
     {
       "source": "/api/(.*)",
