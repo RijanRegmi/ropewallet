@@ -1,4 +1,12 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const getApiBase = () => {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return '/api';
+  }
+  return 'http://localhost:5000/api';
+};
 
 export async function apiRequest<T>(
   endpoint: string,
@@ -6,6 +14,7 @@ export async function apiRequest<T>(
   body?: any
 ): Promise<{ success: boolean; data?: T; error?: string; message?: string }> {
   try {
+    const apiBase = getApiBase();
     const opts: RequestInit = {
       method,
       headers: {
@@ -18,7 +27,7 @@ export async function apiRequest<T>(
       opts.body = JSON.stringify(body);
     }
 
-    const res = await fetch(`${API_BASE}${endpoint}`, opts);
+    const res = await fetch(`${apiBase}${endpoint}`, opts);
     const data = await res.json();
     return data;
   } catch (err: any) {
