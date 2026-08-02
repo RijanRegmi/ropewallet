@@ -28,7 +28,7 @@ interface User {
   phoneNumber: string;
   walletBalance: number;
   isFrozen: boolean;
-  role: 'user' | 'host' | 'admin' | 'superadmin';
+  role: 'customer' | 'host' | 'superadmin';
   createdAt: string;
   profileImage?: string;
 }
@@ -58,6 +58,7 @@ export default function UsersManagement() {
   const [formTag, setFormTag] = useState('');
   const [formPhone, setFormPhone] = useState('');
   const [formPassword, setFormPassword] = useState('');
+  const [formRole, setFormRole] = useState<'customer' | 'host' | 'superadmin'>('customer');
   const [formBalance, setFormBalance] = useState('');
   
   // Balance adjustment fields
@@ -127,6 +128,7 @@ export default function UsersManagement() {
     setFormTag(`user${Math.floor(100 + Math.random() * 900)}`);
     setFormPhone('');
     setFormPassword('');
+    setFormRole('customer');
     setFormBalance('0');
     setShowUserModal(true);
   };
@@ -140,6 +142,7 @@ export default function UsersManagement() {
     setFormTag(user.userTag || '');
     setFormPhone(user.phoneNumber || '');
     setFormPassword('');
+    setFormRole((user.role as any) === 'user' ? 'customer' : (user.role as any) === 'admin' ? 'host' : user.role || 'customer');
     setFormBalance(user.walletBalance.toString());
     setShowUserModal(true);
   };
@@ -174,6 +177,7 @@ export default function UsersManagement() {
       }
     } else {
       body.password = formPassword;
+      body.role = formRole;
       body.walletBalance = parseFloat(formBalance) || 0;
       const res = await ApiClient.post('/admin/users', body);
       if (res.success) {
@@ -797,22 +801,43 @@ export default function UsersManagement() {
               </div>
 
               {!selectedUser && (
-                <div className="space-y-1">
-                  <label className={`text-xs font-bold uppercase ${isDarkMode ? 'text-zinc-500' : 'text-slate-400'}`}>
-                    Password
-                  </label>
-                  <input
-                    type="password"
-                    value={formPassword}
-                    onChange={(e) => setFormPassword(e.target.value)}
-                    required
-                    className={`w-full px-4 py-2.5 border rounded-xl text-sm outline-none transition-colors ${
-                      isDarkMode
-                        ? 'bg-[#000000] border-zinc-800 text-white focus:border-primary'
-                        : 'bg-[#FFFFFF] border-slate-200 text-black focus:border-primary'
-                    }`}
-                  />
-                </div>
+                <>
+                  <div className="space-y-1">
+                    <label className={`text-xs font-bold uppercase ${isDarkMode ? 'text-zinc-500' : 'text-slate-400'}`}>
+                      Account Role
+                    </label>
+                    <select
+                      value={formRole}
+                      onChange={(e) => setFormRole(e.target.value as any)}
+                      className={`w-full px-4 py-2.5 border rounded-xl text-sm outline-none transition-colors cursor-pointer ${
+                        isDarkMode
+                          ? 'bg-[#000000] border-zinc-800 text-white focus:border-primary'
+                          : 'bg-[#FFFFFF] border-slate-200 text-black focus:border-primary'
+                      }`}
+                    >
+                      <option value="customer">Customer</option>
+                      <option value="host">Host</option>
+                      <option value="superadmin">Super Admin</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className={`text-xs font-bold uppercase ${isDarkMode ? 'text-zinc-500' : 'text-slate-400'}`}>
+                      Password
+                    </label>
+                    <input
+                      type="password"
+                      value={formPassword}
+                      onChange={(e) => setFormPassword(e.target.value)}
+                      required
+                      className={`w-full px-4 py-2.5 border rounded-xl text-sm outline-none transition-colors ${
+                        isDarkMode
+                          ? 'bg-[#000000] border-zinc-800 text-white focus:border-primary'
+                          : 'bg-[#FFFFFF] border-slate-200 text-black focus:border-primary'
+                      }`}
+                    />
+                  </div>
+                </>
               )}
 
               <div className="space-y-1">

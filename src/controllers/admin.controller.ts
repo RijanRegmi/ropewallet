@@ -185,8 +185,8 @@ export class AdminController {
       let adminFilter: any = {};
 
       if (creatorRole === 'superadmin') {
-        // Superadmin sees all customers + all host/superadmin accounts
-        userFilter = { role: { $in: ['customer', 'user'] } };
+        // Superadmin sees all customer/user accounts (including legacy/unspecified roles) + all host/superadmin accounts
+        userFilter = { role: { $nin: ['host', 'admin', 'superadmin'] } };
         adminFilter = { role: { $in: ['host', 'admin', 'superadmin'] } };
       } else {
         // Host sees ONLY customers created by themselves
@@ -1864,6 +1864,14 @@ export class AdminController {
             <label>User Tag *</label>
             <input class="form-input" id="uTag" required>
           </div>
+          <div class="form-group" id="roleGroup">
+            <label>Account Role *</label>
+            <select class="form-input" id="uRole">
+              <option value="customer" selected>Customer</option>
+              <option value="host">Host</option>
+              <option value="superadmin">Superadmin</option>
+            </select>
+          </div>
           <div class="form-group" id="passwordGroup">
             <label>Password *</label>
             <input class="form-input" type="password" id="uPassword" minlength="6">
@@ -1951,12 +1959,13 @@ export class AdminController {
 
       function openCreateModal() {
         try {
+          document.getElementById('userForm').reset();
           document.getElementById('modalTitle').textContent = 'Create User';
           document.getElementById('submitBtn').textContent = 'Create User';
           document.getElementById('editUserId').value = '';
           document.getElementById('passwordGroup').style.display = 'block';
+          document.getElementById('roleGroup').style.display = 'block';
           document.getElementById('balanceGroup').style.display = 'none';
-          document.getElementById('userForm').reset();
           document.getElementById('uTag').value = '$user' + Math.floor(100 + Math.random() * 900);
           const modal = document.getElementById('userModal');
           if (modal) {
@@ -1977,6 +1986,7 @@ export class AdminController {
           document.getElementById('submitBtn').textContent = 'Save Changes';
           document.getElementById('editUserId').value = id;
           document.getElementById('passwordGroup').style.display = 'none';
+          document.getElementById('roleGroup').style.display = 'none';
           document.getElementById('balanceGroup').style.display = 'block';
           document.getElementById('uFirstName').value = u.firstName || '';
           document.getElementById('uLastName').value = u.lastName || '';
@@ -2024,6 +2034,7 @@ export class AdminController {
           showToast(res.success ? 'User updated' : res.error, res.success ? 'success' : 'error');
         } else {
           body.password = document.getElementById('uPassword').value;
+          body.role = document.getElementById('uRole').value;
           const res = await api('/api/admin/users', 'POST', body);
           showToast(res.success ? 'User created' : res.error, res.success ? 'success' : 'error');
         }
@@ -2071,11 +2082,8 @@ export class AdminController {
         });
       }
 
-      if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        loadUsers();
-      } else {
-        document.addEventListener('DOMContentLoaded', () => loadUsers());
-      }
+      // Automatically load users immediately
+      loadUsers(1);
     </script>`;
 
     return AdminController.adminShell('Users', 'users', content);
