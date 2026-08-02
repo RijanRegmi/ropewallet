@@ -40,7 +40,11 @@ function runExpress(req: NextRequest): Promise<Response> {
       reqStream.socket = mockSocket;
       reqStream.connection = mockSocket;
 
-      let _query: any = {};
+      const initialQuery: Record<string, string> = {};
+      url.searchParams.forEach((val, key) => {
+        initialQuery[key] = val;
+      });
+      let _query: any = initialQuery;
       let _body: any = undefined;
       Object.defineProperty(reqStream, 'query', {
         get: () => _query,

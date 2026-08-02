@@ -46,6 +46,17 @@ export default function UsersPage() {
     fetchUsers(page, searchQuery);
   }, [page]);
 
+  const filterList = (list: UserModel[], query: string) => {
+    const q = query.toLowerCase().trim();
+    if (!q) return list;
+    return list.filter((u) => {
+      const name = (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).toLowerCase();
+      const email = (u.email || '').toLowerCase();
+      const tag = (u.userTag || '').toLowerCase();
+      return name.includes(q) || email.includes(q) || tag.includes(q);
+    });
+  };
+
   const fetchUsers = async (p: number, q: string) => {
     setLoading(true);
     const res = await apiRequest<UserListResponse['data']>(`/admin/users?page=${p}&limit=15&search=${encodeURIComponent(q)}`);
@@ -54,31 +65,17 @@ export default function UsersPage() {
     if (res.success && res.data) {
       const all = [...(res.data.admins || []), ...(res.data.users || [])];
       setUsers(all);
-      setFilteredUsers(all);
-      setTotalPages(res.data.pagination.totalPages || 1);
+      setFilteredUsers(filterList(all, q));
+      setTotalPages(res.data.pagination?.totalPages || 1);
     }
   };
 
   // Instant real-time local search on keyup + debounced API search
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
+    setFilteredUsers(filterList(users, val));
 
-    // 1. Instant 0ms local client DOM filter
-    const q = val.toLowerCase().trim();
-    if (!q) {
-      setFilteredUsers(users);
-    } else {
-      setFilteredUsers(
-        users.filter((u) => {
-          const name = (u.fullName || `${u.firstName || ''} ${u.lastName || ''}`).toLowerCase();
-          const email = (u.email || '').toLowerCase();
-          const tag = (u.userTag || '').toLowerCase();
-          return name.includes(q) || email.includes(q) || tag.includes(q);
-        })
-      );
-    }
-
-    // 2. Debounced API request after 250ms
+    // Debounced API request after 250ms
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
       fetchUsers(1, val);
