@@ -69,6 +69,14 @@ const authLimiter = rateLimit({
   message: { success: false, error: 'Too many authentication attempts, please try again after 15 minutes' },
 });
 
+// Normalize URL paths for Vercel Serverless environment
+app.use((req, res, next) => {
+  if (!req.url.startsWith('/api') && req.url !== '/') {
+    req.url = '/api' + req.url;
+  }
+  next();
+});
+
 // Welcome root endpoint
 app.get('/', (req, res) => {
   res.json({ success: true, message: 'RopeWallet Layered REST API Service Running' });
