@@ -163,16 +163,35 @@ export class P2POrderController {
 
       const remainingSeconds = Math.max(0, Math.floor((order.expiresAt.getTime() - now.getTime()) / 1000));
 
-      // Direct pay link generator based on platform
+      // Direct pay link generator based on platform & account configuration
       let directPayUrl = '';
-      if (order.paymentMethod === 'chime') {
-        directPayUrl = `https://app.chime.com/link/qr?handle=${encodeURIComponent(order.assignedHandle)}`;
-      } else if (order.paymentMethod === 'cashapp') {
-        const cleanTag = order.assignedHandle.replace(/^\$/, '');
-        directPayUrl = `https://cash.app/$${cleanTag}/${order.amount}`;
-      } else if (order.paymentMethod === 'venmo') {
-        const cleanVenmo = order.assignedHandle.replace(/^@/, '');
-        directPayUrl = `https://venmo.com/${cleanVenmo}?txn=pay&amount=${order.amount}`;
+      
+      // 1. First check if the assigned P2P account has a directPayUrl configured
+      if (order.assignedP2PAccountId) {
+        const p2pAcc = await P2PAccount.findById(order.assignedP2PAccountId);
+        if (p2pAcc && p2pAcc.directPayUrl && p2pAcc.directPayUrl.trim()) {
+          directPayUrl = p2pAcc.directPayUrl.trim();
+        }
+      }
+
+      // 2. If directPayUrl is not explicitly set, construct accurate platform URLs
+      if (!directPayUrl) {
+        const handleStr = (order.assignedHandle || '').trim();
+        const cleanTag = handleStr.replace(/^[$@]/, '');
+        
+        if (order.paymentMethod === 'chime') {
+          if (handleStr.startsWith('$')) {
+            directPayUrl = `https://chime.me/${handleStr}`;
+          } else if (handleStr.includes('@')) {
+            directPayUrl = `https://member.chime.com/pay/${encodeURIComponent(handleStr)}`;
+          } else {
+            directPayUrl = `https://chime.me/$${cleanTag}`;
+          }
+        } else if (order.paymentMethod === 'cashapp') {
+          directPayUrl = `https://cash.app/$${cleanTag}/${order.amount}`;
+        } else if (order.paymentMethod === 'venmo') {
+          directPayUrl = `https://venmo.com/${cleanTag}?txn=pay&amount=${order.amount}`;
+        }
       }
 
       const hostObj: any = order.hostId;
