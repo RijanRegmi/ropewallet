@@ -180,12 +180,14 @@ export class P2POrderController {
         const cleanTag = handleStr.replace(/^[$@]/, '');
         
         if (order.paymentMethod === 'chime') {
-          if (handleStr.startsWith('$')) {
-            directPayUrl = `https://chime.me/${handleStr}`;
+          if (handleStr.startsWith('http://') || handleStr.startsWith('https://')) {
+            directPayUrl = handleStr;
+          } else if (handleStr.startsWith('$')) {
+            directPayUrl = `https://chime.com/${handleStr}`;
           } else if (handleStr.includes('@')) {
             directPayUrl = `https://member.chime.com/pay/${encodeURIComponent(handleStr)}`;
           } else {
-            directPayUrl = `https://chime.me/$${cleanTag}`;
+            directPayUrl = `https://chime.com/$${cleanTag}`;
           }
         } else if (order.paymentMethod === 'cashapp') {
           directPayUrl = `https://cash.app/$${cleanTag}/${order.amount}`;

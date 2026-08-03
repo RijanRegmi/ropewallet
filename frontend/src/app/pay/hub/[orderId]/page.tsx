@@ -130,6 +130,47 @@ export default function OrderGatewayHubPage() {
     );
   }
 
+  const handleLaunchApp = (e: React.MouseEvent) => {
+    if (!order?.directPayUrl) return;
+
+    const method = (order.paymentMethod || '').toLowerCase();
+    const handleStr = (order.assignedHandle || '').trim();
+    const cleanTag = handleStr.replace(/^[$@]/, '');
+
+    let targetUrl = order.directPayUrl;
+    let appUri = '';
+
+    if (method === 'chime') {
+      // Native Chime App URI Scheme on Android / iOS
+      appUri = `chime://pay/${cleanTag}`;
+      if (!targetUrl.startsWith('http')) {
+        targetUrl = `https://chime.com/$${cleanTag}`;
+      }
+    } else if (method === 'cashapp') {
+      appUri = `cashme://`;
+      if (!targetUrl.startsWith('http')) {
+        targetUrl = `https://cash.app/$${cleanTag}/${order.amount}`;
+      }
+    } else if (method === 'venmo') {
+      appUri = `venmo://paycharge?txn=pay&recipients=${cleanTag}&amount=${order.amount}`;
+      if (!targetUrl.startsWith('http')) {
+        targetUrl = `https://venmo.com/${cleanTag}?txn=pay&amount=${order.amount}`;
+      }
+    }
+
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(typeof navigator !== 'undefined' ? navigator.userAgent : '');
+
+    if (isMobile && appUri) {
+      e.preventDefault();
+      // Try launching native mobile app scheme
+      window.location.href = appUri;
+      // Fallback to direct web payment link if native app isn't opened within 600ms
+      setTimeout(() => {
+        window.location.href = targetUrl;
+      }, 600);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0B0F1A] text-white flex items-center justify-center p-4 relative overflow-hidden">
       {/* Glow */}
@@ -205,7 +246,8 @@ export default function OrderGatewayHubPage() {
                 href={order.directPayUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 active:scale-[0.99] text-white font-extrabold text-sm sm:text-base rounded-2xl shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 text-center"
+                onClick={handleLaunchApp}
+                className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 active:scale-[0.99] text-white font-extrabold text-sm sm:text-base rounded-2xl shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 text-center cursor-pointer"
               >
                 <ExternalLink className="w-5 h-5" />
                 Launch {order.paymentMethod.toUpperCase()} App
