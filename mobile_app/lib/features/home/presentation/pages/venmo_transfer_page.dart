@@ -258,7 +258,7 @@ class _VenmoTransferPageState extends State<VenmoTransferPage> with SingleTicker
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text('Venmo Transfer', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                            Image.network('https://img.icons8.com/color/96/venmo.png', height: 28, errorBuilder: (c, e, s) => const SizedBox.shrink()),
+                            Image.network('https://img.icons8.com/ios-filled/100/008CFF/venmo.png', height: 28, errorBuilder: (c, e, s) => const SizedBox.shrink()),
                           ],
                         ),
                         const SizedBox(height: 20),

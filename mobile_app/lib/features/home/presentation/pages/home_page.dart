@@ -482,7 +482,7 @@ class _HomePageState extends State<HomePage> {
                       _buildServiceCard(
                         title: 'Venmo',
                         subtitle: 'Send / Payout',
-                        logoUrl: 'https://img.icons8.com/color/96/venmo.png',
+                        logoUrl: 'https://img.icons8.com/ios-filled/100/008CFF/venmo.png',
                         accentColor: const Color(0xFF008CFF),
                         onTap: () {
                           Navigator.push(
@@ -850,7 +850,7 @@ class _ShareLinkBottomSheetState extends State<_ShareLinkBottomSheet> {
   final List<Map<String, dynamic>> _allMethods = [
     {'id': 'chime', 'name': 'Chime', 'logo': 'https://img.icons8.com/color/96/chime.png', 'color': const Color(0xFF25C490)},
     {'id': 'cashapp', 'name': 'Cash App', 'logo': 'https://img.icons8.com/color/96/cash-app.png', 'color': const Color(0xFF00D632)},
-    {'id': 'venmo', 'name': 'Venmo', 'logo': 'https://img.icons8.com/color/96/venmo.png', 'color': const Color(0xFF008CFF)},
+    {'id': 'venmo', 'name': 'Venmo', 'logo': 'https://img.icons8.com/ios-filled/100/008CFF/venmo.png', 'color': const Color(0xFF008CFF)},
     {'id': 'applepay', 'name': 'Apple Pay', 'logo': 'https://img.icons8.com/color/96/apple-pay.png', 'color': const Color(0xFFA855F7)},
   ];
 

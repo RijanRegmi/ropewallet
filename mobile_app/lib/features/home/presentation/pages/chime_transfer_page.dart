@@ -597,7 +597,7 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
                                   children: [
                                     {'id': 'chime', 'name': 'Chime', 'logo': 'https://img.icons8.com/color/96/chime.png'},
                                     {'id': 'cashapp', 'name': 'Cash App', 'logo': 'https://img.icons8.com/color/96/cash-app.png'},
-                                    {'id': 'venmo', 'name': 'Venmo', 'logo': 'https://img.icons8.com/color/96/venmo.png'},
+                                    {'id': 'venmo', 'name': 'Venmo', 'logo': 'https://img.icons8.com/ios-filled/100/008CFF/venmo.png'},
                                     {'id': 'applepay', 'name': 'Apple Pay', 'logo': 'https://img.icons8.com/color/96/apple-pay.png'},
                                   ].map((m) {
                                     final isSel = _selectedP2PMethod == m['id'];

@@ -28,7 +28,7 @@ export default function HostPayPage() {
   const methodLogos: Record<string, { name: string; logo: string; color: string }> = {
     chime: { name: 'Chime', logo: 'https://img.icons8.com/color/96/chime.png', color: 'emerald' },
     cashapp: { name: 'Cash App', logo: 'https://img.icons8.com/color/96/cash-app.png', color: 'emerald' },
-    venmo: { name: 'Venmo', logo: 'https://img.icons8.com/color/96/venmo.png', color: 'blue' },
+    venmo: { name: 'Venmo', logo: '', color: 'blue' },
     applepay: { name: 'Apple Pay', logo: 'https://img.icons8.com/color/96/apple-pay.png', color: 'purple' },
   };
 

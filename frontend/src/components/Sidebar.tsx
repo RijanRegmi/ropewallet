@@ -27,11 +27,21 @@ export default function Sidebar() {
     <>
       <aside className="w-64 bg-[#111827] border-r border-[#1F2937] flex flex-col fixed inset-y-0 z-50">
         {/* Brand */}
-        <div className="p-6 border-b border-[#1F2937]">
-          <h1 className="text-xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            RopeWallet
-          </h1>
-          <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Admin Portal</span>
+        <div className="p-6 border-b border-[#1F2937] flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              RopeWallet
+            </h1>
+            <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Admin Portal</span>
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-emerald-500/20 via-indigo-500/20 to-purple-500/20 border border-emerald-500/30">
+            <div className="w-4 h-4 rounded bg-gradient-to-tr from-emerald-400 to-indigo-500 flex items-center justify-center text-[9px] font-black text-black">
+              RJN
+            </div>
+            <span className="font-extrabold text-[10px] tracking-wider text-emerald-400">
+              RJN
+            </span>
+          </div>
         </div>
 
         {/* Nav */}
