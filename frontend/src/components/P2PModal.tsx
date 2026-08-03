@@ -182,7 +182,7 @@ export default function P2PModal({ isOpen, account, onClose, onSuccess }: P2PMod
           {/* Handle / Username */}
           <div>
             <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">
-              Handle / Username / ChimeSign *
+              Handle / Username / {platform === 'chime' ? 'ChimeSign ($tag)' : 'Tag'} *
             </label>
             <input
               type="text"
@@ -195,7 +195,14 @@ export default function P2PModal({ isOpen, account, onClose, onSuccess }: P2PMod
                   : '@username (e.g. @JaneDoe)'
               }
               value={handle}
-              onChange={(e) => setHandle(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setHandle(val);
+                // Auto sync email if handle looks like a gmail address
+                if (val.includes('@gmail.com') && !email) {
+                  setEmail(val);
+                }
+              }}
               className="w-full px-4 py-2.5 bg-[#1F2937] border border-gray-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500 font-mono transition-all"
             />
           </div>
@@ -224,9 +231,9 @@ export default function P2PModal({ isOpen, account, onClose, onSuccess }: P2PMod
               <button
                 type="button"
                 onClick={handleAutoGenerateLink}
-                className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer bg-emerald-500/10 hover:bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/30 transition-all"
+                className="text-[10px] font-extrabold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer bg-emerald-500/15 hover:bg-emerald-500/25 px-2.5 py-1 rounded-lg border border-emerald-500/40 transition-all active:scale-95"
               >
-                <Sparkles className="w-3 h-3" />
+                <Sparkles className="w-3 h-3 text-emerald-400" />
                 Auto-Fill Pay Link
               </button>
             </div>
@@ -241,10 +248,10 @@ export default function P2PModal({ isOpen, account, onClose, onSuccess }: P2PMod
               }
               value={directPayUrl}
               onChange={(e) => setDirectPayUrl(e.target.value)}
-              className="w-full px-4 py-2.5 bg-[#1F2937] border border-gray-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500 transition-all font-mono"
+              className="w-full px-4 py-2.5 bg-[#1F2937] border border-gray-700 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition-all font-mono"
             />
-            <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
-              💡 {platform === 'chime' ? 'Paste your official Chime Pay Link (e.g. https://chime.me/$tag or https://member.chime.com/pay/$tag). When users click "Launch Chime App", they will open your exact payment screen!' : 'Direct payment URL opened when user clicks Launch App.'}
+            <p className="text-[11px] text-emerald-400/90 mt-1.5 leading-relaxed bg-emerald-950/40 p-2 rounded-lg border border-emerald-500/20">
+              👉 <strong>Where to add your Chime Tag:</strong> Enter your <strong>$ChimeSign</strong> (e.g. <code>$JasmineHoward</code>) or <strong>https://chime.me/$yourtag</strong> in the box above or click <strong>Auto-Fill Pay Link</strong>. When payers click &quot;Launch Chime App&quot;, they will land directly on your Chime payment screen!
             </p>
           </div>
 
