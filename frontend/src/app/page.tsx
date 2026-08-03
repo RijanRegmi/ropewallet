@@ -22,12 +22,15 @@ import {
   X,
   Send,
   MessageSquare,
+  User,
+  Phone,
+  Mail,
+  MapPin,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
 export default function ProfessionalWhiteLandingPage() {
-  // Become a Host Modal State
-  const [isHostModalOpen, setIsHostModalOpen] = useState(false);
+  // Become a Host Form State
   const [hostForm, setHostForm] = useState({
     fullName: '',
     email: '',
@@ -79,16 +82,13 @@ export default function ProfessionalWhiteLandingPage() {
           New
         </span>
         <span>RopeWallet 2.0 Instant P2P Settlement Engine is now live!</span>
-        <button
-          onClick={() => {
-            setIsHostModalOpen(true);
-            setSubmitSuccess(false);
-            setSubmitError('');
-          }}
-          className="underline hover:text-emerald-400 font-bold ml-1 flex items-center gap-0.5 cursor-pointer bg-transparent border-0 text-xs text-white"
+        <a
+          href="#become-host"
+          onClick={(e) => handleSmoothScroll(e, 'become-host')}
+          className="underline hover:text-emerald-400 font-bold ml-1 flex items-center gap-0.5 text-xs text-white"
         >
-          Become a Host Request <ChevronRight className="w-3 h-3" />
-        </button>
+          Become a Host Inquiry <ChevronRight className="w-3 h-3" />
+        </a>
       </div>
 
       {/* Main Header / Navigation */}
@@ -111,32 +111,32 @@ export default function ProfessionalWhiteLandingPage() {
           </div>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
-            <a href="#features" onClick={(e) => handleSmoothScroll(e, 'features')} className="hover:text-slate-900 transition-colors">
-              Features
+            <a href="#gateways" onClick={(e) => handleSmoothScroll(e, 'gateways')} className="hover:text-slate-900 transition-colors">
+              Supported Gateways
+            </a>
+            <a href="#become-host" onClick={(e) => handleSmoothScroll(e, 'become-host')} className="hover:text-slate-900 transition-colors">
+              Become a Host
             </a>
             <a href="#mobile-app" onClick={(e) => handleSmoothScroll(e, 'mobile-app')} className="hover:text-slate-900 transition-colors">
               Mobile App
             </a>
+            <a href="#features" onClick={(e) => handleSmoothScroll(e, 'features')} className="hover:text-slate-900 transition-colors">
+              Features
+            </a>
             <a href="#how-it-works" onClick={(e) => handleSmoothScroll(e, 'how-it-works')} className="hover:text-slate-900 transition-colors">
               How It Works
-            </a>
-            <a href="#gateways" onClick={(e) => handleSmoothScroll(e, 'gateways')} className="hover:text-slate-900 transition-colors">
-              Supported Gateways
             </a>
           </nav>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                setIsHostModalOpen(true);
-                setSubmitSuccess(false);
-                setSubmitError('');
-              }}
+            <a
+              href="#become-host"
+              onClick={(e) => handleSmoothScroll(e, 'become-host')}
               className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-110 text-white text-xs font-black transition-all shadow-md shadow-emerald-600/20 hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2 cursor-pointer"
             >
               <UserPlus className="w-4 h-4" />
               Become a Host
-            </button>
+            </a>
           </div>
         </div>
       </header>
@@ -150,7 +150,7 @@ export default function ProfessionalWhiteLandingPage() {
             <span>Ultra-Secure Enterprise P2P Payment Gateway Engine</span>
           </div>
 
-          {/* Genuine Enterprise Headline (No Gaming Mention) */}
+          {/* Headline */}
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-slate-900 max-w-5xl mx-auto leading-[1.08] mb-6">
             The Ultra-Secure Enterprise P2P Payment Gateway &{' '}
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600">
@@ -164,18 +164,15 @@ export default function ProfessionalWhiteLandingPage() {
 
           {/* CTA Action Buttons */}
           <div className="flex flex-wrap items-center justify-center gap-4 mb-16">
-            <button
-              onClick={() => {
-                setIsHostModalOpen(true);
-                setSubmitSuccess(false);
-                setSubmitError('');
-              }}
+            <a
+              href="#become-host"
+              onClick={(e) => handleSmoothScroll(e, 'become-host')}
               className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-2xl shadow-xl shadow-emerald-600/25 transition-all hover:scale-[1.03] active:scale-[0.98] flex items-center gap-3 cursor-pointer"
             >
               <UserPlus className="w-5 h-5" />
-              Become a Host (Request Access)
+              Become a Host (Submit Inquiry)
               <ArrowRight className="w-4 h-4" />
-            </button>
+            </a>
             <a
               href="#mobile-app"
               onClick={(e) => handleSmoothScroll(e, 'mobile-app')}
@@ -213,6 +210,182 @@ export default function ProfessionalWhiteLandingPage() {
                 <img src="https://img.icons8.com/color/96/apple-pay.png" alt="Apple Pay" className="h-7 object-contain" />
                 <span className="font-extrabold text-sm text-slate-800">Apple Pay</span>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Become a Host Connection Section (Matches User's UI Screenshot) */}
+      <section id="become-host" className="py-20 bg-slate-50/70 border-y border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center max-w-3xl mx-auto mb-12">
+            <span className="text-xs font-extrabold text-emerald-600 uppercase tracking-widest block mb-3">
+              Partner With Us
+            </span>
+            <h2 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight mb-4">
+              Become an Authorized Host
+            </h2>
+            <p className="text-slate-600 text-base sm:text-lg">
+              Submit your inquiry directly to Super Admin to receive host credentials and manage P2P deposit flows.
+            </p>
+          </div>
+
+          {/* 2-Column Inquiry Card Container */}
+          <div className="bg-white border border-slate-200/80 rounded-[32px] shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 max-w-6xl mx-auto">
+            {/* Left Side Beautiful Image Container */}
+            <div className="lg:col-span-5 relative min-h-[350px] lg:min-h-[500px] overflow-hidden bg-slate-900">
+              <img
+                src="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1200&q=80"
+                alt="Fintech Host Security Engine"
+                className="w-full h-full object-cover opacity-85 hover:scale-105 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent flex flex-col justify-end p-8 text-white">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold w-fit mb-3">
+                  <ShieldCheck className="w-4 h-4" /> 100% Bank Verification Audit
+                </div>
+                <h3 className="text-2xl font-black text-white leading-tight mb-2">
+                  Enterprise Host Infrastructure
+                </h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Automated 80% host credit settlement, live IMAP receipt engine, and zero chargeback protection.
+                </p>
+              </div>
+            </div>
+
+            {/* Right Side Inquiry Form (Matching Screenshot Layout) */}
+            <div className="lg:col-span-7 p-8 sm:p-12 text-left bg-white flex flex-col justify-center">
+              {submitSuccess ? (
+                <div className="text-center py-12 space-y-4">
+                  <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-10 h-10" />
+                  </div>
+                  <h3 className="text-2xl font-extrabold text-slate-900">Inquiry Received!</h3>
+                  <p className="text-slate-600 text-sm leading-relaxed max-w-md mx-auto">
+                    Your Become a Host connection request has been securely delivered to Super Admin. Our team will contact you via email or phone shortly.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setSubmitSuccess(false);
+                      setHostForm({ fullName: '', email: '', phone: '', telegramOrWhatsapp: '', notes: '' });
+                    }}
+                    className="px-6 py-3 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-all cursor-pointer shadow-md shadow-emerald-600/20"
+                  >
+                    Submit Another Inquiry
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleHostSubmit} className="space-y-6">
+                  {submitError && (
+                    <div className="p-3.5 bg-red-50 border border-red-200 text-red-600 text-xs rounded-xl font-medium">
+                      {submitError}
+                    </div>
+                  )}
+
+                  {/* 2-Column Grid Inputs */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    {/* Full Name */}
+                    <div>
+                      <label className="block text-[11px] font-extrabold text-slate-600 mb-2 uppercase tracking-wider flex items-center gap-1.5">
+                        <User className="w-3.5 h-3.5 text-emerald-600" />
+                        Full Name *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          required
+                          placeholder="Enter full name"
+                          value={hostForm.fullName}
+                          onChange={(e) => setHostForm({ ...hostForm, fullName: e.target.value })}
+                          className="w-full pl-4 pr-10 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white transition-all font-medium"
+                        />
+                        <Mail className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-600 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Phone Number */}
+                    <div>
+                      <label className="block text-[11px] font-extrabold text-slate-600 mb-2 uppercase tracking-wider flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                        Phone Number *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          required
+                          placeholder="98XXXXXXXX"
+                          value={hostForm.phone}
+                          onChange={(e) => setHostForm({ ...hostForm, phone: e.target.value })}
+                          className="w-full px-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white transition-all font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Email Address */}
+                    <div>
+                      <label className="block text-[11px] font-extrabold text-slate-600 mb-2 uppercase tracking-wider flex items-center gap-1.5">
+                        <Mail className="w-3.5 h-3.5 text-emerald-600" />
+                        Email Address *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="email"
+                          required
+                          placeholder="example@mail.com"
+                          value={hostForm.email}
+                          onChange={(e) => setHostForm({ ...hostForm, email: e.target.value })}
+                          className="w-full pl-4 pr-10 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white transition-all font-medium"
+                        />
+                        <Mail className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-600 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Telegram / WhatsApp / Address */}
+                    <div>
+                      <label className="block text-[11px] font-extrabold text-slate-600 mb-2 uppercase tracking-wider flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                        Telegram / WhatsApp / Address *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          required
+                          placeholder="@handle or Residential address"
+                          value={hostForm.telegramOrWhatsapp}
+                          onChange={(e) => setHostForm({ ...hostForm, telegramOrWhatsapp: e.target.value })}
+                          className="w-full pl-4 pr-10 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white transition-all font-medium"
+                        />
+                        <Mail className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-600 pointer-events-none" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Your Message */}
+                  <div>
+                    <label className="block text-[11px] font-extrabold text-slate-600 mb-2 uppercase tracking-wider flex items-center gap-1.5">
+                      <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                      Your Message *
+                    </label>
+                    <textarea
+                      rows={4}
+                      required
+                      placeholder="How can we help you?"
+                      value={hostForm.notes}
+                      onChange={(e) => setHostForm({ ...hostForm, notes: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white transition-all font-medium"
+                    />
+                  </div>
+
+                  {/* Vibrant Green Submit Button (Matching User's Screenshot) */}
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full py-4 bg-[#00B050] hover:bg-[#009A46] text-white font-extrabold text-base rounded-2xl shadow-xl shadow-[#00B050]/25 transition-all flex items-center justify-center gap-3 cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+                  >
+                    <span>{isSubmitting ? 'Submitting Inquiry...' : 'Submit Inquiry'}</span>
+                    <Send className="w-5 h-5" />
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         </div>
@@ -448,137 +621,7 @@ export default function ProfessionalWhiteLandingPage() {
         </div>
       </section>
 
-      {/* Become a Host Connection Modal */}
-      {isHostModalOpen && (
-        <div className="fixed inset-0 z-[600] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-3xl p-8 w-full max-w-lg shadow-2xl relative animate-fade-in text-left">
-            <button
-              onClick={() => setIsHostModalOpen(false)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 transition-colors p-1 rounded-full bg-slate-100"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            {submitSuccess ? (
-              <div className="text-center py-6 space-y-4">
-                <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
-                  <CheckCircle2 className="w-10 h-10" />
-                </div>
-                <h3 className="text-2xl font-extrabold text-slate-900">Request Received!</h3>
-                <p className="text-slate-600 text-sm leading-relaxed max-w-md mx-auto">
-                  Your Become a Host connection request has been securely delivered to Super Admin. Our team will contact you via email or phone shortly.
-                </p>
-                <button
-                  onClick={() => setIsHostModalOpen(false)}
-                  className="px-6 py-3 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-all cursor-pointer"
-                >
-                  Close Window
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                    <UserPlus className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-slate-900">Become an Authorized Host</h3>
-                    <p className="text-xs text-slate-500">Send a connection request directly to Super Admin</p>
-                  </div>
-                </div>
-
-                {submitError && (
-                  <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-xl font-medium">
-                    {submitError}
-                  </div>
-                )}
-
-                <form onSubmit={handleHostSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">
-                      Full Name / Business Name *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. John Smith"
-                      value={hostForm.fullName}
-                      onChange={(e) => setHostForm({ ...hostForm, fullName: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm focus:outline-none focus:border-emerald-600 transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">
-                      Email Address *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="john@example.com"
-                      value={hostForm.email}
-                      onChange={(e) => setHostForm({ ...hostForm, email: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm focus:outline-none focus:border-emerald-600 transition-all"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">
-                        Phone Number
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="+1 (555) 000-0000"
-                        value={hostForm.phone}
-                        onChange={(e) => setHostForm({ ...hostForm, phone: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm focus:outline-none focus:border-emerald-600 transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">
-                        Telegram / WhatsApp
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="@username or number"
-                        value={hostForm.telegramOrWhatsapp}
-                        onChange={(e) => setHostForm({ ...hostForm, telegramOrWhatsapp: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm focus:outline-none focus:border-emerald-600 transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">
-                      Message / Expected Monthly Volume
-                    </label>
-                    <textarea
-                      rows={3}
-                      placeholder="Tell Super Admin about your business or expected volume..."
-                      value={hostForm.notes}
-                      onChange={(e) => setHostForm({ ...hostForm, notes: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm focus:outline-none focus:border-emerald-600 transition-all"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-110 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <Send className="w-4 h-4" />
-                    {isSubmitting ? 'Sending Request...' : 'Send Connection Request to Super Admin'}
-                  </button>
-                </form>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Footer with Developed by RJN Branding */}
+      {/* Footer with Circular RJN Logo */}
       <footer className="border-t border-slate-200 bg-white py-10 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
@@ -590,11 +633,8 @@ export default function ProfessionalWhiteLandingPage() {
 
           <div className="flex items-center gap-2">
             <span className="text-slate-500 font-semibold">Developed by</span>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-slate-100 border border-slate-300 shadow-xs">
-              <img src="/RJN.png" alt="RJN Logo" className="h-6 w-auto object-contain rounded-md" />
-              <span className="font-extrabold text-xs tracking-wider text-slate-800">
-                RJN DEVELOPER
-              </span>
+            <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-300 shadow-xs flex items-center justify-center overflow-hidden p-0.5">
+              <img src="/RJN.png" alt="RJN Logo" className="w-full h-full object-cover rounded-full" />
             </div>
           </div>
 
