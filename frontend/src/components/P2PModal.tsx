@@ -97,8 +97,8 @@ export default function P2PModal({ isOpen, account, onClose, onSuccess }: P2PMod
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-[#111827] border border-[#1F2937] rounded-3xl w-full max-w-lg p-7 shadow-2xl animate-fade-in relative text-left">
+    <div className="fixed inset-0 z-[1000] bg-black/75 backdrop-blur-md overflow-y-auto p-4 sm:p-6 flex items-center justify-center min-h-screen">
+      <div className="bg-[#111827] border border-[#1F2937] rounded-3xl w-full max-w-lg p-6 sm:p-7 shadow-2xl animate-fade-in relative text-left my-auto max-h-[90vh] overflow-y-auto">
         {/* Close Button */}
         <button
           onClick={onClose}

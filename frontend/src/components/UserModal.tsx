@@ -97,8 +97,8 @@ export default function UserModal({ isOpen, user, onClose, onSuccess }: UserModa
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#111827] border border-[#1F2937] rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-modal-in">
+    <div className="fixed inset-0 z-[1000] bg-black/75 backdrop-blur-md overflow-y-auto p-4 sm:p-6 flex items-center justify-center min-h-screen">
+      <div className="bg-[#111827] border border-[#1F2937] rounded-3xl w-full max-w-lg p-6 sm:p-7 shadow-2xl animate-fade-in relative text-left my-auto max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-5 pb-3 border-b border-[#1F2937]">
           <h3 className="text-lg font-bold text-white">
             {user ? 'Edit User Account' : 'Create New User'}
