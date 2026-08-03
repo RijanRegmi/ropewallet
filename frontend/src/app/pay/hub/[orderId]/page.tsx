@@ -139,10 +139,8 @@ export default function OrderGatewayHubPage() {
 
     let targetUrl = order.directPayUrl;
     if (method === 'chime') {
-      // Normalize chime.com/$ to chime.me/$ for direct Chime App Pay Screen deep-linking!
-      targetUrl = targetUrl.replace(/chime\.com\/\$/i, 'chime.me/$');
       if (!targetUrl.startsWith('http')) {
-        targetUrl = `https://chime.me/$${cleanTag}`;
+        targetUrl = `https://chime.com/$${cleanTag}`;
       }
     } else if (method === 'cashapp' && !targetUrl.startsWith('http')) {
       targetUrl = `https://cash.app/$${cleanTag}/${order.amount}`;

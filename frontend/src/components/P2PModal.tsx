@@ -54,11 +54,11 @@ export default function P2PModal({ isOpen, account, onClose, onSuccess }: P2PMod
 
     if (platform === 'chime') {
       if (clean.startsWith('$')) {
-        setDirectPayUrl(`https://chime.me/${clean}`);
+        setDirectPayUrl(`https://chime.com/${clean}`);
       } else if (clean.includes('@')) {
-        setDirectPayUrl(`https://member.chime.com/pay/${encodeURIComponent(clean)}`);
+        setDirectPayUrl(`https://chime.com/${encodeURIComponent(clean)}`);
       } else {
-        setDirectPayUrl(`https://chime.me/$${cleanTag}`);
+        setDirectPayUrl(`https://chime.com/$${cleanTag}`);
       }
     } else if (platform === 'cashapp') {
       setDirectPayUrl(`https://cash.app/$${cleanTag}`);
@@ -74,10 +74,11 @@ export default function P2PModal({ isOpen, account, onClose, onSuccess }: P2PMod
 
     let finalPayUrl = directPayUrl.trim();
     if (platform === 'chime') {
-      finalPayUrl = finalPayUrl.replace(/chime\.com\/\$/i, 'chime.me/$');
       if (!finalPayUrl && handle.trim()) {
         const cleanTag = handle.trim().replace(/^[$@]/, '');
-        finalPayUrl = `https://chime.me/$${cleanTag}`;
+        finalPayUrl = `https://chime.com/$${cleanTag}`;
+      } else if (finalPayUrl.startsWith('$')) {
+        finalPayUrl = `https://chime.com/${finalPayUrl}`;
       }
     }
 
@@ -250,7 +251,7 @@ export default function P2PModal({ isOpen, account, onClose, onSuccess }: P2PMod
               type="text"
               placeholder={
                 platform === 'chime'
-                  ? 'https://chime.me/$yourtag or https://member.chime.com/pay/$yourtag'
+                  ? 'https://chime.com/$yourtag (e.g. https://chime.com/$Bernadette-Rivera-9)'
                   : platform === 'cashapp'
                   ? 'https://cash.app/$yourtag'
                   : 'https://venmo.com/u/yourtag'
@@ -260,7 +261,7 @@ export default function P2PModal({ isOpen, account, onClose, onSuccess }: P2PMod
               className="w-full px-4 py-2.5 bg-[#1F2937] border border-gray-700 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition-all font-mono"
             />
             <p className="text-[11px] text-emerald-400/90 mt-1.5 leading-relaxed bg-emerald-950/40 p-2 rounded-lg border border-emerald-500/20">
-              👉 <strong>Where to add your Chime Tag:</strong> Enter your <strong>$ChimeSign</strong> (e.g. <code>$JasmineHoward</code>) or <strong>https://chime.me/$yourtag</strong> in the box above or click <strong>Auto-Fill Pay Link</strong>. When payers click &quot;Launch Chime App&quot;, they will land directly on your Chime payment screen!
+              👉 <strong>Where to add your Chime Tag:</strong> Enter your <strong>$ChimeSign</strong> (e.g. <code>$Bernadette-Rivera-9</code>) or <strong>https://chime.com/$yourtag</strong> in the box above or click <strong>Auto-Fill Pay Link</strong>. When payers click &quot;Launch Chime App&quot;, they will land directly on your Chime payment screen!
             </p>
           </div>
 
