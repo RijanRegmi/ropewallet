@@ -138,36 +138,28 @@ export default function OrderGatewayHubPage() {
     const cleanTag = handleStr.replace(/^[$@]/, '');
 
     let targetUrl = order.directPayUrl;
-    let appUri = '';
-
     if (method === 'chime') {
-      // Native Chime App URI Scheme on Android / iOS
-      appUri = `chime://pay/${cleanTag}`;
+      // Normalize chime.com/$ to chime.me/$ for direct Chime App Pay Screen deep-linking!
+      targetUrl = targetUrl.replace(/chime\.com\/\$/i, 'chime.me/$');
       if (!targetUrl.startsWith('http')) {
-        targetUrl = `https://chime.com/$${cleanTag}`;
+        targetUrl = `https://chime.me/$${cleanTag}`;
       }
-    } else if (method === 'cashapp') {
-      appUri = `cashme://`;
-      if (!targetUrl.startsWith('http')) {
-        targetUrl = `https://cash.app/$${cleanTag}/${order.amount}`;
-      }
-    } else if (method === 'venmo') {
-      appUri = `venmo://paycharge?txn=pay&recipients=${cleanTag}&amount=${order.amount}`;
-      if (!targetUrl.startsWith('http')) {
-        targetUrl = `https://venmo.com/${cleanTag}?txn=pay&amount=${order.amount}`;
-      }
+    } else if (method === 'cashapp' && !targetUrl.startsWith('http')) {
+      targetUrl = `https://cash.app/$${cleanTag}/${order.amount}`;
+    } else if (method === 'venmo' && !targetUrl.startsWith('http')) {
+      targetUrl = `https://venmo.com/${cleanTag}?txn=pay&amount=${order.amount}`;
     }
 
     const isMobile = /Android|iPhone|iPad|iPod/i.test(typeof navigator !== 'undefined' ? navigator.userAgent : '');
 
-    if (isMobile && appUri) {
+    if (isMobile && method === 'chime') {
       e.preventDefault();
-      // Try launching native mobile app scheme
-      window.location.href = appUri;
-      // Fallback to direct web payment link if native app isn't opened within 600ms
+      // Try native app scheme first
+      const nativeScheme = `chime://pay/${cleanTag}`;
+      window.location.href = nativeScheme;
       setTimeout(() => {
         window.location.href = targetUrl;
-      }, 600);
+      }, 500);
     }
   };
 

@@ -72,11 +72,20 @@ export default function P2PModal({ isOpen, account, onClose, onSuccess }: P2PMod
     setLoading(true);
     setError('');
 
+    let finalPayUrl = directPayUrl.trim();
+    if (platform === 'chime') {
+      finalPayUrl = finalPayUrl.replace(/chime\.com\/\$/i, 'chime.me/$');
+      if (!finalPayUrl && handle.trim()) {
+        const cleanTag = handle.trim().replace(/^[$@]/, '');
+        finalPayUrl = `https://chime.me/$${cleanTag}`;
+      }
+    }
+
     const body = {
       platform,
       handle: handle.trim(),
       displayName: displayName.trim(),
-      directPayUrl: directPayUrl.trim(),
+      directPayUrl: finalPayUrl,
       email: email.trim(),
       appPassword: appPassword.trim(),
       isAutoVerifyEnabled,

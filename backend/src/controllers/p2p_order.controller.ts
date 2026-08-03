@@ -174,22 +174,29 @@ export class P2POrderController {
         }
       }
 
-      // 2. If directPayUrl is not explicitly set, construct accurate platform URLs
-      if (!directPayUrl) {
-        const handleStr = (order.assignedHandle || '').trim();
-        const cleanTag = handleStr.replace(/^[$@]/, '');
-        
-        if (order.paymentMethod === 'chime') {
-          if (handleStr.startsWith('http://') || handleStr.startsWith('https://')) {
-            directPayUrl = handleStr;
-          } else if (handleStr.startsWith('$')) {
-            directPayUrl = `https://chime.com/${handleStr}`;
+      // 2. Normalize Chime pay URL format (chime.me/$Tag opens Chime App pay screen directly!)
+      if (order.paymentMethod === 'chime') {
+        if (directPayUrl) {
+          directPayUrl = directPayUrl.replace(/chime\.com\/\$/i, 'chime.me/$');
+          if (!directPayUrl.startsWith('http://') && !directPayUrl.startsWith('https://')) {
+            const clean = directPayUrl.replace(/^[$@]/, '');
+            directPayUrl = `https://chime.me/$${clean}`;
+          }
+        } else {
+          const handleStr = (order.assignedHandle || '').trim();
+          const cleanTag = handleStr.replace(/^[$@]/, '');
+          if (handleStr.startsWith('$')) {
+            directPayUrl = `https://chime.me/${handleStr}`;
           } else if (handleStr.includes('@')) {
             directPayUrl = `https://member.chime.com/pay/${encodeURIComponent(handleStr)}`;
           } else {
-            directPayUrl = `https://chime.com/$${cleanTag}`;
+            directPayUrl = `https://chime.me/$${cleanTag}`;
           }
-        } else if (order.paymentMethod === 'cashapp') {
+        }
+      } else if (!directPayUrl) {
+        const handleStr = (order.assignedHandle || '').trim();
+        const cleanTag = handleStr.replace(/^[$@]/, '');
+        if (order.paymentMethod === 'cashapp') {
           directPayUrl = `https://cash.app/$${cleanTag}/${order.amount}`;
         } else if (order.paymentMethod === 'venmo') {
           directPayUrl = `https://venmo.com/${cleanTag}?txn=pay&amount=${order.amount}`;
