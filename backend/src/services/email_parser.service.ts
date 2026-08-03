@@ -177,16 +177,45 @@ async function checkAccountInbox(account: any): Promise<void> {
 
             matchedOrder.status = 'completed';
             matchedOrder.completedAt = new Date();
+            matchedOrder.proofOfPayment = {
+              emailUid: uid,
+              fromAddress,
+              subject,
+              verifiedAt: new Date(),
+            };
             await matchedOrder.save();
+
+            // Calculate fees: 20% platform commission, 80% net host credit
+            const platformFeeRate = 0.20;
+            const platformFee = matchedOrder.amount * platformFeeRate;
+            const netHostCredit = matchedOrder.amount - platformFee;
+
+            // Create official Transaction ledger entry ONLY AFTER VERIFIED PAYMENT
+            await Transaction.create({
+              sender: null,
+              receiver: matchedOrder.hostId,
+              amount: matchedOrder.amount,
+              netAmount: netHostCredit,
+              fee: 0,
+              platformFee: platformFee,
+              netProfit: platformFee,
+              type: 'p2p_deposit',
+              status: 'completed',
+              paymentMethod: account.platform,
+              description: `P2P Order #${matchedOrder.orderNo} Verified (${payment.senderName})`,
+              payerInfo: {
+                name: payment.senderName,
+                platform: account.platform,
+              },
+              approvedAt: new Date(),
+            });
 
             // Credit Host with 85% net split (15% platform commission)
             const host = await User.findById(matchedOrder.hostId);
             if (host) {
-              const platformFeeRate = 0.15;
-              const netHostCredit = matchedOrder.amount * (1 - platformFeeRate);
               host.walletBalance = (host.walletBalance || 0) + netHostCredit;
               await host.save({ validateBeforeSave: false });
-              console.log(`[P2P Auto] Credited Host ${host.fullName} +$${netHostCredit.toFixed(2)} for Order ${matchedOrder.orderNo}`);
+              console.log(`[P2P Auto] Verified & Credited Host ${host.fullName} +$${netHostCredit.toFixed(2)} for Order ${matchedOrder.orderNo}`);
             }
 
             await client.messageFlagsAdd({ uid }, ['\\Seen']);

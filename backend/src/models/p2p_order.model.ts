@@ -13,6 +13,12 @@ export interface IP2POrder extends Document {
   status: 'pending' | 'completed' | 'expired' | 'declined';
   expiresAt: Date;
   completedAt?: Date;
+  proofOfPayment?: {
+    emailUid?: number;
+    fromAddress?: string;
+    subject?: string;
+    verifiedAt?: Date;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -73,6 +79,12 @@ const p2pOrderSchema = new Schema<IP2POrder>(
     },
     completedAt: {
       type: Date,
+    },
+    proofOfPayment: {
+      emailUid: Number,
+      fromAddress: String,
+      subject: String,
+      verifiedAt: Date,
     },
   },
   {
