@@ -174,31 +174,16 @@ export class P2POrderController {
         }
       }
 
-      // 2. Format Chime pay URL to official Chime App Link route: https://chime.com/pay/$tag
-      if (order.paymentMethod === 'chime') {
-        if (directPayUrl) {
-          if (!directPayUrl.startsWith('http://') && !directPayUrl.startsWith('https://')) {
-            const clean = directPayUrl.replace(/^[$@]/, '');
-            directPayUrl = `https://chime.com/pay/$${clean}`;
-          }
-        } else {
-          const handleStr = (order.assignedHandle || '').trim();
-          const cleanTag = handleStr.replace(/^[$@]/, '');
-          if (handleStr.startsWith('$')) {
-            directPayUrl = `https://chime.com/pay/${handleStr}`;
-          } else if (handleStr.includes('@')) {
-            directPayUrl = `https://chime.com/pay/${encodeURIComponent(handleStr)}`;
-          } else {
-            directPayUrl = `https://chime.com/pay/$${cleanTag}`;
-          }
-        }
-      } else if (!directPayUrl) {
-        const handleStr = (order.assignedHandle || '').trim();
-        const cleanTag = handleStr.replace(/^[$@]/, '');
-        if (order.paymentMethod === 'cashapp') {
+      // 2. Direct pay link generator based on platform
+      if (!directPayUrl) {
+        if (order.paymentMethod === 'chime') {
+          directPayUrl = `https://app.chime.com/link/qr?handle=${encodeURIComponent(order.assignedHandle)}`;
+        } else if (order.paymentMethod === 'cashapp') {
+          const cleanTag = order.assignedHandle.replace(/^[$@]/, '');
           directPayUrl = `https://cash.app/$${cleanTag}/${order.amount}`;
         } else if (order.paymentMethod === 'venmo') {
-          directPayUrl = `https://venmo.com/${cleanTag}?txn=pay&amount=${order.amount}`;
+          const cleanVenmo = order.assignedHandle.replace(/^[@]/, '');
+          directPayUrl = `https://venmo.com/${cleanVenmo}?txn=pay&amount=${order.amount}`;
         }
       }
 

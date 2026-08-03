@@ -139,18 +139,16 @@ export default function OrderGatewayHubPage() {
     const cleanTag = handleStr.replace(/^[$@]/, '');
 
     let targetUrl = order.directPayUrl.trim();
-
-    if (method === 'chime') {
-      if (!targetUrl.includes('/pay/')) {
-        targetUrl = `https://chime.com/pay/$${cleanTag}`;
+    if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+      if (method === 'chime') {
+        targetUrl = `https://app.chime.com/link/qr?handle=${encodeURIComponent(handleStr)}`;
+      } else if (method === 'cashapp') {
+        targetUrl = `https://cash.app/$${cleanTag}/${order.amount}`;
+      } else if (method === 'venmo') {
+        targetUrl = `https://venmo.com/${cleanTag}?txn=pay&amount=${order.amount}`;
       }
-    } else if (method === 'cashapp' && !targetUrl.startsWith('http')) {
-      targetUrl = `https://cash.app/$${cleanTag}/${order.amount}`;
-    } else if (method === 'venmo' && !targetUrl.startsWith('http')) {
-      targetUrl = `https://venmo.com/${cleanTag}?txn=pay&amount=${order.amount}`;
     }
 
-    // Direct window location navigation triggers native app links on Android & iOS
     window.location.href = targetUrl;
   };
 
