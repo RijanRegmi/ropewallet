@@ -54,4 +54,9 @@ class ApiConstants {
   static const String transfer = '/payments/transfer';
   static const String withdraw = '/payments/withdraw';
   static const String transactions = '/payments/transactions';
+
+  // P2P Gateway Endpoints
+  static const String p2pHostInfo = '/pay/host';
+  static const String p2pCreateOrder = '/pay/create-order';
+  static const String p2pGetOrder = '/pay/order';
 }

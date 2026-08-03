@@ -10,12 +10,12 @@ export default function HostPayPage() {
   const router = useRouter();
   const userTag = (params?.userTag as string) || '';
 
-  const [hostInfo, setHostInfo] = useState<{ id: string; name: string; userTag: string } | null>(null);
+  const [hostInfo, setHostInfo] = useState<{ id: string; name: string; userTag: string; activePlatforms?: string[] } | null>(null);
   const [loadingHost, setLoadingHost] = useState(true);
   const [hostError, setHostError] = useState('');
 
   // Form states
-  const [paymentMethod, setPaymentMethod] = useState<'chime' | 'cashapp' | 'venmo' | 'applepay' | 'googlepay'>('chime');
+  const [paymentMethod, setPaymentMethod] = useState<string>('chime');
   const [gameUserId, setGameUserId] = useState('');
   const [payerTag, setPayerTag] = useState('');
   const [selectedAmount, setSelectedAmount] = useState<number>(20);
@@ -24,6 +24,13 @@ export default function HostPayPage() {
   const [errorMsg, setErrorMsg] = useState('');
 
   const presetAmounts = [20, 25, 30, 31, 40, 50, 80, 100, 125, 130, 150, 200, 300, 400, 500];
+
+  const methodLogos: Record<string, { name: string; logo: string; color: string }> = {
+    chime: { name: 'Chime', logo: 'https://img.icons8.com/color/96/chime.png', color: 'emerald' },
+    cashapp: { name: 'Cash App', logo: 'https://img.icons8.com/color/96/cash-app.png', color: 'emerald' },
+    venmo: { name: 'Venmo', logo: 'https://img.icons8.com/color/96/venmo.png', color: 'blue' },
+    applepay: { name: 'Apple Pay', logo: 'https://img.icons8.com/color/96/apple-pay.png', color: 'purple' },
+  };
 
   useEffect(() => {
     if (userTag) {
@@ -39,6 +46,9 @@ export default function HostPayPage() {
 
     if (res.success && res.data) {
       setHostInfo(res.data);
+      if (res.data.activePlatforms && res.data.activePlatforms.length > 0) {
+        setPaymentMethod(res.data.activePlatforms[0]);
+      }
     } else {
       setHostError(res.error || 'Host account not found');
     }
@@ -135,67 +145,31 @@ export default function HostPayPage() {
                 Payment Method <span className="text-indigo-400">*</span>
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {/* Chime */}
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('chime')}
-                  className={`p-3.5 rounded-2xl border flex flex-col items-center gap-2 transition-all cursor-pointer ${
-                    paymentMethod === 'chime'
-                      ? 'bg-emerald-500/15 border-emerald-500 text-emerald-400 ring-2 ring-emerald-500/20'
-                      : 'bg-[#1F2937]/50 border-gray-800 text-gray-400 hover:border-gray-700 hover:text-white'
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-400 text-xs">
-                    chime
-                  </div>
-                  <span className="text-xs font-bold">Chime</span>
-                </button>
-
-                {/* Cash App */}
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('cashapp')}
-                  className={`p-3.5 rounded-2xl border flex flex-col items-center gap-2 transition-all cursor-pointer ${
-                    paymentMethod === 'cashapp'
-                      ? 'bg-emerald-500/15 border-emerald-500 text-emerald-400 ring-2 ring-emerald-500/20'
-                      : 'bg-[#1F2937]/50 border-gray-800 text-gray-400 hover:border-gray-700 hover:text-white'
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-400 text-sm">
-                    $
-                  </div>
-                  <span className="text-xs font-bold">Cash App</span>
-                </button>
-
-                {/* Venmo */}
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('venmo')}
-                  className={`p-3.5 rounded-2xl border flex flex-col items-center gap-2 transition-all cursor-pointer ${
-                    paymentMethod === 'venmo'
-                      ? 'bg-blue-500/15 border-blue-500 text-blue-400 ring-2 ring-blue-500/20'
-                      : 'bg-[#1F2937]/50 border-gray-800 text-gray-400 hover:border-gray-700 hover:text-white'
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-xl bg-blue-500/20 flex items-center justify-center font-bold text-blue-400 text-xs">
-                    v
-                  </div>
-                  <span className="text-xs font-bold">Venmo</span>
-                </button>
-
-                {/* Apple Pay */}
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('applepay')}
-                  className={`p-3.5 rounded-2xl border flex flex-col items-center gap-2 transition-all cursor-pointer ${
-                    paymentMethod === 'applepay'
-                      ? 'bg-purple-500/15 border-purple-500 text-purple-400 ring-2 ring-purple-500/20'
-                      : 'bg-[#1F2937]/50 border-gray-800 text-gray-400 hover:border-gray-700 hover:text-white'
-                  }`}
-                >
-                  <Smartphone className="w-5 h-5 text-gray-300" />
-                  <span className="text-xs font-bold">Apple Pay</span>
-                </button>
+                {(hostInfo?.activePlatforms || ['chime', 'cashapp', 'venmo']).map((mKey) => {
+                  const m = methodLogos[mKey] || { name: mKey.toUpperCase(), logo: '', color: 'emerald' };
+                  const isSelected = paymentMethod === mKey;
+                  return (
+                    <button
+                      key={mKey}
+                      type="button"
+                      onClick={() => setPaymentMethod(mKey)}
+                      className={`p-3.5 rounded-2xl border flex flex-col items-center gap-2 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-emerald-500/15 border-emerald-500 text-emerald-400 ring-2 ring-emerald-500/20'
+                          : 'bg-[#1F2937]/50 border-gray-800 text-gray-400 hover:border-gray-700 hover:text-white'
+                      }`}
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-white/10 p-1.5 flex items-center justify-center">
+                        {m.logo ? (
+                          <img src={m.logo} alt={m.name} className="w-full h-full object-contain" />
+                        ) : (
+                          <span className="font-bold text-xs">{mKey[0].toUpperCase()}</span>
+                        )}
+                      </div>
+                      <span className="text-xs font-bold">{m.name}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

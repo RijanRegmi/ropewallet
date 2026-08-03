@@ -239,14 +239,6 @@ class _SignupPageState extends State<SignupPage> {
     }
   }
 
-  void _handleOtpPaste(String value) {
-    final digitsOnly = value.replaceAll(RegExp(r'\D'), '');
-    if (digitsOnly.length >= 6) {
-      for (int i = 0; i < 6; i++) {
-        _otpControllers[i].text = digitsOnly[i];
-      }
-      FocusScope.of(context).unfocus();
-    }
   }
 
   Widget _buildOtpField(int index) {

@@ -41,8 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAdmin((res as any).admin);
     } else {
       setAdmin(null);
-      // If we're on a protected page, redirect to login
-      if (pathname && !pathname.startsWith('/admin/login') && pathname !== '/') {
+      // If we're on an admin protected page, redirect to login
+      if (pathname && pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
         router.replace('/admin/login');
       }
     }

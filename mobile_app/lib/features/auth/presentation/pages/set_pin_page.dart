@@ -107,7 +107,6 @@ class _SetPinPageState extends State<SetPinPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final authProvider = Provider.of<AuthProvider>(context);
 
     return PopScope(
       canPop: false, // Strictly block back gesture

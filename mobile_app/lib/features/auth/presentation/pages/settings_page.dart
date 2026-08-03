@@ -288,7 +288,6 @@ class ChangeCredentialVerificationPage extends StatefulWidget {
 }
 
 class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerificationPage> {
-  final _formKeyOtp = GlobalKey<FormState>();
   final _formKeyTarget = GlobalKey<FormState>();
 
   final List<TextEditingController> _otpControllers = List.generate(6, (_) => TextEditingController());

@@ -27,12 +27,18 @@ export class P2POrderController {
         return;
       }
 
+      // Fetch active P2P payment methods/accounts configured in system
+      const activeAccounts = await P2PAccount.find({ isActive: true }).select('platform handle displayName directPayUrl');
+      const activePlatforms = Array.from(new Set(activeAccounts.map(a => a.platform.toLowerCase())));
+
       res.json({
         success: true,
         data: {
           id: host._id,
           name: host.fullName || `${host.firstName || ''} ${host.lastName || ''}`.trim() || host.userTag,
           userTag: host.userTag,
+          activeAccounts,
+          activePlatforms: activePlatforms.length > 0 ? activePlatforms : ['chime'], // fallback to chime if none explicitly marked
         },
       });
     } catch (error) {

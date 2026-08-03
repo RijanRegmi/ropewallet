@@ -17,6 +17,7 @@ import 'cash_app_transfer_page.dart';
 import 'venmo_transfer_page.dart';
 import 'bank_transfer_page.dart';
 import 'usdt_transfer_page.dart';
+import 'p2p_gateway_order_page.dart';
 import '../../../admin/presentation/pages/admin_portal_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -841,15 +842,16 @@ class _ShareLinkBottomSheet extends StatefulWidget {
 
 class _ShareLinkBottomSheetState extends State<_ShareLinkBottomSheet> {
   final TextEditingController _amountController = TextEditingController();
-  String _selectedMethod = 'any'; // 'any', 'chime', 'venmo', 'cashapp', 'card'
+  final TextEditingController _customerTagController = TextEditingController();
+  final TextEditingController _gameIdController = TextEditingController();
+  String _selectedMethod = 'chime'; // 'chime', 'venmo', 'cashapp', 'card'
   bool _isLoading = false;
 
   final List<Map<String, dynamic>> _allMethods = [
-    {'id': 'any', 'name': 'Any Method', 'icon': '🌐', 'color': const Color(0xFFEC4899)},
-    {'id': 'chime', 'name': 'Chime Only', 'icon': '🏦', 'color': const Color(0xFF25C490)},
-    {'id': 'venmo', 'name': 'Venmo Only', 'icon': '💜', 'color': const Color(0xFF008CFF)},
-    {'id': 'cashapp', 'name': 'Cash App Only', 'icon': '💚', 'color': const Color(0xFF00D632)},
-    {'id': 'card', 'name': 'Card / Pay', 'icon': '💳', 'color': const Color(0xFF3B82F6)},
+    {'id': 'chime', 'name': 'Chime', 'logo': 'https://img.icons8.com/color/96/chime.png', 'color': const Color(0xFF25C490)},
+    {'id': 'cashapp', 'name': 'Cash App', 'logo': 'https://img.icons8.com/color/96/cash-app.png', 'color': const Color(0xFF00D632)},
+    {'id': 'venmo', 'name': 'Venmo', 'logo': 'https://img.icons8.com/color/96/venmo.png', 'color': const Color(0xFF008CFF)},
+    {'id': 'applepay', 'name': 'Apple Pay', 'logo': 'https://img.icons8.com/color/96/apple-pay.png', 'color': const Color(0xFFA855F7)},
   ];
 
   List<Map<String, dynamic>> _availableMethods = [];
@@ -857,68 +859,95 @@ class _ShareLinkBottomSheetState extends State<_ShareLinkBottomSheet> {
   @override
   void initState() {
     super.initState();
-    final activePlatforms = widget.activeP2pAccounts.map((a) => a['platform'] as String).toSet();
-    _availableMethods = _allMethods.where((m) {
-      if (m['id'] == 'any' || m['id'] == 'card') return true;
-      return activePlatforms.contains(m['id']);
-    }).toList();
+    final activePlatforms = widget.activeP2pAccounts
+        .where((a) => a['isActive'] != false)
+        .map((a) => (a['platform'] as String).toLowerCase())
+        .toSet();
+
+    if (activePlatforms.isNotEmpty) {
+      _availableMethods = _allMethods.where((m) => activePlatforms.contains(m['id'])).toList();
+    } else {
+      // Fallback: Default to chime if none explicitly enabled
+      _availableMethods = _allMethods.where((m) => m['id'] == 'chime').toList();
+    }
+
+    if (_availableMethods.isNotEmpty) {
+      _selectedMethod = _availableMethods[0]['id'];
+    }
   }
 
   @override
   void dispose() {
     _amountController.dispose();
+    _customerTagController.dispose();
+    _gameIdController.dispose();
     super.dispose();
   }
 
   Future<void> _generateAndCopy() async {
     final amountText = _amountController.text.trim();
     final double? amount = double.tryParse(amountText);
+    final customerTag = _customerTagController.text.trim();
+    final gameUserId = _gameIdController.text.trim();
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userTag = authProvider.user?['userTag'] ?? 'admin';
+
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.red,
+          content: Text('Please enter a required amount of at least \$1.00'),
+        ),
+      );
+      return;
+    }
 
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final response = await ApiClient().post('/p2p/create-request', {
-        if (amount != null && amount > 0) 'amount': amount,
-        'note': _selectedMethod == 'any' 
-            ? 'General Payment Request'
-            : 'Payment Request via ${_selectedMethod.toUpperCase()}',
+      final response = await ApiClient().post('/pay/create-order', {
+        'userTag': userTag,
+        'payerTag': customerTag,
+        'gameUserId': gameUserId,
+        'paymentMethod': _selectedMethod,
+        'amount': amount,
       });
 
       if (!mounted) return;
 
       final responseData = jsonDecode(response.body);
-      if (response.statusCode == 201 && responseData['success'] == true) {
-        String link = responseData['data']['paymentLink'];
-        
-        // Append selected method to link if not 'any'
-        if (_selectedMethod != 'any') {
-          link = '$link&method=$_selectedMethod';
-        }
+      if ((response.statusCode == 200 || response.statusCode == 201) && responseData['success'] == true) {
+        final orderId = responseData['data']['orderId'] as String;
+        final link = 'https://www.ropewallet.com/pay/hub/$orderId';
 
         await Clipboard.setData(ClipboardData(text: link));
-        
+
         if (!mounted) return;
         Navigator.pop(context);
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFFEC4899),
+          const SnackBar(
+            backgroundColor: Color(0xFF10B981),
             content: Row(
               children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white),
-                const SizedBox(width: 10),
+                Icon(Icons.check_circle_rounded, color: Colors.white),
+                SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    _selectedMethod == 'any'
-                        ? 'Unique general payment link copied!'
-                        : 'Unique ${_selectedMethod.toUpperCase()} request link copied!',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    'Payment Gateway Link copied to clipboard! Share with customer.',
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
             ),
+          ),
+        );
+
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => P2PGatewayOrderPage(orderId: orderId),
           ),
         );
       } else {
@@ -1009,9 +1038,77 @@ class _ShareLinkBottomSheetState extends State<_ShareLinkBottomSheet> {
             ),
             const SizedBox(height: 24),
             
+            // Customer Tag Field
+            Text(
+              'Customer P2P Tag / Name (e.g. \$alice99)',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white54 : Colors.black45,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _customerTagController,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+              decoration: InputDecoration(
+                hintText: 'e.g. \$alice99 or Alice Smith',
+                hintStyle: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.white24 : Colors.black26,
+                ),
+                filled: true,
+                fillColor: isDark ? const Color(0xFF0F1218) : Colors.grey.shade100,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Account ID Field (Optional)
+            Text(
+              'Account ID (Optional, e.g. 101)',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white54 : Colors.black45,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _gameIdController,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+              decoration: InputDecoration(
+                hintText: 'e.g. 101',
+                hintStyle: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.white24 : Colors.black26,
+                ),
+                filled: true,
+                fillColor: isDark ? const Color(0xFF0F1218) : Colors.grey.shade100,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              ),
+            ),
+            const SizedBox(height: 16),
+
             // Amount Input Field
             Text(
-              'Request Amount (Optional)',
+              'Request Amount (USD) *',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
@@ -1097,13 +1194,15 @@ class _ShareLinkBottomSheetState extends State<_ShareLinkBottomSheet> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          method['icon'],
-                          style: const TextStyle(fontSize: 14),
+                        Image.network(
+                          method['logo'] as String,
+                          height: 20,
+                          width: 20,
+                          errorBuilder: (c, e, s) => Icon(Icons.payment, size: 18, color: method['color'] as Color),
                         ),
-                        const SizedBox(width: 5),
+                        const SizedBox(width: 6),
                         Text(
-                          method['name'].split(' ')[0],
+                          method['name'],
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,

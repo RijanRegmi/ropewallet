@@ -1,10 +1,14 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../../auth/presentation/widgets/pin_code_dialog.dart';
 import 'receipt_page.dart';
+import 'p2p_gateway_order_page.dart';
 
 class ChimeTransferPage extends StatefulWidget {
   const ChimeTransferPage({super.key});
@@ -25,6 +29,9 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
   final _bankAmountController = TextEditingController();
 
   final _chimeTagController = TextEditingController();
+  final _customerTagController = TextEditingController();
+  final _gameIdController = TextEditingController();
+  String _selectedP2PMethod = 'chime';
   final _holderNameController = TextEditingController();
   final _routingController = TextEditingController();
   final _accountController = TextEditingController();
@@ -54,6 +61,8 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
     _tagAmountController.dispose();
     _bankAmountController.dispose();
     _chimeTagController.dispose();
+    _customerTagController.dispose();
+    _gameIdController.dispose();
     _holderNameController.dispose();
     _routingController.dispose();
     _accountController.dispose();
@@ -136,6 +145,72 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
           ),
         );
       }
+    }
+  }
+
+  Future<void> _submitP2PGatewayOrder() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userTag = authProvider.user?['userTag'] ?? 'admin';
+    final amount = double.tryParse(_depositAmountController.text.trim()) ?? 0.0;
+    final customerTag = _customerTagController.text.trim();
+    final gameUserId = _gameIdController.text.trim();
+
+    if (amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid deposit amount of at least \$1.00'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final response = await ApiClient().post('/pay/create-order', {
+        'userTag': userTag,
+        'payerTag': customerTag,
+        'gameUserId': gameUserId,
+        'paymentMethod': _selectedP2PMethod,
+        'amount': amount,
+      });
+
+      final res = jsonDecode(response.body);
+      if (res['success'] == true && res['data'] != null && res['data']['orderId'] != null) {
+        final orderId = res['data']['orderId'] as String;
+        final shareableUrl = 'https://www.ropewallet.com/pay/hub/$orderId';
+
+        await Clipboard.setData(ClipboardData(text: shareableUrl));
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Payment Gateway Link copied to clipboard! Share with customer.'),
+              backgroundColor: Color(0xFF10B981),
+              duration: Duration(seconds: 3),
+            ),
+          );
+
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => P2PGatewayOrderPage(orderId: orderId),
+            ),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res['error'] ?? 'Failed to create gateway order'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error creating gateway order: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
   }
 
@@ -490,6 +565,101 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
                               const Text('AVAILABLE ROPEWALLET BALANCE', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                               const SizedBox(height: 4),
                               Text('\$${userBalance.toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFF10B981), fontSize: 28, fontWeight: FontWeight.w800)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        // Gateway Generator Box
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.qr_code_2_rounded, color: Color(0xFF10B981), size: 20),
+                                  SizedBox(width: 8),
+                                  Text('P2P Gateway Link Generator', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Method Choice Chips
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: [
+                                    {'id': 'chime', 'name': 'Chime', 'logo': 'https://img.icons8.com/color/96/chime.png'},
+                                    {'id': 'cashapp', 'name': 'Cash App', 'logo': 'https://img.icons8.com/color/96/cash-app.png'},
+                                    {'id': 'venmo', 'name': 'Venmo', 'logo': 'https://img.icons8.com/color/96/venmo.png'},
+                                    {'id': 'applepay', 'name': 'Apple Pay', 'logo': 'https://img.icons8.com/color/96/apple-pay.png'},
+                                  ].map((m) {
+                                    final isSel = _selectedP2PMethod == m['id'];
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 8),
+                                      child: ChoiceChip(
+                                        avatar: Image.network(
+                                          m['logo']!,
+                                          height: 18,
+                                          errorBuilder: (c, e, s) => const SizedBox.shrink(),
+                                        ),
+                                        label: Text(m['name']!, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isSel ? Colors.white : Colors.grey)),
+                                        selected: isSel,
+                                        selectedColor: const Color(0xFF10B981),
+                                        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
+                                        onSelected: (val) {
+                                          if (val) setState(() => _selectedP2PMethod = m['id']!);
+                                        },
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+
+                              // Customer Tag Input
+                              TextFormField(
+                                controller: _customerTagController,
+                                decoration: InputDecoration(
+                                  labelText: 'Customer P2P Tag (e.g. \$alice99)',
+                                  hintText: 'e.g. \$alice99 or Alice Smith',
+                                  prefixIcon: const Icon(Icons.alternate_email_rounded, size: 18),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Account ID Input
+                              TextFormField(
+                                controller: _gameIdController,
+                                decoration: InputDecoration(
+                                  labelText: 'Account ID (Optional, e.g. 101)',
+                                  prefixIcon: const Icon(Icons.badge_outlined, size: 18),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Generate Link Button
+                              SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: ElevatedButton.icon(
+                                  onPressed: _submitP2PGatewayOrder,
+                                  icon: const Icon(Icons.link_rounded, color: Colors.white, size: 18),
+                                  label: const Text('Generate & Copy Gateway Link', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF10B981),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
