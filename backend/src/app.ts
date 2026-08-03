@@ -110,12 +110,15 @@ app.get('/', (req, res) => {
 
 
 
+import p2pOrderRoutes from './routes/p2p_order.routes.js';
+
 // ─── API Routes ────────────────────────────────────────────────
 app.post(['/api/webhook', '/webhook'], PaymentController.handleWebhook);
 app.use(['/api/auth', '/auth'], authLimiter as any, authRoutes);
 app.use(['/api/payments', '/payments'], paymentRoutes);
 app.use(['/api/admin', '/admin'], adminRoutes);
 app.use(['/api/p2p', '/p2p'], p2pRoutes);
+app.use(['/api/pay', '/pay'], p2pOrderRoutes);
 
 // Catch 404 routes
 app.use((req, res) => {

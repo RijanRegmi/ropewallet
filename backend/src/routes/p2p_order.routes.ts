@@ -1,0 +1,15 @@
+import { Router } from 'express';
+import { P2POrderController } from '../controllers/p2p_order.controller.js';
+
+const router = Router();
+
+// Public: Get host info for payment selection page
+router.get('/host/:userTag', P2POrderController.getHostInfo);
+
+// Public: Create order gateway link
+router.post('/create-order', P2POrderController.createOrder);
+
+// Public: Get order status and remaining countdown timer
+router.get('/order/:orderId', P2POrderController.getOrder);
+
+export default router;

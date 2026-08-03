@@ -7,6 +7,8 @@ import { User } from '../models/user.model.js';
 let pollingInterval: NodeJS.Timeout | null = null;
 let isPolling = false;
 
+import { P2POrder } from '../models/p2p_order.model.js';
+
 // Helper to fuzzy match payer names
 function fuzzyMatchName(dbName: string, emailName: string): boolean {
   // If no payer name was provided in the database (automated verification), match purely on amount
@@ -146,49 +148,86 @@ async function checkAccountInbox(account: any): Promise<void> {
         if (payment) {
           console.log(`[P2P Auto] Parsed receipt: $${payment.amount} from "${payment.senderName}" on ${account.platform}`);
           
-          // Look up matching pending transaction in database
-          // Allow small margin (e.g. ±1 cent, or exact matches)
-          const txn = await Transaction.findOne({
+          // 1. Check P2POrder gateway orders first
+          const pendingOrders = await P2POrder.find({
+            status: 'pending',
+            paymentMethod: account.platform,
+            amount: payment.amount,
+            expiresAt: { $gt: new Date() },
+          });
+
+          let matchedOrder = null;
+          for (const order of pendingOrders) {
+            const cleanSender = payment.senderName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const cleanPayerTag = (order.payerTag || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const cleanPayerName = (order.payerName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+            if (
+              (cleanPayerTag && (cleanSender.includes(cleanPayerTag) || cleanPayerTag.includes(cleanSender))) ||
+              (cleanPayerName && (cleanSender.includes(cleanPayerName) || cleanPayerName.includes(cleanSender))) ||
+              (!cleanPayerTag && !cleanPayerName)
+            ) {
+              matchedOrder = order;
+              break;
+            }
+          }
+
+          if (matchedOrder) {
+            console.log(`[P2P Auto] Matched Gateway P2POrder ID ${matchedOrder._id} (Order: ${matchedOrder.orderNo})`);
+
+            matchedOrder.status = 'completed';
+            matchedOrder.completedAt = new Date();
+            await matchedOrder.save();
+
+            // Credit Host with 85% net split (15% platform commission)
+            const host = await User.findById(matchedOrder.hostId);
+            if (host) {
+              const platformFeeRate = 0.15;
+              const netHostCredit = matchedOrder.amount * (1 - platformFeeRate);
+              host.walletBalance = (host.walletBalance || 0) + netHostCredit;
+              await host.save({ validateBeforeSave: false });
+              console.log(`[P2P Auto] Credited Host ${host.fullName} +$${netHostCredit.toFixed(2)} for Order ${matchedOrder.orderNo}`);
+            }
+
+            await client.messageFlagsAdd({ uid }, ['\\Seen']);
+            continue;
+          }
+
+          // 2. Check legacy Transaction records
+          const pendingTxns = await Transaction.find({
             status: 'pending',
             type: 'p2p_deposit',
             paymentMethod: account.platform,
             amount: payment.amount
           }).populate('receiver');
-          
-          if (txn) {
+
+          let matchedTxn = null;
+          for (const txn of pendingTxns) {
             const dbPayerName = txn.payerInfo?.name || '';
-            
-            // Fuzzy match the names to be safe
             if (fuzzyMatchName(dbPayerName, payment.senderName)) {
-              console.log(`[P2P Auto] Found matching pending transaction: ID ${txn._id} for recipient wallet.`);
-              
-              // Approve the transaction and update recipient balance
-              const fee = 0;
-              const netAmount = txn.amount;
-              
-              txn.status = 'completed';
-              txn.fee = fee;
-              txn.platformFee = fee;
-              txn.netAmount = netAmount;
-              txn.netProfit = fee;
-              txn.approvedAt = new Date();
-              await txn.save();
-              
-              const receiver = await User.findById(txn.receiver);
-              if (receiver) {
-                receiver.walletBalance = (receiver.walletBalance || 0) + netAmount;
-                await receiver.save({ validateBeforeSave: false });
-                console.log(`[P2P Auto] Instantly credited $${netAmount.toFixed(2)} to ${receiver.fullName}.`);
-              }
-              
-              // Mark the email as read in the inbox
-              await client.messageFlagsAdd({ uid }, ['\\Seen']);
-              console.log(`[P2P Auto] Email marked as Read.`);
-            } else {
-              console.log(`[P2P Auto] Found transaction with amount $${payment.amount} but name mismatch ("${dbPayerName}" vs email "${payment.senderName}")`);
+              matchedTxn = txn;
+              break;
             }
+          }
+
+          if (matchedTxn) {
+            console.log(`[P2P Auto] Found matching pending transaction: ID ${matchedTxn._id} for recipient wallet.`);
+            
+            matchedTxn.status = 'completed';
+            matchedTxn.approvedAt = new Date();
+            await matchedTxn.save();
+            
+            const receiver = await User.findById(matchedTxn.receiver);
+            if (receiver) {
+              receiver.walletBalance = (receiver.walletBalance || 0) + matchedTxn.amount;
+              await receiver.save({ validateBeforeSave: false });
+              console.log(`[P2P Auto] Instantly credited $${matchedTxn.amount.toFixed(2)} to ${receiver.fullName}.`);
+            }
+            
+            await client.messageFlagsAdd({ uid }, ['\\Seen']);
+            console.log(`[P2P Auto] Email marked as Read.`);
           } else {
-            console.log(`[P2P Auto] No pending transaction found matching amount $${payment.amount} on ${account.platform}`);
+            console.log(`[P2P Auto] No pending transaction/order found matching amount $${payment.amount} from "${payment.senderName}" on ${account.platform}`);
           }
         }
       }
