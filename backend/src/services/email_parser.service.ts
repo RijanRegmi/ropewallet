@@ -201,14 +201,14 @@ async function checkAccountInbox(account: any): Promise<void> {
               netProfit: platformFee,
               type: 'p2p_deposit',
               status: 'completed',
-              paymentMethod: account.platform,
-              description: `P2P Order #${matchedOrder.orderNo} Verified (${payment.senderName})`,
+              paymentMethod: account.platform as any,
+              remarks: `P2P Order #${matchedOrder.orderNo} Verified (${payment.senderName})`,
               payerInfo: {
                 name: payment.senderName,
                 platform: account.platform,
               },
               approvedAt: new Date(),
-            });
+            } as any);
 
             // Credit Host with 85% net split (15% platform commission)
             const host = await User.findById(matchedOrder.hostId);
