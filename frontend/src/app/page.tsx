@@ -249,7 +249,7 @@ export default function ProfessionalWhiteLandingPage() {
                 <div className="w-[215px] sm:w-[260px] lg:w-[290px] bg-slate-950 border-[7px] sm:border-[8px] border-slate-900 rounded-[40px] sm:rounded-[44px] shadow-2xl shadow-slate-950/60 overflow-hidden relative border-t-[9px] border-b-[9px]">
                   {/* Android Camera Punch Hole */}
                   <div className="w-3 h-3 bg-[#0B0F1A] border border-slate-800 rounded-full mx-auto absolute top-1.5 left-1/2 -translate-x-1/2 z-30 shadow-inner" />
-                  
+
                   {/* Phone Screen Display with App Screenshot */}
                   <div className="bg-[#0B0F1A] rounded-[32px] sm:rounded-[36px] overflow-hidden pt-4 sm:pt-5">
                     <img

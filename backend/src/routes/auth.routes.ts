@@ -6,9 +6,9 @@ const router = Router();
 
 router.get('/check-usertag', AuthController.checkUserTag);
 router.get('/check-email', AuthController.checkEmail);
-// router.post('/send-register-otp', AuthController.sendRegisterOtp);
-// router.post('/verify-register-otp', AuthController.verifyRegisterOtp);
-// router.post('/register', AuthController.register);
+router.post('/send-register-otp', AuthController.sendRegisterOtp);
+router.post('/verify-register-otp', AuthController.verifyRegisterOtp);
+router.post('/register', AuthController.register);
 router.post('/login', AuthController.login);
 router.post('/forgot-password', AuthController.forgotPassword);
 router.post('/verify-forgot-password-otp', AuthController.verifyForgotPasswordOtp);

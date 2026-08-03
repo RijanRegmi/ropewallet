@@ -310,9 +310,9 @@ export class AdminController {
         return;
       }
 
-      // Hosts can ONLY create 'customer' role accounts. Only Super Admins can create 'host' or 'superadmin' accounts.
-      if (creatorRole !== 'superadmin' && targetRole !== 'customer') {
-        res.status(403).json({ success: false, error: 'Hosts can only create regular customer accounts' });
+      // Only Super Admin can directly create user accounts from Admin Portal
+      if (creatorRole !== 'superadmin') {
+        res.status(403).json({ success: false, error: 'User creation is restricted to Super Admin only. Hosts cannot create users.' });
         return;
       }
 

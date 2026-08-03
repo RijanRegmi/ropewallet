@@ -67,7 +67,7 @@ export class AuthController {
     try {
       const { firstName, middleName, lastName, userTag, email, password, phoneNumber, otpCode, transactionPin } = req.body;
       
-      if (!firstName || !lastName || !userTag || !email || !password || !phoneNumber || !otpCode || !transactionPin) {
+      if (!firstName || !lastName || !email || !password || !phoneNumber || !otpCode || !transactionPin) {
         res.status(400).json({ success: false, error: 'Please provide all required fields, including the OTP code and Transaction PIN' });
         return;
       }

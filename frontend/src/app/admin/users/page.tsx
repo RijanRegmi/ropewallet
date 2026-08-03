@@ -38,7 +38,7 @@ export default function UsersPage() {
     message: '',
     confirmText: 'Confirm',
     type: 'danger',
-    onConfirm: () => {},
+    onConfirm: () => { },
     loading: false,
   });
 
@@ -113,9 +113,8 @@ export default function UsersPage() {
     setConfirmState({
       isOpen: true,
       title: `${freeze ? 'Freeze' : 'Unfreeze'} User Account`,
-      message: `Are you sure you want to ${action} the account for "${u.fullName || u.email}"? ${
-        freeze ? 'The user will be blocked from accessing their account and submitting transactions.' : 'Access will be restored immediately.'
-      }`,
+      message: `Are you sure you want to ${action} the account for "${u.fullName || u.email}"? ${freeze ? 'The user will be blocked from accessing their account and submitting transactions.' : 'Access will be restored immediately.'
+        }`,
       confirmText: freeze ? 'Freeze Account' : 'Unfreeze Account',
       type: freeze ? 'warning' : 'info' as any,
       loading: false,
@@ -206,22 +205,20 @@ export default function UsersPage() {
       <div className="flex items-center gap-3 border-b border-[#1F2937] pb-3">
         <button
           onClick={() => setActiveTab('users')}
-          className={`px-4 py-2 text-sm font-bold rounded-xl transition-all cursor-pointer ${
-            activeTab === 'users'
+          className={`px-4 py-2 text-sm font-bold rounded-xl transition-all cursor-pointer ${activeTab === 'users'
               ? 'bg-indigo-600 text-white shadow-md'
               : 'bg-[#111827] text-gray-400 hover:text-white border border-gray-800'
-          }`}
+            }`}
         >
           User & Host Accounts ({filteredUsers.length})
         </button>
 
         <button
           onClick={() => setActiveTab('host_requests')}
-          className={`px-4 py-2 text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
-            activeTab === 'host_requests'
+          className={`px-4 py-2 text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center gap-2 ${activeTab === 'host_requests'
               ? 'bg-emerald-600 text-white shadow-md'
               : 'bg-[#111827] text-gray-400 hover:text-white border border-gray-800'
-          }`}
+            }`}
         >
           Become a Host Requests
           {hostRequests.filter((r) => r.status === 'pending').length > 0 && (
@@ -251,12 +248,11 @@ export default function UsersPage() {
                 <div key={hr._id} className="bg-[#1F2937]/60 border border-gray-800 rounded-xl p-5 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-extrabold text-white text-base">{hr.fullName}</span>
-                    <span className={`px-2.5 py-1 text-xs font-semibold rounded-lg uppercase ${
-                      hr.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                      hr.status === 'contacted' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                      hr.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                      'bg-red-500/10 text-red-400 border border-red-500/20'
-                    }`}>
+                    <span className={`px-2.5 py-1 text-xs font-semibold rounded-lg uppercase ${hr.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                        hr.status === 'contacted' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                          hr.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                            'bg-red-500/10 text-red-400 border border-red-500/20'
+                      }`}>
                       {hr.status}
                     </span>
                   </div>
@@ -296,129 +292,126 @@ export default function UsersPage() {
         </div>
       ) : (
         <div className="bg-[#111827] border border-[#1F2937] rounded-2xl overflow-hidden shadow-lg">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-gray-300">
-            <thead className="bg-[#1F2937]/50 text-xs uppercase text-gray-400 font-semibold">
-              <tr>
-                <th className="px-6 py-3.5">User</th>
-                <th className="px-6 py-3.5">Email</th>
-                <th className="px-6 py-3.5">Tag</th>
-                <th className="px-6 py-3.5">Balance</th>
-                <th className="px-6 py-3.5">Status</th>
-                <th className="px-6 py-3.5">Role</th>
-                <th className="px-6 py-3.5">Joined</th>
-                <th className="px-6 py-3.5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#1F2937]">
-              {loading ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-gray-300">
+              <thead className="bg-[#1F2937]/50 text-xs uppercase text-gray-400 font-semibold">
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-400">
-                    <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mx-auto mb-2"></div>
-                    Loading users...
-                  </td>
+                  <th className="px-6 py-3.5">User</th>
+                  <th className="px-6 py-3.5">Email</th>
+                  <th className="px-6 py-3.5">Tag</th>
+                  <th className="px-6 py-3.5">Balance</th>
+                  <th className="px-6 py-3.5">Status</th>
+                  <th className="px-6 py-3.5">Role</th>
+                  <th className="px-6 py-3.5">Joined</th>
+                  <th className="px-6 py-3.5 text-right">Actions</th>
                 </tr>
-              ) : filteredUsers.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-400">
-                    No matching users found.
-                  </td>
-                </tr>
-              ) : (
-                filteredUsers.map((u) => (
-                  <tr key={u._id} className="hover:bg-gray-800/30 transition-all">
-                    <td className="px-6 py-4 font-bold text-white">
-                      {u.fullName || `${u.firstName || ''} ${u.lastName || ''}`}
-                    </td>
-                    <td className="px-6 py-4">{u.email}</td>
-                    <td className="px-6 py-4 font-mono text-indigo-400 font-medium">
-                      {u.userTag ? (u.userTag.startsWith('$') ? u.userTag : `$${u.userTag}`) : '-'}
-                    </td>
-                    <td className="px-6 py-4 font-bold text-white">
-                      ${Number(u.walletBalance || 0).toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-2.5 py-1 text-xs font-semibold rounded-lg border ${
-                          u.isFrozen
-                            ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                        }`}
-                      >
-                        {u.isFrozen ? 'Frozen' : 'Active'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <select
-                        value={(u.role === 'user' || u.role === 'customer') ? 'customer' : (u.role === 'admin' || u.role === 'host') ? 'host' : 'superadmin'}
-                        onChange={(e) => handleRoleChange(u._id, e.target.value)}
-                        className="px-2.5 py-1 bg-gray-800 border border-gray-700 rounded-lg text-xs font-semibold text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
-                      >
-                        <option value="customer">Customer</option>
-                        <option value="host">Host</option>
-                        <option value="superadmin">Superadmin</option>
-                      </select>
-                    </td>
-                    <td className="px-6 py-4 text-xs text-gray-400">
-                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            setSelectedUser(u);
-                            setIsModalOpen(true);
-                          }}
-                          className="cursor-pointer p-2 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white active:scale-95 transition-all"
-                          title="Edit User"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => promptToggleFreeze(u, !u.isFrozen)}
-                          className={`cursor-pointer p-2 rounded-lg active:scale-95 transition-all ${
-                            u.isFrozen
-                              ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white'
-                              : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500 hover:text-white'
-                          }`}
-                          title={u.isFrozen ? 'Unfreeze Account' : 'Freeze Account'}
-                        >
-                          {u.isFrozen ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                        </button>
-                        <button
-                          onClick={() => promptDeleteUser(u)}
-                          className="cursor-pointer p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white active:scale-95 transition-all"
-                          title="Delete User"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+              </thead>
+              <tbody className="divide-y divide-[#1F2937]">
+                {loading ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-12 text-center text-gray-400">
+                      <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mx-auto mb-2"></div>
+                      Loading users...
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 p-4 border-t border-[#1F2937]">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPage(p)}
-                className={`cursor-pointer px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all active:scale-95 ${
-                  p === page
-                    ? 'bg-indigo-600 text-white border-indigo-500'
-                    : 'bg-gray-800 text-gray-300 border-gray-700 hover:border-gray-500 hover:text-white'
-                }`}
-              >
-                {p}
-              </button>
-            ))}
+                ) : filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-12 text-center text-gray-400">
+                      No matching users found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((u) => (
+                    <tr key={u._id} className="hover:bg-gray-800/30 transition-all">
+                      <td className="px-6 py-4 font-bold text-white">
+                        {u.fullName || `${u.firstName || ''} ${u.lastName || ''}`}
+                      </td>
+                      <td className="px-6 py-4">{u.email}</td>
+                      <td className="px-6 py-4 font-mono text-indigo-400 font-medium">
+                        {u.userTag ? (u.userTag.startsWith('$') ? u.userTag : `$${u.userTag}`) : '-'}
+                      </td>
+                      <td className="px-6 py-4 font-bold text-white">
+                        ${Number(u.walletBalance || 0).toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-lg border ${u.isFrozen
+                              ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                              : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            }`}
+                        >
+                          {u.isFrozen ? 'Frozen' : 'Active'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <select
+                          value={(u.role === 'user' || u.role === 'customer') ? 'customer' : (u.role === 'admin' || u.role === 'host') ? 'host' : 'superadmin'}
+                          onChange={(e) => handleRoleChange(u._id, e.target.value)}
+                          className="px-2.5 py-1 bg-gray-800 border border-gray-700 rounded-lg text-xs font-semibold text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+                        >
+                          <option value="customer">Customer</option>
+                          <option value="host">Host</option>
+                          <option value="superadmin">Superadmin</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-4 text-xs text-gray-400">
+                        {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedUser(u);
+                              setIsModalOpen(true);
+                            }}
+                            className="cursor-pointer p-2 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white active:scale-95 transition-all"
+                            title="Edit User"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => promptToggleFreeze(u, !u.isFrozen)}
+                            className={`cursor-pointer p-2 rounded-lg active:scale-95 transition-all ${u.isFrozen
+                                ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white'
+                                : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500 hover:text-white'
+                              }`}
+                            title={u.isFrozen ? 'Unfreeze Account' : 'Freeze Account'}
+                          >
+                            {u.isFrozen ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                          </button>
+                          <button
+                            onClick={() => promptDeleteUser(u)}
+                            className="cursor-pointer p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white active:scale-95 transition-all"
+                            title="Delete User"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 p-4 border-t border-[#1F2937]">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`cursor-pointer px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all active:scale-95 ${p === page
+                      ? 'bg-indigo-600 text-white border-indigo-500'
+                      : 'bg-gray-800 text-gray-300 border-gray-700 hover:border-gray-500 hover:text-white'
+                    }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       <UserModal
