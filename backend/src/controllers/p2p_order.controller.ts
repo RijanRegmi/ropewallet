@@ -3,6 +3,7 @@ import { P2POrder } from '../models/p2p_order.model.js';
 import { P2PAccount } from '../models/p2p_account.model.js';
 import { User } from '../models/user.model.js';
 import { Transaction } from '../models/transaction.model.js';
+import { HostRequest } from '../models/host_request.model.js';
 import crypto from 'crypto';
 
 export class P2POrderController {
@@ -311,6 +312,79 @@ export class P2POrderController {
           platformFee,
           hostUserTag: host.userTag,
         },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Public: Become a Host Request (/api/pay/become-host-request)
+   */
+  static async createHostRequest(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { fullName, email, phone, telegramOrWhatsapp, notes } = req.body;
+
+      if (!fullName || !email) {
+        res.status(400).json({ success: false, error: 'Full Name and Email Address are required.' });
+        return;
+      }
+
+      const hostReq = await HostRequest.create({
+        fullName,
+        email,
+        phone,
+        telegramOrWhatsapp,
+        notes,
+        status: 'pending',
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Your Become a Host connection request has been securely submitted to Super Admin!',
+        data: hostReq,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Admin: Get all Become a Host Requests (/api/pay/host-requests)
+   */
+  static async getHostRequests(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const requests = await HostRequest.find().sort({ createdAt: -1 });
+      res.json({
+        success: true,
+        data: requests,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Admin: Update Host Request Status (/api/pay/host-requests/:id/status)
+   */
+  static async updateHostRequestStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      const hostReq = await HostRequest.findById(id);
+      if (!hostReq) {
+        res.status(404).json({ success: false, error: 'Host request not found' });
+        return;
+      }
+
+      hostReq.status = status;
+      await hostReq.save();
+
+      res.json({
+        success: true,
+        message: `Updated request status to ${status}`,
+        data: hostReq,
       });
     } catch (error) {
       next(error);

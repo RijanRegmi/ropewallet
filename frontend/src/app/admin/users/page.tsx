@@ -11,6 +11,8 @@ import { Search, Plus, Edit, Lock, Unlock, Trash2 } from 'lucide-react';
 export default function UsersPage() {
   const [users, setUsers] = useState<UserModel[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserModel[]>([]);
+  const [activeTab, setActiveTab] = useState<'users' | 'host_requests'>('users');
+  const [hostRequests, setHostRequests] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -44,7 +46,25 @@ export default function UsersPage() {
 
   useEffect(() => {
     fetchUsers(page, searchQuery);
+    fetchHostRequests();
   }, [page]);
+
+  const fetchHostRequests = async () => {
+    const res = await apiRequest<any[]>('/pay/host-requests');
+    if (res.success && Array.isArray(res.data)) {
+      setHostRequests(res.data);
+    }
+  };
+
+  const handleUpdateHostRequestStatus = async (id: string, status: string) => {
+    const res = await apiRequest(`/pay/host-requests/${id}/status`, 'PUT', { status });
+    if (res.success) {
+      showToast(`Updated request status to ${status}`);
+      fetchHostRequests();
+    } else {
+      showToast(res.error || 'Failed to update status', 'error');
+    }
+  };
 
   const filterList = (list: UserModel[], query: string) => {
     const q = query.toLowerCase().trim();
@@ -182,7 +202,100 @@ export default function UsersPage() {
         </div>
       </div>
 
-      <div className="bg-[#111827] border border-[#1F2937] rounded-2xl overflow-hidden shadow-lg">
+      {/* Tabs */}
+      <div className="flex items-center gap-3 border-b border-[#1F2937] pb-3">
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`px-4 py-2 text-sm font-bold rounded-xl transition-all cursor-pointer ${
+            activeTab === 'users'
+              ? 'bg-indigo-600 text-white shadow-md'
+              : 'bg-[#111827] text-gray-400 hover:text-white border border-gray-800'
+          }`}
+        >
+          User & Host Accounts ({filteredUsers.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('host_requests')}
+          className={`px-4 py-2 text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
+            activeTab === 'host_requests'
+              ? 'bg-emerald-600 text-white shadow-md'
+              : 'bg-[#111827] text-gray-400 hover:text-white border border-gray-800'
+          }`}
+        >
+          Become a Host Requests
+          {hostRequests.filter((r) => r.status === 'pending').length > 0 && (
+            <span className="px-2 py-0.5 text-xs font-black bg-amber-500 text-black rounded-full">
+              {hostRequests.filter((r) => r.status === 'pending').length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeTab === 'host_requests' ? (
+        <div className="bg-[#111827] border border-[#1F2937] rounded-2xl overflow-hidden shadow-lg p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-white">Incoming Become a Host Connection Requests ({hostRequests.length})</h3>
+              <p className="text-xs text-gray-400">Potential hosts requesting access to the platform</p>
+            </div>
+          </div>
+
+          {hostRequests.length === 0 ? (
+            <div className="text-center py-12 text-gray-500 text-sm">
+              No host connection requests received yet.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {hostRequests.map((hr) => (
+                <div key={hr._id} className="bg-[#1F2937]/60 border border-gray-800 rounded-xl p-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-white text-base">{hr.fullName}</span>
+                    <span className={`px-2.5 py-1 text-xs font-semibold rounded-lg uppercase ${
+                      hr.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                      hr.status === 'contacted' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                      hr.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                      'bg-red-500/10 text-red-400 border border-red-500/20'
+                    }`}>
+                      {hr.status}
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-gray-300 space-y-1">
+                    <p><strong>Email:</strong> {hr.email}</p>
+                    {hr.phone && <p><strong>Phone:</strong> {hr.phone}</p>}
+                    {hr.telegramOrWhatsapp && <p><strong>Telegram/WhatsApp:</strong> {hr.telegramOrWhatsapp}</p>}
+                    {hr.notes && <p className="text-gray-400 pt-1"><strong>Notes:</strong> {hr.notes}</p>}
+                    <p className="text-gray-500 text-[10px] pt-1">Requested: {new Date(hr.createdAt).toLocaleString()}</p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-800">
+                    <button
+                      onClick={() => handleUpdateHostRequestStatus(hr._id, 'contacted')}
+                      className="px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white text-xs font-bold rounded-lg transition-all cursor-pointer"
+                    >
+                      Mark Contacted
+                    </button>
+                    <button
+                      onClick={() => handleUpdateHostRequestStatus(hr._id, 'approved')}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition-all cursor-pointer"
+                    >
+                      Approve Request
+                    </button>
+                    <a
+                      href={`mailto:${hr.email}`}
+                      className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold rounded-lg transition-all cursor-pointer"
+                    >
+                      Send Email
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="bg-[#111827] border border-[#1F2937] rounded-2xl overflow-hidden shadow-lg">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-gray-300">
             <thead className="bg-[#1F2937]/50 text-xs uppercase text-gray-400 font-semibold">
@@ -306,6 +419,7 @@ export default function UsersPage() {
           </div>
         )}
       </div>
+      )}
 
       <UserModal
         isOpen={isModalOpen}

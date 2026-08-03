@@ -34,10 +34,8 @@ export default function Sidebar() {
             </h1>
             <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Admin Portal</span>
           </div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-emerald-500/20 via-indigo-500/20 to-purple-500/20 border border-emerald-500/30">
-            <div className="w-4 h-4 rounded bg-gradient-to-tr from-emerald-400 to-indigo-500 flex items-center justify-center text-[9px] font-black text-black">
-              RJN
-            </div>
+          <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#1F2937] border border-gray-700">
+            <img src="/RJN.png" alt="RJN Logo" className="h-5 w-auto object-contain rounded" />
             <span className="font-extrabold text-[10px] tracking-wider text-emerald-400">
               RJN
             </span>

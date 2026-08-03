@@ -120,7 +120,7 @@ export default function LoginPage() {
                   placeholder="admin@ropewallet.com"
                   value={loginInput}
                   onChange={(e) => setLoginInput(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-[#1F2937] border border-[#374151] rounded-xl text-white text-sm placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                  className="w-full pl-10 pr-4 py-3 bg-[#1F2937] border border-[#374151] rounded-xl text-white text-sm placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-all"
                 />
               </div>
             </div>
@@ -157,7 +157,7 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-11 py-3 bg-[#1F2937] border border-[#374151] rounded-xl text-white text-sm placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                  className="w-full pl-10 pr-11 py-3 bg-[#1F2937] border border-[#374151] rounded-xl text-white text-sm placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-all"
                 />
                 <button
                   type="button"
