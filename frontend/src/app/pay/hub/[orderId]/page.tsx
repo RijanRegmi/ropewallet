@@ -197,28 +197,76 @@ export default function OrderGatewayHubPage() {
 
             {/* Handle Display Box */}
             <div className="bg-[#1F2937] border border-gray-700 rounded-2xl p-4 sm:p-5 text-center space-y-3">
-              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block">Recipient Handle / Email</span>
-              <div className="text-lg sm:text-xl font-extrabold text-white font-mono tracking-wider break-all select-all">
-                {order.assignedHandle}
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block">
+                {order.paymentMethod.toLowerCase() === 'chime'
+                  ? 'Recipient $ChimeSign Tag *'
+                  : order.paymentMethod.toLowerCase() === 'cashapp'
+                  ? 'Recipient $cashtag *'
+                  : 'Recipient Handle *'}
+              </span>
+              <div className="text-xl sm:text-2xl font-extrabold text-emerald-400 font-mono tracking-wider break-all select-all py-1">
+                {order.paymentMethod.toLowerCase() === 'chime' && !order.assignedHandle.startsWith('$')
+                  ? `$${order.assignedHandle}`
+                  : order.assignedHandle}
               </div>
 
               <button
                 type="button"
                 onClick={handleCopyHandle}
-                className="w-full py-3 bg-emerald-600/15 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white text-emerald-400 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                className="w-full py-3.5 bg-emerald-600/20 border border-emerald-500/40 hover:bg-emerald-500 hover:text-white text-emerald-400 font-extrabold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-md shadow-emerald-500/10"
               >
                 {copied ? (
                   <>
-                    <CheckCircle2 className="w-4 h-4" />
-                    Copied to Clipboard!
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    Copied {order.paymentMethod.toLowerCase() === 'chime' ? '$Tag' : 'Handle'} to Clipboard!
                   </>
                 ) : (
                   <>
                     <Copy className="w-4 h-4" />
-                    Copy Handle
+                    Copy {order.paymentMethod.toLowerCase() === 'chime' ? `$ChimeSign Tag` : 'Handle'}
                   </>
                 )}
               </button>
+            </div>
+
+            {/* Simple Step-by-Step Payment Instructions */}
+            <div className="bg-[#192233] border border-[#2D3748] rounded-2xl p-4 sm:p-5 space-y-3">
+              <span className="text-xs font-extrabold text-emerald-400 uppercase tracking-wider block flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-emerald-400" />
+                Easy 3-Step Payment Guide
+              </span>
+              
+              <div className="space-y-2 text-xs text-gray-200">
+                <div className="flex items-center gap-3 bg-[#111827] p-2.5 rounded-xl border border-gray-800">
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-extrabold flex items-center justify-center shrink-0 text-xs border border-emerald-500/30">
+                    1
+                  </div>
+                  <div className="text-[11px]">
+                    <span className="font-bold text-white block">Copy Recipient Tag</span>
+                    <span className="text-gray-400">Tap the green <strong>&quot;Copy Tag&quot;</strong> button above to copy <strong>{order.assignedHandle.startsWith('$') ? order.assignedHandle : `$${order.assignedHandle}`}</strong></span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 bg-[#111827] p-2.5 rounded-xl border border-gray-800">
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-extrabold flex items-center justify-center shrink-0 text-xs border border-emerald-500/30">
+                    2
+                  </div>
+                  <div className="text-[11px]">
+                    <span className="font-bold text-white block">Open {order.paymentMethod.toUpperCase()} App</span>
+                    <span className="text-gray-400">Tap <strong>&quot;Launch App&quot;</strong> below to open your payment app</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 bg-[#111827] p-2.5 rounded-xl border border-gray-800">
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-extrabold flex items-center justify-center shrink-0 text-xs border border-emerald-500/30">
+                    3
+                  </div>
+                  <div className="text-[11px]">
+                    <span className="font-bold text-white block">Paste &amp; Send ${Number(order.amount).toFixed(2)}</span>
+                    <span className="text-gray-400">Tap <strong>Pay / Send</strong> in your app, paste the tag, and complete payment!</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Launch Direct App Button */}
