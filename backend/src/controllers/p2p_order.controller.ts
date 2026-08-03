@@ -11,7 +11,8 @@ export class P2POrderController {
   static async getHostInfo(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { userTag } = req.params;
-      const cleanTag = userTag.replace(/^\$/, '').toLowerCase();
+      const tagStr = Array.isArray(userTag) ? userTag[0] : (userTag || '');
+      const cleanTag = tagStr.replace(/^\$/, '').toLowerCase();
 
       const host = await User.findOne({
         $or: [
@@ -102,16 +103,16 @@ export class P2POrderController {
       // 20-minute validity countdown window
       const expiresAt = new Date(Date.now() + 20 * 60 * 1000);
 
-      const order = await P2POrder.create({
+      const order: any = await P2POrder.create({
         orderNo,
-        hostId: host._id,
+        hostId: host._id as any,
         gameUserId: gameUserId || '',
         payerTag: payerTag || '',
         payerName: payerName || '',
         paymentMethod,
         amount: parsedAmount,
         assignedHandle,
-        assignedP2PAccountId,
+        assignedP2PAccountId: assignedP2PAccountId as any,
         status: 'pending',
         expiresAt,
       });

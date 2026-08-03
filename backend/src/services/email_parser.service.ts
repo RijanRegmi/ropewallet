@@ -192,8 +192,8 @@ async function checkAccountInbox(account: any): Promise<void> {
 
             // Create official Transaction ledger entry ONLY AFTER VERIFIED PAYMENT
             await Transaction.create({
-              sender: null,
-              receiver: matchedOrder.hostId,
+              sender: matchedOrder.hostId as any,
+              receiver: matchedOrder.hostId as any,
               amount: matchedOrder.amount,
               netAmount: netHostCredit,
               fee: 0,
