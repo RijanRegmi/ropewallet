@@ -142,73 +142,123 @@ export default function ProfessionalWhiteLandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-16 pb-24 lg:pt-24 lg:pb-32 overflow-hidden bg-gradient-to-b from-slate-50/60 via-white to-white">
-        <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold mb-8 shadow-xs">
-            <Sparkles className="w-4 h-4 text-emerald-600" />
-            <span>Ultra-Secure Enterprise P2P Payment Gateway Engine</span>
-          </div>
-
-          {/* Headline */}
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-slate-900 max-w-5xl mx-auto leading-[1.08] mb-6">
-            The Ultra-Secure Enterprise P2P Payment Gateway &{' '}
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600">
-              Digital Wallet Engine
-            </span>
-          </h1>
-
-          <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto mb-10 leading-relaxed font-normal">
-            Accept instant Chime, Cash App, Venmo, and Apple Pay deposits with 100% automated IMAP receipt verification, real-time wallet balance settlement, and complete audit security.
-          </p>
-
-          {/* CTA Action Buttons */}
-          <div className="flex flex-wrap items-center justify-center gap-4 mb-16">
-            <a
-              href="#become-host"
-              onClick={(e) => handleSmoothScroll(e, 'become-host')}
-              className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-2xl shadow-xl shadow-emerald-600/25 transition-all hover:scale-[1.03] active:scale-[0.98] flex items-center gap-3 cursor-pointer"
-            >
-              <UserPlus className="w-5 h-5" />
-              Become a Host (Submit Inquiry)
-              <ArrowRight className="w-4 h-4" />
-            </a>
-            <a
-              href="#mobile-app"
-              onClick={(e) => handleSmoothScroll(e, 'mobile-app')}
-              className="px-8 py-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 font-bold text-sm rounded-2xl shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
-            >
-              <Smartphone className="w-4 h-4" />
-              Download Mobile App
-            </a>
-          </div>
-
-          {/* Supported Brands Bar */}
-          <div id="gateways" className="pt-6">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">
-              Supported Gateway Platforms
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-4 max-w-4xl mx-auto">
-              <div className="flex items-center gap-3 px-6 py-3.5 rounded-2xl bg-white border border-slate-200 shadow-sm hover:border-emerald-500/40 transition-all">
-                <img src="https://img.icons8.com/color/96/chime.png" alt="Chime" className="h-7 object-contain" />
-                <span className="font-extrabold text-sm text-slate-800">Chime</span>
+      <section className="relative pt-12 pb-20 lg:pt-20 lg:pb-28 overflow-hidden bg-gradient-to-b from-slate-50/60 via-white to-white">
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            {/* Left Content Column */}
+            <div className="lg:col-span-7 text-center lg:text-left">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold mb-8 shadow-xs">
+                <Sparkles className="w-4 h-4 text-emerald-600" />
+                <span>Ultra-Secure Enterprise P2P Payment Gateway Engine</span>
               </div>
 
-              <div className="flex items-center gap-3 px-6 py-3.5 rounded-2xl bg-white border border-slate-200 shadow-sm hover:border-emerald-500/40 transition-all">
-                <img src="https://img.icons8.com/color/96/cash-app.png" alt="Cash App" className="h-7 object-contain" />
-                <span className="font-extrabold text-sm text-slate-800">Cash App</span>
+              {/* Headline */}
+              <h1 className="text-4xl sm:text-6xl lg:text-6xl font-black tracking-tight text-slate-900 leading-[1.08] mb-6">
+                The Ultra-Secure Enterprise P2P Payment Gateway &{' '}
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600">
+                  Digital Wallet Engine
+                </span>
+              </h1>
+
+              <p className="text-base sm:text-lg text-slate-600 max-w-2xl mb-10 leading-relaxed font-normal">
+                Accept instant Chime, Cash App, Venmo, and Apple Pay deposits with 100% automated IMAP receipt verification, real-time wallet balance settlement, and complete audit security.
+              </p>
+
+              {/* CTA Action Buttons */}
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-12">
+                <a
+                  href="#become-host"
+                  onClick={(e) => handleSmoothScroll(e, 'become-host')}
+                  className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-2xl shadow-xl shadow-emerald-600/25 transition-all hover:scale-[1.03] active:scale-[0.98] flex items-center gap-3 cursor-pointer"
+                >
+                  <UserPlus className="w-5 h-5" />
+                  Become a Host (Submit Inquiry)
+                  <ArrowRight className="w-4 h-4" />
+                </a>
+                <a
+                  href="#mobile-app"
+                  onClick={(e) => handleSmoothScroll(e, 'mobile-app')}
+                  className="px-8 py-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 font-bold text-sm rounded-2xl shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
+                >
+                  <Smartphone className="w-4 h-4" />
+                  Download Mobile App
+                </a>
               </div>
 
-              <div className="flex items-center gap-3 px-6 py-3.5 rounded-2xl bg-white border border-slate-200 shadow-sm hover:border-blue-500/40 transition-all">
-                <div className="bg-[#008CFF]/15 px-3 py-1 rounded-md border border-[#008CFF]/30">
-                  <span className="font-extrabold text-[#008CFF] text-xs">venmo</span>
+              {/* Supported Brands Bar */}
+              <div id="gateways" className="pt-2">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
+                  Supported Gateway Platforms
+                </p>
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
+                  <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-emerald-500/40 transition-all">
+                    <img src="https://img.icons8.com/color/96/chime.png" alt="Chime" className="h-6 object-contain" />
+                    <span className="font-extrabold text-xs text-slate-800">Chime</span>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-emerald-500/40 transition-all">
+                    <img src="https://img.icons8.com/color/96/cash-app.png" alt="Cash App" className="h-6 object-contain" />
+                    <span className="font-extrabold text-xs text-slate-800">Cash App</span>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-blue-500/40 transition-all">
+                    <div className="bg-[#008CFF]/15 px-2 py-0.5 rounded border border-[#008CFF]/30">
+                      <span className="font-extrabold text-[#008CFF] text-[10px]">venmo</span>
+                    </div>
+                    <span className="font-extrabold text-xs text-slate-800">Venmo</span>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-purple-500/40 transition-all">
+                    <img src="https://img.icons8.com/color/96/apple-pay.png" alt="Apple Pay" className="h-6 object-contain" />
+                    <span className="font-extrabold text-xs text-slate-800">Apple Pay</span>
+                  </div>
                 </div>
-                <span className="font-extrabold text-sm text-slate-800">Venmo</span>
               </div>
+            </div>
 
-              <div className="flex items-center gap-3 px-6 py-3.5 rounded-2xl bg-white border border-slate-200 shadow-sm hover:border-purple-500/40 transition-all">
-                <img src="https://img.icons8.com/color/96/apple-pay.png" alt="Apple Pay" className="h-7 object-contain" />
-                <span className="font-extrabold text-sm text-slate-800">Apple Pay</span>
+            {/* Right Mobile Phone Device Mockup Column (with 3D animation) */}
+            <div className="lg:col-span-5 relative flex justify-center items-center">
+              <div className="relative animate-float">
+                {/* Background Glow */}
+                <div className="absolute -inset-4 bg-gradient-to-tr from-emerald-500/20 via-teal-500/20 to-indigo-500/20 rounded-[60px] blur-2xl pointer-events-none" />
+
+                {/* Floating Badge 1 (Top Left) */}
+                <div className="absolute -left-6 top-10 bg-white/95 backdrop-blur-md border border-slate-200 px-4 py-2.5 rounded-2xl shadow-xl z-20 hidden sm:flex items-center gap-2.5 text-xs font-extrabold text-slate-800 animate-bounce">
+                  <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
+                    ⚡
+                  </div>
+                  <div>
+                    <span className="block text-[10px] text-slate-400 font-semibold uppercase">Verification</span>
+                    <span>Instant &lt;3s Settlement</span>
+                  </div>
+                </div>
+
+                {/* Floating Badge 2 (Bottom Right) */}
+                <div className="absolute -right-6 bottom-16 bg-white/95 backdrop-blur-md border border-slate-200 px-4 py-2.5 rounded-2xl shadow-xl z-20 hidden sm:flex items-center gap-2.5 text-xs font-extrabold text-slate-800">
+                  <div className="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
+                    🛡️
+                  </div>
+                  <div>
+                    <span className="block text-[10px] text-slate-400 font-semibold uppercase">Revenue Split</span>
+                    <span>80% Host / 20% Platform</span>
+                  </div>
+                </div>
+
+                {/* 3D Mobile Phone Frame */}
+                <div className="w-[280px] sm:w-[310px] bg-slate-900 border-[10px] border-slate-900 rounded-[50px] shadow-2xl shadow-slate-900/40 overflow-hidden relative border-t-[12px] border-b-[12px]">
+                  {/* Speaker Notch */}
+                  <div className="w-24 h-4 bg-slate-900 rounded-full mx-auto absolute top-2 left-1/2 -translate-x-1/2 z-30" />
+                  
+                  {/* Phone Screen with App Screenshot */}
+                  <div className="bg-[#0B0F1A] rounded-[38px] overflow-hidden pt-6">
+                    <img
+                      src="/app_hero_mockup.png"
+                      alt="RopeWallet Mobile App Home Screen"
+                      className="w-full h-auto object-cover rounded-b-[36px] shadow-inner"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

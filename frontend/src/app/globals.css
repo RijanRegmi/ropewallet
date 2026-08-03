@@ -145,6 +145,16 @@ select {
   animation: fadeIn 0.3s ease forwards;
 }
 
+/* ─── Hero Floating Phone Animation ─────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-14px) rotate(1.2deg); }
+}
+
+.animate-float {
+  animation: float 5s ease-in-out infinite;
+}
+
 /* ─── Tooltip via title attr (browser native) ───────────────── */
 [title] {
   cursor: pointer;
