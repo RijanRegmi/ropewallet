@@ -181,14 +181,14 @@ export default function P2PModal({ isOpen, account, onClose, onSuccess }: P2PMod
           {/* Handle / Username */}
           <div>
             <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">
-              Handle / Username / {platform === 'chime' ? 'ChimeSign ($tag)' : 'Tag'} *
+              Gateway Handle ({platform === 'chime' ? '$ChimeSign' : platform === 'cashapp' ? '$cashtag' : 'Username'}) *
             </label>
             <input
               type="text"
               required
               placeholder={
                 platform === 'chime'
-                  ? '$ChimeSign or email (e.g. $JasmineHoward or Jasmine@gmail.com)'
+                  ? '$ChimeSign (e.g. $Bernadette-Rivera-9)'
                   : platform === 'cashapp'
                   ? '$cashtag (e.g. $JohnDoe)'
                   : '@username (e.g. @JaneDoe)'
@@ -197,12 +197,11 @@ export default function P2PModal({ isOpen, account, onClose, onSuccess }: P2PMod
               onChange={(e) => {
                 const val = e.target.value;
                 setHandle(val);
-                // Auto sync email if handle looks like a gmail address
                 if (val.includes('@gmail.com') && !email) {
                   setEmail(val);
                 }
               }}
-              className="w-full px-4 py-2.5 bg-[#1F2937] border border-gray-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500 font-mono transition-all"
+              className="w-full px-4 py-2.5 bg-[#1F2937] border border-gray-700 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 font-mono transition-all"
             />
           </div>
 
@@ -214,10 +213,10 @@ export default function P2PModal({ isOpen, account, onClose, onSuccess }: P2PMod
             <input
               type="text"
               required
-              placeholder="Friendly name shown to payers (e.g. Chime Official)"
+              placeholder="Friendly name shown to payers (e.g. Host Account 1)"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full px-4 py-2.5 bg-[#1F2937] border border-gray-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500 transition-all"
+              className="w-full px-4 py-2.5 bg-[#1F2937] border border-gray-700 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition-all"
             />
           </div>
 
@@ -225,7 +224,7 @@ export default function P2PModal({ isOpen, account, onClose, onSuccess }: P2PMod
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider">
-                Direct Payment URL (Chime / Gateway Link)
+                Direct Payment URL
               </label>
               <button
                 type="button"
@@ -240,7 +239,7 @@ export default function P2PModal({ isOpen, account, onClose, onSuccess }: P2PMod
               type="text"
               placeholder={
                 platform === 'chime'
-                  ? 'https://chime.me/$yourtag (e.g. https://chime.me/$Bernadette-Rivera-9)'
+                  ? 'https://app.chime.com/link/qr?handle=$tag'
                   : platform === 'cashapp'
                   ? 'https://cash.app/$yourtag'
                   : 'https://venmo.com/u/yourtag'
@@ -249,16 +248,17 @@ export default function P2PModal({ isOpen, account, onClose, onSuccess }: P2PMod
               onChange={(e) => setDirectPayUrl(e.target.value)}
               className="w-full px-4 py-2.5 bg-[#1F2937] border border-gray-700 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition-all font-mono"
             />
-            <p className="text-[11px] text-emerald-400/90 mt-1.5 leading-relaxed bg-emerald-950/40 p-2 rounded-lg border border-emerald-500/20">
-              👉 <strong>Where to add your Chime Tag:</strong> Enter your <strong>$ChimeSign</strong> (e.g. <code>$Bernadette-Rivera-9</code>) or <strong>https://chime.me/$yourtag</strong> in the box above or click <strong>Auto-Fill Pay Link</strong>. When payers click &quot;Launch Chime App&quot;, they will land directly on your Chime payment screen!
+            <p className="text-[11px] text-emerald-400/90 mt-1.5 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>Click <strong>Auto-Fill Pay Link</strong> to automatically generate the direct app link from your handle.</span>
             </p>
           </div>
 
           {/* Automation Email & App Password */}
-          <div className="pt-2 border-t border-[#1F2937] space-y-3">
+          <div className="pt-3 border-t border-[#1F2937] space-y-3">
             <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              Automated IMAP Verification Settings
+              Automated IMAP Email Settlement
             </span>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -269,7 +269,7 @@ export default function P2PModal({ isOpen, account, onClose, onSuccess }: P2PMod
                   placeholder="example@gmail.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#1F2937] border border-gray-700 rounded-xl text-white text-xs focus:outline-none focus:border-indigo-500 transition-all"
+                  className="w-full px-3.5 py-2.5 bg-[#1F2937] border border-gray-700 rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500 transition-all"
                 />
               </div>
 
@@ -277,10 +277,10 @@ export default function P2PModal({ isOpen, account, onClose, onSuccess }: P2PMod
                 <label className="block text-[11px] font-semibold text-gray-400 mb-1">Gmail App Password</label>
                 <input
                   type="password"
-                  placeholder="xxxx xxxx xxxx xxxx"
+                  placeholder="•••• •••• •••• ••••"
                   value={appPassword}
                   onChange={(e) => setAppPassword(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#1F2937] border border-gray-700 rounded-xl text-white text-xs focus:outline-none focus:border-indigo-500 transition-all"
+                  className="w-full px-3.5 py-2.5 bg-[#1F2937] border border-gray-700 rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500 transition-all"
                 />
               </div>
             </div>
