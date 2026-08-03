@@ -217,8 +217,8 @@ export default function ProfessionalWhiteLandingPage() {
               </div>
             </div>
 
-            {/* Right Mobile Phone Device Mockup Column (Android Frame - Top on Mobile, Right on Desktop) */}
-            <div className="lg:col-span-5 relative flex justify-center items-center order-first lg:order-last mb-8 lg:mb-0">
+            {/* Right Mobile Phone Device Mockup Column (Below text on Mobile, Right on Desktop) */}
+            <div className="lg:col-span-5 relative flex justify-center items-center mt-10 lg:mt-0">
               <div className="relative animate-float">
                 {/* Background Glow */}
                 <div className="absolute -inset-4 bg-gradient-to-tr from-emerald-500/20 via-teal-500/20 to-indigo-500/20 rounded-[60px] blur-2xl pointer-events-none" />
@@ -245,17 +245,17 @@ export default function ProfessionalWhiteLandingPage() {
                   </div>
                 </div>
 
-                {/* Android Smartphone Frame (Camera Punch Hole) */}
-                <div className="w-[260px] sm:w-[300px] bg-slate-950 border-[8px] border-slate-900 rounded-[44px] shadow-2xl shadow-slate-950/60 overflow-hidden relative border-t-[10px] border-b-[10px]">
+                {/* Android Smartphone Frame (Compact & Sleek) */}
+                <div className="w-[215px] sm:w-[260px] lg:w-[290px] bg-slate-950 border-[7px] sm:border-[8px] border-slate-900 rounded-[40px] sm:rounded-[44px] shadow-2xl shadow-slate-950/60 overflow-hidden relative border-t-[9px] border-b-[9px]">
                   {/* Android Camera Punch Hole */}
-                  <div className="w-3.5 h-3.5 bg-[#0B0F1A] border border-slate-800 rounded-full mx-auto absolute top-2 left-1/2 -translate-x-1/2 z-30 shadow-inner" />
+                  <div className="w-3 h-3 bg-[#0B0F1A] border border-slate-800 rounded-full mx-auto absolute top-1.5 left-1/2 -translate-x-1/2 z-30 shadow-inner" />
                   
                   {/* Phone Screen Display with App Screenshot */}
-                  <div className="bg-[#0B0F1A] rounded-[36px] overflow-hidden pt-5">
+                  <div className="bg-[#0B0F1A] rounded-[32px] sm:rounded-[36px] overflow-hidden pt-4 sm:pt-5">
                     <img
                       src="/app_hero_mockup.png"
                       alt="RopeWallet Android Mobile App UI"
-                      className="w-full h-auto object-cover rounded-b-[34px] shadow-inner"
+                      className="w-full h-auto object-cover rounded-b-[30px] sm:rounded-b-[34px] shadow-inner"
                     />
                   </div>
                 </div>
