@@ -137,27 +137,37 @@ export default function OrderGatewayHubPage() {
     const handleStr = (order.assignedHandle || '').trim();
     const cleanTag = handleStr.replace(/^[$@]/, '');
 
-    let targetUrl = order.directPayUrl;
-    if (method === 'chime') {
-      if (!targetUrl.startsWith('http')) {
-        targetUrl = `https://chime.com/$${cleanTag}`;
-      }
-    } else if (method === 'cashapp' && !targetUrl.startsWith('http')) {
-      targetUrl = `https://cash.app/$${cleanTag}/${order.amount}`;
-    } else if (method === 'venmo' && !targetUrl.startsWith('http')) {
-      targetUrl = `https://venmo.com/${cleanTag}?txn=pay&amount=${order.amount}`;
-    }
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+    const isAndroid = /Android/i.test(ua);
+    const isIOS = /iPhone|iPad|iPod/i.test(ua);
+    const isMobile = isAndroid || isIOS;
 
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(typeof navigator !== 'undefined' ? navigator.userAgent : '');
-
-    if (isMobile && method === 'chime') {
+    if (isMobile) {
       e.preventDefault();
-      // Try native app scheme first
-      const nativeScheme = `chime://pay/${cleanTag}`;
-      window.location.href = nativeScheme;
-      setTimeout(() => {
-        window.location.href = targetUrl;
-      }, 500);
+
+      if (method === 'chime') {
+        if (isAndroid) {
+          // Direct Android Intent for native Chime app (com.chime.mobile)
+          window.location.href = `intent://pay/${cleanTag}#Intent;scheme=chime;package=com.chime.mobile;end`;
+        } else {
+          // Direct iOS Scheme for native Chime app
+          window.location.href = `chime://pay/${cleanTag}`;
+        }
+      } else if (method === 'cashapp') {
+        if (isAndroid) {
+          window.location.href = `intent://cash.app/$${cleanTag}#Intent;scheme=https;package=com.squareup.cash;end`;
+        } else {
+          window.location.href = `cashme://`;
+        }
+      } else if (method === 'venmo') {
+        if (isAndroid) {
+          window.location.href = `intent://paycharge?txn=pay&recipients=${cleanTag}&amount=${order.amount}#Intent;scheme=venmo;package=com.venmo;end`;
+        } else {
+          window.location.href = `venmo://paycharge?txn=pay&recipients=${cleanTag}&amount=${order.amount}`;
+        }
+      } else {
+        window.open(order.directPayUrl, '_blank');
+      }
     }
   };
 
