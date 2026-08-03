@@ -133,42 +133,25 @@ export default function OrderGatewayHubPage() {
   const handleLaunchApp = (e: React.MouseEvent) => {
     if (!order?.directPayUrl) return;
 
+    e.preventDefault();
     const method = (order.paymentMethod || '').toLowerCase();
     const handleStr = (order.assignedHandle || '').trim();
     const cleanTag = handleStr.replace(/^[$@]/, '');
 
-    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-    const isAndroid = /Android/i.test(ua);
-    const isIOS = /iPhone|iPad|iPod/i.test(ua);
-    const isMobile = isAndroid || isIOS;
+    let targetUrl = order.directPayUrl.trim();
 
-    if (isMobile) {
-      e.preventDefault();
-
-      if (method === 'chime') {
-        if (isAndroid) {
-          // Direct Android Intent for native Chime app (com.chime.mobile)
-          window.location.href = `intent://pay/${cleanTag}#Intent;scheme=chime;package=com.chime.mobile;end`;
-        } else {
-          // Direct iOS Scheme for native Chime app
-          window.location.href = `chime://pay/${cleanTag}`;
-        }
-      } else if (method === 'cashapp') {
-        if (isAndroid) {
-          window.location.href = `intent://cash.app/$${cleanTag}#Intent;scheme=https;package=com.squareup.cash;end`;
-        } else {
-          window.location.href = `cashme://`;
-        }
-      } else if (method === 'venmo') {
-        if (isAndroid) {
-          window.location.href = `intent://paycharge?txn=pay&recipients=${cleanTag}&amount=${order.amount}#Intent;scheme=venmo;package=com.venmo;end`;
-        } else {
-          window.location.href = `venmo://paycharge?txn=pay&recipients=${cleanTag}&amount=${order.amount}`;
-        }
-      } else {
-        window.open(order.directPayUrl, '_blank');
+    if (method === 'chime') {
+      if (!targetUrl.includes('/pay/')) {
+        targetUrl = `https://chime.com/pay/$${cleanTag}`;
       }
+    } else if (method === 'cashapp' && !targetUrl.startsWith('http')) {
+      targetUrl = `https://cash.app/$${cleanTag}/${order.amount}`;
+    } else if (method === 'venmo' && !targetUrl.startsWith('http')) {
+      targetUrl = `https://venmo.com/${cleanTag}?txn=pay&amount=${order.amount}`;
     }
+
+    // Direct window location navigation triggers native app links on Android & iOS
+    window.location.href = targetUrl;
   };
 
   return (

@@ -174,22 +174,22 @@ export class P2POrderController {
         }
       }
 
-      // 2. Format Chime pay URL format (https://chime.com/$tag)
+      // 2. Format Chime pay URL to official Chime App Link route: https://chime.com/pay/$tag
       if (order.paymentMethod === 'chime') {
         if (directPayUrl) {
           if (!directPayUrl.startsWith('http://') && !directPayUrl.startsWith('https://')) {
             const clean = directPayUrl.replace(/^[$@]/, '');
-            directPayUrl = `https://chime.com/$${clean}`;
+            directPayUrl = `https://chime.com/pay/$${clean}`;
           }
         } else {
           const handleStr = (order.assignedHandle || '').trim();
           const cleanTag = handleStr.replace(/^[$@]/, '');
           if (handleStr.startsWith('$')) {
-            directPayUrl = `https://chime.com/${handleStr}`;
+            directPayUrl = `https://chime.com/pay/${handleStr}`;
           } else if (handleStr.includes('@')) {
-            directPayUrl = `https://chime.com/${encodeURIComponent(handleStr)}`;
+            directPayUrl = `https://chime.com/pay/${encodeURIComponent(handleStr)}`;
           } else {
-            directPayUrl = `https://chime.com/$${cleanTag}`;
+            directPayUrl = `https://chime.com/pay/$${cleanTag}`;
           }
         }
       } else if (!directPayUrl) {
