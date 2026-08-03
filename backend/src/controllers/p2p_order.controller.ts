@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { P2POrder } from '../models/p2p_order.model.js';
 import { P2PAccount } from '../models/p2p_account.model.js';
 import { User } from '../models/user.model.js';
+import { Transaction } from '../models/transaction.model.js';
 import crypto from 'crypto';
 
 export class P2POrderController {

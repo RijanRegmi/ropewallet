@@ -164,7 +164,7 @@ export default function DepositsPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-xs text-gray-400 uppercase tracking-wider block">Payer</span>
+                    <span className="text-xs text-gray-400 uppercase tracking-wider block">Payer Tag / Name</span>
                     <span className="font-bold text-white text-sm">{fo.payerName || fo.payerTag || 'Verified Payer'}</span>
                   </div>
                   <div className="text-right">
@@ -172,8 +172,9 @@ export default function DepositsPage() {
                     <span className="text-lg font-black text-emerald-400">${Number(fo.amount).toFixed(2)}</span>
                   </div>
                 </div>
-                <div className="text-xs text-gray-400 bg-[#111827] p-2.5 rounded-lg border border-gray-800">
-                  <span>Proof: Email UID #{fo.proofOfPayment?.emailUid} ({fo.paymentMethod?.toUpperCase()})</span>
+                <div className="text-xs text-gray-300 bg-[#111827] p-2.5 rounded-lg border border-gray-800 flex items-center justify-between">
+                  <span><strong>Received At Account:</strong> {fo.assignedHandle || fo.paymentMethod?.toUpperCase()}</span>
+                  <span className="text-gray-400">Email UID #{fo.proofOfPayment?.emailUid}</span>
                 </div>
                 <div className="flex items-center gap-2 pt-1">
                   <input
