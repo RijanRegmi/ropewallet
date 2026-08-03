@@ -254,9 +254,35 @@ async function checkAccountInbox(account: any): Promise<void> {
             }
             
             await client.messageFlagsAdd({ uid }, ['\\Seen']);
-            console.log(`[P2P Auto] Email marked as Read.`);
           } else {
-            console.log(`[P2P Auto] No pending transaction/order found matching amount $${payment.amount} from "${payment.senderName}" on ${account.platform}`);
+            console.log(`[P2P Auto] Unmatched verified payment received ($${payment.amount} from "${payment.senderName}" on ${account.platform}). Storing in pending review for super admin.`);
+
+            // Find admin user for fallback assignment
+            const adminUser = await User.findOne({ role: 'admin' });
+
+            if (adminUser) {
+              const orderNo = `FLAG-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 1000)}`;
+              await P2POrder.create({
+                orderNo,
+                hostId: adminUser._id as any,
+                payerName: payment.senderName,
+                paymentMethod: account.platform as any,
+                amount: payment.amount,
+                assignedHandle: account.handle,
+                assignedP2PAccountId: account._id,
+                status: 'flagged_pending_manual',
+                expiresAt: new Date(Date.now() + 86400000 * 30),
+                proofOfPayment: {
+                  emailUid: uid,
+                  fromAddress,
+                  subject,
+                  verifiedAt: new Date(),
+                },
+              });
+
+              await client.messageFlagsAdd({ uid }, ['\\Seen']);
+              console.log(`[P2P Auto] Flagged manual review order #${orderNo} created and email marked as Read.`);
+            }
           }
         }
       }

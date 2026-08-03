@@ -198,4 +198,121 @@ export class P2POrderController {
       next(error);
     }
   }
+
+  /**
+   * Get all flagged / pending manual review orders (/api/pay/flagged-orders)
+   */
+  static async getFlaggedOrders(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const flaggedOrders = await P2POrder.find({
+        status: 'flagged_pending_manual',
+      })
+        .sort({ createdAt: -1 })
+        .populate('hostId', 'firstName lastName fullName userTag email');
+
+      res.json({
+        success: true,
+        data: flaggedOrders,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Super Admin Manual Approval & Transfer (/api/pay/manual-approve/:orderId)
+   */
+  static async manualApproveOrder(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { orderId } = req.params;
+      const { targetHostUserTag } = req.body;
+
+      const order = await P2POrder.findById(orderId);
+      if (!order) {
+        res.status(404).json({ success: false, error: 'Order not found' });
+        return;
+      }
+
+      if (!order.proofOfPayment || !order.proofOfPayment.verifiedAt) {
+        res.status(400).json({ success: false, error: 'CRITICAL SECURITY ERROR: Money must be received and verified via email receipt before manual approval.' });
+        return;
+      }
+
+      if (order.status === 'completed') {
+        res.status(400).json({ success: false, error: 'Order has already been completed and credited.' });
+        return;
+      }
+
+      // Find target host user
+      let targetUserTag = targetHostUserTag;
+      if (!targetUserTag && order.hostId) {
+        const h = await User.findById(order.hostId);
+        if (h) targetUserTag = h.userTag;
+      }
+
+      if (!targetUserTag) {
+        res.status(400).json({ success: false, error: 'Target host userTag is required for transfer' });
+        return;
+      }
+
+      const host = await User.findOne({
+        $or: [
+          { userTag: targetUserTag.replace(/^\$/, '').toLowerCase() },
+          { userTag: targetUserTag },
+        ],
+      });
+
+      if (!host) {
+        res.status(404).json({ success: false, error: `Host user ${targetUserTag} not found` });
+        return;
+      }
+
+      // Calculate fees: 20% platform commission, 80% net host split
+      const platformFee = order.amount * 0.20;
+      const netHostCredit = order.amount - platformFee;
+
+      // Credit Host Wallet Balance
+      host.walletBalance = (host.walletBalance || 0) + netHostCredit;
+      await host.save({ validateBeforeSave: false });
+
+      // Update Order Status
+      order.status = 'completed';
+      order.hostId = host._id as any;
+      order.completedAt = new Date();
+      await order.save();
+
+      // Create Ledger Transaction Entry
+      await Transaction.create({
+        sender: host._id as any,
+        receiver: host._id as any,
+        amount: order.amount,
+        netAmount: netHostCredit,
+        fee: 0,
+        platformFee,
+        netProfit: platformFee,
+        type: 'p2p_deposit',
+        status: 'completed',
+        paymentMethod: order.paymentMethod as any,
+        remarks: `Super Admin Manual Transfer: Order #${order.orderNo} (${order.payerName || 'Verified Payer'})`,
+        payerInfo: {
+          name: order.payerName || 'Verified Payer',
+          platform: order.paymentMethod,
+        },
+        approvedAt: new Date(),
+      } as any);
+
+      res.json({
+        success: true,
+        message: `Successfully credited $${netHostCredit.toFixed(2)} to host ${host.fullName} (${host.userTag}) with $${platformFee.toFixed(2)} platform fee retained.`,
+        data: {
+          orderId: order._id,
+          netHostCredit,
+          platformFee,
+          hostUserTag: host.userTag,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

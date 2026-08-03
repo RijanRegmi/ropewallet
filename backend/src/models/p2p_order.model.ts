@@ -10,7 +10,7 @@ export interface IP2POrder extends Document {
   amount: number;
   assignedHandle: string;
   assignedP2PAccountId?: Schema.Types.ObjectId;
-  status: 'pending' | 'completed' | 'expired' | 'declined';
+  status: 'pending' | 'completed' | 'expired' | 'declined' | 'flagged_pending_manual';
   expiresAt: Date;
   completedAt?: Date;
   proofOfPayment?: {
@@ -68,7 +68,7 @@ const p2pOrderSchema = new Schema<IP2POrder>(
     },
     status: {
       type: String,
-      enum: ['pending', 'completed', 'expired', 'declined'],
+      enum: ['pending', 'completed', 'expired', 'declined', 'flagged_pending_manual'],
       default: 'pending',
       index: true,
     },

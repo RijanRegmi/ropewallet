@@ -10,6 +10,9 @@ import { Check, X } from 'lucide-react';
 
 export default function DepositsPage() {
   const [deposits, setDeposits] = useState<TransactionModel[]>([]);
+  const [flaggedOrders, setFlaggedOrders] = useState<any[]>([]);
+  const [manualTransferTags, setManualTransferTags] = useState<Record<string, string>>({});
+  const [processingOrder, setProcessingOrder] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'pending' | 'completed' | 'declined' | 'all'>('pending');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -37,7 +40,37 @@ export default function DepositsPage() {
 
   useEffect(() => {
     fetchDeposits(page, statusFilter);
+    fetchFlaggedOrders();
   }, [page, statusFilter]);
+
+  const fetchFlaggedOrders = async () => {
+    const res = await apiRequest<any[]>('/pay/flagged-orders');
+    if (res.success && Array.isArray(res.data)) {
+      setFlaggedOrders(res.data);
+    }
+  };
+
+  const handleManualApprove = async (orderId: string) => {
+    const targetTag = manualTransferTags[orderId]?.trim();
+    if (!targetTag) {
+      showToast('Please enter host userTag for transfer (e.g. mamaji)', 'error');
+      return;
+    }
+
+    setProcessingOrder(orderId);
+    const res = await apiRequest<any>(`/pay/manual-approve/${orderId}`, 'POST', {
+      targetHostUserTag: targetTag,
+    });
+    setProcessingOrder(null);
+
+    if (res.success) {
+      showToast(res.message || 'Successfully credited host wallet balance!');
+      fetchFlaggedOrders();
+      fetchDeposits(page, statusFilter);
+    } else {
+      showToast(res.error || 'Manual transfer failed', 'error');
+    }
+  };
 
   const fetchDeposits = async (p: number, s: string) => {
     setLoading(true);
@@ -106,6 +139,63 @@ export default function DepositsPage() {
           </select>
         </div>
       </div>
+
+      {/* Flagged / Verified Unmatched Deposits Banner */}
+      {flaggedOrders.length > 0 && (
+        <div className="bg-[#111827] border border-amber-500/30 rounded-2xl p-6 space-y-4 shadow-xl relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-lg">
+                ⚠️
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Verified Unmatched Payments Needing Manual Host Transfer ({flaggedOrders.length})</h3>
+                <p className="text-xs text-gray-400">Money has been received and verified via email receipt. Enter target host userTag to complete 80% host credit / 20% platform split.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {flaggedOrders.map((fo) => (
+              <div key={fo._id} className="bg-[#1F2937]/60 border border-gray-800 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between text-xs text-gray-400">
+                  <span className="font-mono text-amber-400 font-bold">#{fo.orderNo}</span>
+                  <span>{new Date(fo.createdAt).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs text-gray-400 uppercase tracking-wider block">Payer</span>
+                    <span className="font-bold text-white text-sm">{fo.payerName || fo.payerTag || 'Verified Payer'}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs text-gray-400 uppercase tracking-wider block">Amount Received</span>
+                    <span className="text-lg font-black text-emerald-400">${Number(fo.amount).toFixed(2)}</span>
+                  </div>
+                </div>
+                <div className="text-xs text-gray-400 bg-[#111827] p-2.5 rounded-lg border border-gray-800">
+                  <span>Proof: Email UID #{fo.proofOfPayment?.emailUid} ({fo.paymentMethod?.toUpperCase()})</span>
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="text"
+                    placeholder="Host userTag (e.g. mamaji)..."
+                    value={manualTransferTags[fo._id] || ''}
+                    onChange={(e) => setManualTransferTags({ ...manualTransferTags, [fo._id]: e.target.value })}
+                    className="w-full bg-[#111827] border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-medium"
+                  />
+                  <button
+                    onClick={() => handleManualApprove(fo._id)}
+                    disabled={processingOrder === fo._id}
+                    className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:brightness-110 text-black text-xs font-black rounded-lg shrink-0 cursor-pointer shadow transition-all"
+                  >
+                    {processingOrder === fo._id ? 'Transferring...' : 'Transfer 80% to Host'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="bg-[#111827] border border-[#1F2937] rounded-2xl overflow-hidden shadow-lg">
         <div className="overflow-x-auto">
