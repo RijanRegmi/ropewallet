@@ -217,45 +217,45 @@ export default function ProfessionalWhiteLandingPage() {
               </div>
             </div>
 
-            {/* Right Mobile Phone Device Mockup Column (with 3D animation) */}
-            <div className="lg:col-span-5 relative flex justify-center items-center">
+            {/* Right Mobile Phone Device Mockup Column (Android Frame - Top on Mobile, Right on Desktop) */}
+            <div className="lg:col-span-5 relative flex justify-center items-center order-first lg:order-last mb-8 lg:mb-0">
               <div className="relative animate-float">
                 {/* Background Glow */}
                 <div className="absolute -inset-4 bg-gradient-to-tr from-emerald-500/20 via-teal-500/20 to-indigo-500/20 rounded-[60px] blur-2xl pointer-events-none" />
 
                 {/* Floating Badge 1 (Top Left) */}
-                <div className="absolute -left-6 top-10 bg-white/95 backdrop-blur-md border border-slate-200 px-4 py-2.5 rounded-2xl shadow-xl z-20 hidden sm:flex items-center gap-2.5 text-xs font-extrabold text-slate-800 animate-bounce">
-                  <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
+                <div className="absolute -left-6 top-8 bg-white/95 backdrop-blur-md border border-slate-200 px-3.5 py-2 rounded-2xl shadow-xl z-20 hidden sm:flex items-center gap-2.5 text-xs font-extrabold text-slate-800">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xs">
                     ⚡
                   </div>
                   <div>
-                    <span className="block text-[10px] text-slate-400 font-semibold uppercase">Verification</span>
-                    <span>Instant &lt;3s Settlement</span>
+                    <span className="block text-[9px] text-slate-400 font-semibold uppercase">Verification</span>
+                    <span className="text-xs">Instant &lt;3s Settlement</span>
                   </div>
                 </div>
 
                 {/* Floating Badge 2 (Bottom Right) */}
-                <div className="absolute -right-6 bottom-16 bg-white/95 backdrop-blur-md border border-slate-200 px-4 py-2.5 rounded-2xl shadow-xl z-20 hidden sm:flex items-center gap-2.5 text-xs font-extrabold text-slate-800">
-                  <div className="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
+                <div className="absolute -right-6 bottom-10 bg-white/95 backdrop-blur-md border border-slate-200 px-3.5 py-2 rounded-2xl shadow-xl z-20 hidden sm:flex items-center gap-2.5 text-xs font-extrabold text-slate-800">
+                  <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs">
                     🛡️
                   </div>
                   <div>
-                    <span className="block text-[10px] text-slate-400 font-semibold uppercase">Revenue Split</span>
-                    <span>80% Host / 20% Platform</span>
+                    <span className="block text-[9px] text-slate-400 font-semibold uppercase">Revenue Split</span>
+                    <span className="text-xs">80% Host / 20% Royalty</span>
                   </div>
                 </div>
 
-                {/* 3D Mobile Phone Frame */}
-                <div className="w-[280px] sm:w-[310px] bg-slate-900 border-[10px] border-slate-900 rounded-[50px] shadow-2xl shadow-slate-900/40 overflow-hidden relative border-t-[12px] border-b-[12px]">
-                  {/* Speaker Notch */}
-                  <div className="w-24 h-4 bg-slate-900 rounded-full mx-auto absolute top-2 left-1/2 -translate-x-1/2 z-30" />
+                {/* Android Smartphone Frame (Camera Punch Hole) */}
+                <div className="w-[260px] sm:w-[300px] bg-slate-950 border-[8px] border-slate-900 rounded-[44px] shadow-2xl shadow-slate-950/60 overflow-hidden relative border-t-[10px] border-b-[10px]">
+                  {/* Android Camera Punch Hole */}
+                  <div className="w-3.5 h-3.5 bg-[#0B0F1A] border border-slate-800 rounded-full mx-auto absolute top-2 left-1/2 -translate-x-1/2 z-30 shadow-inner" />
                   
-                  {/* Phone Screen with App Screenshot */}
-                  <div className="bg-[#0B0F1A] rounded-[38px] overflow-hidden pt-6">
+                  {/* Phone Screen Display with App Screenshot */}
+                  <div className="bg-[#0B0F1A] rounded-[36px] overflow-hidden pt-5">
                     <img
                       src="/app_hero_mockup.png"
-                      alt="RopeWallet Mobile App Home Screen"
-                      className="w-full h-auto object-cover rounded-b-[36px] shadow-inner"
+                      alt="RopeWallet Android Mobile App UI"
+                      className="w-full h-auto object-cover rounded-b-[34px] shadow-inner"
                     />
                   </div>
                 </div>
@@ -429,7 +429,7 @@ export default function ProfessionalWhiteLandingPage() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full py-4 bg-[#00B050] hover:bg-[#009A46] text-white font-extrabold text-base rounded-2xl shadow-xl shadow-[#00B050]/25 transition-all flex items-center justify-center gap-3 cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+                    className="w-full py-4 bg-[#00B050] hover:bg-[#009A46] text-white font-extrabold text-base rounded-full shadow-lg shadow-[#00B050]/30 transition-all flex items-center justify-center gap-3 cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
                   >
                     <span>{isSubmitting ? 'Submitting Inquiry...' : 'Submit Inquiry'}</span>
                     <Send className="w-5 h-5" />
