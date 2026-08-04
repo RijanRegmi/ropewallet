@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
+import 'core/network/api_client.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/home/providers/wallet_provider.dart';
 import 'features/auth/providers/security_provider.dart';
@@ -9,8 +10,19 @@ import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/set_pin_page.dart';
 import 'features/home/presentation/pages/home_page.dart';
 
-void main() {
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp();
+    final messaging = FirebaseMessaging.instance;
+    await messaging.requestPermission(alert: true, badge: true, sound: true);
+  } catch (e) {
+    debugPrint('Firebase init error: $e');
+  }
+
   runApp(
     MultiProvider(
       providers: [
@@ -56,6 +68,16 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   bool _initialized = false;
+  bool _fcmSynced = false;
+
+  void _syncFcmToken() async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null && token.isNotEmpty) {
+        ApiClient().post('/auth/fcm-token', {'fcmToken': token});
+      }
+    } catch (_) {}
+  }
 
   @override
   void didChangeDependencies() {
@@ -71,6 +93,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (authProvider.isAuthenticated && !_fcmSynced) {
+      _fcmSynced = true;
+      _syncFcmToken();
+    }
 
     // While authenticating, show a plain scaffold matching native splash background
     // so the transition from native splash → Flutter is invisible (no flash)

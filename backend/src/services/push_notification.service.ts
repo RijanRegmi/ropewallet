@@ -1,4 +1,3 @@
-import admin from 'firebase-admin';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -7,27 +6,41 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let isFirebaseInitialized = false;
+let firebaseAdminModule: any = null;
 
-try {
-  const configDir = path.join(__dirname, '../config');
-  const files = fs.readdirSync(configDir);
-  const serviceAccountFile = files.find((f) => f.includes('firebase-adminsdk') || f.includes('firebase-service-account'));
+const initFirebase = async () => {
+  if (isFirebaseInitialized) return;
 
-  if (serviceAccountFile) {
-    const keyPath = path.join(configDir, serviceAccountFile);
-    const serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+  try {
+    const configDir = path.join(__dirname, '../config');
+    if (!fs.existsSync(configDir)) return;
 
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-    isFirebaseInitialized = true;
-    console.log(`[PushNotification] Firebase Admin SDK initialized with ${serviceAccountFile}`);
-  } else {
-    console.log('[PushNotification] No Firebase service account file found in backend/src/config. Push notifications disabled.');
+    const files = fs.readdirSync(configDir);
+    const serviceAccountFile = files.find((f) => f.includes('firebase-adminsdk') || f.includes('firebase-service-account'));
+
+    if (serviceAccountFile) {
+      const keyPath = path.join(configDir, serviceAccountFile);
+      const serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+
+      // Dynamic import to prevent build failure on Vercel
+      // @ts-ignore
+      const adminModule = await (import('firebase-admin') as any);
+      firebaseAdminModule = adminModule.default || adminModule;
+
+      if (firebaseAdminModule && !firebaseAdminModule.apps?.length) {
+        firebaseAdminModule.initializeApp({
+          credential: firebaseAdminModule.credential.cert(serviceAccount),
+        });
+      }
+      isFirebaseInitialized = true;
+      console.log(`[PushNotification] Firebase Admin SDK initialized with ${serviceAccountFile}`);
+    }
+  } catch (error: any) {
+    console.error('[PushNotification] Failed to initialize Firebase Admin SDK:', error.message || error);
   }
-} catch (error: any) {
-  console.error('[PushNotification] Failed to initialize Firebase Admin SDK:', error.message || error);
-}
+};
+
+initFirebase().catch(() => {});
 
 export const sendPushNotification = async (
   fcmToken: string,
@@ -35,12 +48,12 @@ export const sendPushNotification = async (
   body: string,
   data?: Record<string, string>
 ): Promise<boolean> => {
-  if (!isFirebaseInitialized || !fcmToken) {
-    return false;
-  }
+  if (!fcmToken) return false;
+  await initFirebase();
+  if (!isFirebaseInitialized || !firebaseAdminModule) return false;
 
   try {
-    await admin.messaging().send({
+    await firebaseAdminModule.messaging().send({
       token: fcmToken,
       notification: { title, body },
       data: data || {},

@@ -1,4 +1,4 @@
-package com.wallet.app.wallet_frontend
+package com.wallet.app.rope_wallet
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

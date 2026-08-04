@@ -1,7 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:ropewallet/core/network/api_client.dart';
-import 'package:ropewallet/features/auth/providers/auth_provider.dart';
 
 class NotificationCenterPage extends StatefulWidget {
   const NotificationCenterPage({super.key});
@@ -40,14 +39,17 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> with Si
     setState(() => _isLoadingTxns = true);
     try {
       final res = await _apiClient.get('/payments/transactions');
-      if (res['success'] == true && res['data'] != null) {
-        setState(() {
-          _transactions = res['data'];
-          _isLoadingTxns = false;
-        });
-      } else {
-        setState(() => _isLoadingTxns = false);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true && data['data'] != null) {
+          setState(() {
+            _transactions = data['data'];
+            _isLoadingTxns = false;
+          });
+          return;
+        }
       }
+      setState(() => _isLoadingTxns = false);
     } catch (e) {
       setState(() => _isLoadingTxns = false);
     }
@@ -57,14 +59,17 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> with Si
     setState(() => _isLoadingNotices = true);
     try {
       final res = await _apiClient.get('/notices');
-      if (res['success'] == true && res['data'] != null) {
-        setState(() {
-          _notices = res['data'];
-          _isLoadingNotices = false;
-        });
-      } else {
-        setState(() => _isLoadingNotices = false);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true && data['data'] != null) {
+          setState(() {
+            _notices = data['data'];
+            _isLoadingNotices = false;
+          });
+          return;
+        }
       }
+      setState(() => _isLoadingNotices = false);
     } catch (e) {
       setState(() => _isLoadingNotices = false);
     }
@@ -262,7 +267,7 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> with Si
                                     Text(
                                       '${isDeposit ? '+' : '-'}\$${amount.toStringAsFixed(2)}',
                                       style: TextStyle(
-                                        fontWeight: FontWeight.extrabold,
+                                        fontWeight: FontWeight.w800,
                                         fontSize: 16,
                                         color: isDeposit ? const Color(0xFF10B981) : (isDark ? Colors.white : Colors.black87),
                                       ),
