@@ -95,10 +95,8 @@ export default function ProfessionalWhiteLandingPage() {
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 p-0.5 shadow-md shadow-emerald-600/20">
-              <div className="w-full h-full bg-white rounded-[10px] flex items-center justify-center">
-                <ShieldCheck className="w-6 h-6 text-emerald-600" />
-              </div>
+            <div className="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center bg-white shadow-md shadow-emerald-600/10 border border-slate-100">
+              <img src="/ropewallet.png" alt="RopeWallet Logo" className="w-full h-full object-contain" />
             </div>
             <div className="flex flex-col">
               <span className="text-xl font-extrabold tracking-tight text-slate-900 leading-none">
@@ -339,17 +337,14 @@ export default function ProfessionalWhiteLandingPage() {
                         <User className="w-3.5 h-3.5 text-emerald-600" />
                         Full Name *
                       </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          required
-                          placeholder="Enter full name"
-                          value={hostForm.fullName}
-                          onChange={(e) => setHostForm({ ...hostForm, fullName: e.target.value })}
-                          className="w-full pl-4 pr-10 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white transition-all font-medium"
-                        />
-                        <Mail className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-600 pointer-events-none" />
-                      </div>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Enter full name"
+                        value={hostForm.fullName}
+                        onChange={(e) => setHostForm({ ...hostForm, fullName: e.target.value })}
+                        className="w-full px-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white transition-all font-medium"
+                      />
                     </div>
 
                     {/* Phone Number */}
@@ -358,16 +353,14 @@ export default function ProfessionalWhiteLandingPage() {
                         <Phone className="w-3.5 h-3.5 text-emerald-600" />
                         Phone Number *
                       </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          required
-                          placeholder="98XXXXXXXX"
-                          value={hostForm.phone}
-                          onChange={(e) => setHostForm({ ...hostForm, phone: e.target.value })}
-                          className="w-full px-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white transition-all font-medium"
-                        />
-                      </div>
+                      <input
+                        type="text"
+                        required
+                        placeholder="98XXXXXXXX"
+                        value={hostForm.phone}
+                        onChange={(e) => setHostForm({ ...hostForm, phone: e.target.value })}
+                        className="w-full px-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white transition-all font-medium"
+                      />
                     </div>
 
                     {/* Email Address */}
@@ -376,17 +369,14 @@ export default function ProfessionalWhiteLandingPage() {
                         <Mail className="w-3.5 h-3.5 text-emerald-600" />
                         Email Address *
                       </label>
-                      <div className="relative">
-                        <input
-                          type="email"
-                          required
-                          placeholder="example@mail.com"
-                          value={hostForm.email}
-                          onChange={(e) => setHostForm({ ...hostForm, email: e.target.value })}
-                          className="w-full pl-4 pr-10 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white transition-all font-medium"
-                        />
-                        <Mail className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-600 pointer-events-none" />
-                      </div>
+                      <input
+                        type="email"
+                        required
+                        placeholder="example@mail.com"
+                        value={hostForm.email}
+                        onChange={(e) => setHostForm({ ...hostForm, email: e.target.value })}
+                        className="w-full px-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white transition-all font-medium"
+                      />
                     </div>
 
                     {/* Telegram / WhatsApp / Address */}
@@ -395,17 +385,14 @@ export default function ProfessionalWhiteLandingPage() {
                         <MapPin className="w-3.5 h-3.5 text-emerald-600" />
                         Telegram / WhatsApp / Address *
                       </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          required
-                          placeholder="@handle or Residential address"
-                          value={hostForm.telegramOrWhatsapp}
-                          onChange={(e) => setHostForm({ ...hostForm, telegramOrWhatsapp: e.target.value })}
-                          className="w-full pl-4 pr-10 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white transition-all font-medium"
-                        />
-                        <Mail className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-600 pointer-events-none" />
-                      </div>
+                      <input
+                        type="text"
+                        required
+                        placeholder="@handle or Residential address"
+                        value={hostForm.telegramOrWhatsapp}
+                        onChange={(e) => setHostForm({ ...hostForm, telegramOrWhatsapp: e.target.value })}
+                        className="w-full px-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white transition-all font-medium"
+                      />
                     </div>
                   </div>
 
@@ -671,12 +658,12 @@ export default function ProfessionalWhiteLandingPage() {
         </div>
       </section>
 
-      {/* Footer with Circular RJN Logo */}
+      {/* Footer with RopeWallet Logo */}
       <footer className="border-t border-slate-200 bg-white py-10 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold text-xs">
-              R
+            <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-white shadow border border-slate-100">
+              <img src="/ropewallet.png" alt="RopeWallet Logo" className="w-full h-full object-contain" />
             </div>
             <span className="font-extrabold text-slate-900 text-sm">RopeWallet</span>
           </div>

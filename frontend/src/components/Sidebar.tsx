@@ -279,10 +279,10 @@ export default function Sidebar() {
       <ConfirmModal
         isOpen={isLogoutModalOpen}
         type="logout"
-        title="Sign Out Confirmation"
-        message="Are you sure you want to log out of the RopeWallet Admin Portal? You will need to sign in again to access the dashboard."
+        title="Sign Out"
+        message="Are you sure you want to sign out?"
         confirmText="Sign Out"
-        cancelText="Stay Logged In"
+        cancelText="Cancel"
         onConfirm={() => {
           setIsLogoutModalOpen(false);
           logout();

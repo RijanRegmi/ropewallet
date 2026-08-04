@@ -1,0 +1,23 @@
+{
+  "name": "RopeWallet",
+  "short_name": "RopeWallet",
+  "description": "Secure digital wallet platform for deposits, withdrawals, and P2P transfers",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0F1A",
+  "theme_color": "#0E7490",
+  "icons": [
+    {
+      "src": "/ropewallet.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/ropewallet.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

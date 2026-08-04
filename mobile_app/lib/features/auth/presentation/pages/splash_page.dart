@@ -45,9 +45,9 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
   Future<void> _initApp() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
-    // Ensure minimum display time for splash animation + run auto-login
+    // Smooth splash animation display time (800ms) + auto-login
     await Future.wait([
-      Future.delayed(const Duration(milliseconds: 2000)),
+      Future.delayed(const Duration(milliseconds: 800)),
       authProvider.tryAutoLogin(),
     ]);
 
@@ -94,38 +94,11 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
                   opacity: _fadeAnimation,
                   child: ScaleTransition(
                     scale: _scaleAnimation,
-                    child: Container(
-                      width: 140,
-                      height: 140,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(32),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isDark
-                                ? Colors.white.withOpacity(0.04)
-                                : Colors.black.withOpacity(0.04),
-                            blurRadius: 30,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(32),
-                        child: Image.asset(
-                          'assets/ropewallet.png',
-                          width: 140,
-                          height: 140,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Image.asset(
-                              'assets/RJN.png',
-                              width: 140,
-                              height: 140,
-                              fit: BoxFit.contain,
-                            );
-                          },
-                        ),
-                      ),
+                    child: Image.asset(
+                      'assets/ropewallet_icon.png',
+                      width: 180,
+                      height: 180,
+                      fit: BoxFit.contain,
                     ),
                   ),
                 );

@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../home/providers/wallet_provider.dart';
-import '../presentation/pages/login_page.dart';
 
 class AuthProvider with ChangeNotifier {
   final ApiClient _apiClient = ApiClient();
@@ -56,28 +55,34 @@ class AuthProvider with ChangeNotifier {
 
       _token = token;
       
-      // Fetch profile from backend to verify token validity
-      final response = await _apiClient.get(ApiConstants.profile);
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        _user = responseData['data'];
-        await _secureStorage.write(key: 'cached_user_profile', value: jsonEncode(_user));
-      } else {
-        // Token is invalid/expired
-        _token = null;
-        _user = null;
-        await _secureStorage.delete(key: 'auth_token');
-        await _secureStorage.delete(key: 'cached_user_profile');
-      }
-    } catch (e) {
-      _errorMessage = 'Could not reach server. Working offline.';
-      // Try restoring cached user profile for offline mode
+      // Immediately restore cached profile for instant screen render
       try {
         final cachedStr = await _secureStorage.read(key: 'cached_user_profile');
         if (cachedStr != null && cachedStr.isNotEmpty) {
           _user = jsonDecode(cachedStr);
         }
       } catch (_) {}
+
+      // Fetch fresh profile from backend with 3s timeout
+      try {
+        final response = await _apiClient.get(ApiConstants.profile).timeout(
+          const Duration(seconds: 3),
+        );
+        if (response.statusCode == 200) {
+          final responseData = jsonDecode(response.body);
+          _user = responseData['data'];
+          await _secureStorage.write(key: 'cached_user_profile', value: jsonEncode(_user));
+        } else if (response.statusCode == 401 || response.statusCode == 403) {
+          // Token is explicitly rejected/expired by server
+          _token = null;
+          _user = null;
+          await _secureStorage.delete(key: 'auth_token');
+          await _secureStorage.delete(key: 'cached_user_profile');
+        }
+      } catch (_) {
+        // Working offline or network timed out — preserve token & cached user
+        _errorMessage = 'Working offline';
+      }
     } finally {
       _isLoading = false;
       notifyListeners();

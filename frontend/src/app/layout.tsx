@@ -9,8 +9,24 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "RopeWallet Admin Portal",
-  description: "Secure admin portal for managing RopeWallet users, deposits, and P2P accounts",
+  title: "RopeWallet – Secure Digital Wallet",
+  description: "RopeWallet is a secure, modern digital wallet platform for managing deposits, withdrawals, and P2P transfers.",
+  icons: {
+    icon: [
+      { url: "/ropewallet.png", type: "image/png", sizes: "512x512" },
+      { url: "/ropewallet.png", type: "image/png", sizes: "192x192" },
+    ],
+    apple: [
+      { url: "/ropewallet.png", sizes: "180x180", type: "image/png" },
+    ],
+    shortcut: "/ropewallet.png",
+  },
+  openGraph: {
+    title: "RopeWallet – Secure Digital Wallet",
+    description: "Manage your money securely with RopeWallet.",
+    images: [{ url: "/ropewallet.png", width: 512, height: 512, alt: "RopeWallet Logo" }],
+  },
+  manifest: "/site.webmanifest",
 };
 
 export default function RootLayout({

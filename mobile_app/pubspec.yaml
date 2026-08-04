@@ -113,5 +113,13 @@ flutter:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "../assets/ropewallet.png"
-
+  image_path: "assets/launcher_icon.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#0B3D4E"
+  adaptive_icon_foreground: "assets/launcher_icon_fg.png"
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "assets/launcher_icon.png"
+    background_color: "#0B3D4E"
+    theme_color: "#0B3D4E"

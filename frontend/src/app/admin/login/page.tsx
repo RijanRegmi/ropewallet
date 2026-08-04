@@ -6,13 +6,13 @@ import { apiRequest } from '@/lib/api';
 
 // Shared inline style helpers
 const glassInput = {
-  background: 'rgba(31, 73, 89, 0.30)',
-  border: '1px solid rgba(92, 124, 137, 0.30)',
+  background: 'rgba(21, 44, 66, 0.70)',
+  border: '1px solid rgba(92, 124, 137, 0.40)',
   color: '#ffffff',
 };
 const glassInputFocus = {
-  borderColor: 'rgba(92, 124, 137, 0.70)',
-  boxShadow: '0 0 0 3px rgba(92, 124, 137, 0.12)',
+  borderColor: 'rgba(168, 196, 204, 0.90)',
+  boxShadow: '0 0 0 3px rgba(92, 124, 137, 0.25)',
 };
 
 export default function LoginPage() {
@@ -83,19 +83,17 @@ export default function LoginPage() {
       <div className="relative w-full max-w-md">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
-          {/* Glass lock icon */}
+          {/* Glass logo badge */}
           <div
-            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
+            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 p-2.5 overflow-hidden"
             style={{
-              background: 'rgba(31, 73, 89, 0.50)',
-              border: '1px solid rgba(92, 124, 137, 0.40)',
+              background: 'rgba(31, 73, 89, 0.45)',
+              border: '1px solid rgba(92, 124, 137, 0.45)',
               backdropFilter: 'blur(16px)',
-              boxShadow: '0 8px 32px rgba(1, 20, 37, 0.50), inset 0 1px 0 rgba(255,255,255,0.12)',
+              boxShadow: '0 8px 32px rgba(1, 20, 37, 0.50), inset 0 1px 0 rgba(255,255,255,0.15)',
             }}
           >
-            <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
+            <img src="/ropewallet.png" alt="RopeWallet Logo" className="w-full h-full object-contain" />
           </div>
           <h1
             className="text-3xl font-extrabold"
@@ -111,15 +109,15 @@ export default function LoginPage() {
           <p className="text-sm mt-1.5 font-medium" style={{ color: '#5C7C89' }}>Admin Portal — Secure Access</p>
         </div>
 
-        {/* Glass card */}
+        {/* High-contrast Glass card */}
         <div
           className="rounded-3xl p-8"
           style={{
-            background: 'rgba(13, 32, 48, 0.75)',
+            background: 'rgba(15, 34, 52, 0.88)',
             backdropFilter: 'blur(32px) saturate(180%)',
             WebkitBackdropFilter: 'blur(32px) saturate(180%)',
-            border: '1px solid rgba(92, 124, 137, 0.25)',
-            boxShadow: '0 24px 60px rgba(1, 20, 37, 0.70), inset 0 1px 0 rgba(255,255,255,0.06)',
+            border: '1px solid rgba(92, 124, 137, 0.45)',
+            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.80), inset 0 1px 0 rgba(255,255,255,0.12), 0 0 40px rgba(31, 73, 89, 0.35)',
           }}
         >
           {error && (
@@ -246,22 +244,13 @@ export default function LoginPage() {
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Authenticating...
+                  Signing in...
                 </>
               ) : (
-                <>
-                  Sign In to Dashboard
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
-                </>
+                'Sign In'
               )}
             </button>
           </form>
-
-          <p className="text-center text-xs mt-6" style={{ color: 'rgba(92,124,137,0.60)' }}>
-            Protected by HTTP-Only cookie authentication
-          </p>
         </div>
       </div>
 
