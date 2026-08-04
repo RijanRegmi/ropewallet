@@ -161,7 +161,7 @@ export default function NoticeAdminPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-            <Bell className="w-7 h-7 text-indigo-400" /> Notice & Notification Center
+            <Bell className="w-7 h-7 text-emerald-400" /> Notice & Notification Center
           </h2>
           <p className="text-sm text-gray-400 mt-1">
             Broadcast announcement alerts or target specific users directly with custom push notices.
@@ -173,7 +173,7 @@ export default function NoticeAdminPage() {
         {/* Create Notice Form */}
         <div className="lg:col-span-1 bg-[#111827] border border-[#1F2937] rounded-2xl p-6 space-y-6 shadow-xl">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <Send className="w-5 h-5 text-indigo-400" /> Create New Notice
+            <Send className="w-5 h-5 text-emerald-400" /> Create New Notice
           </h3>
 
           <form onSubmit={handleSubmitNotice} className="space-y-5">
@@ -185,7 +185,7 @@ export default function NoticeAdminPage() {
                 placeholder="e.g. System Maintenance Notice"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full bg-[#1F2937] border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                className="w-full bg-[#1F2937] border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition-colors"
                 required
               />
             </div>
@@ -196,12 +196,12 @@ export default function NoticeAdminPage() {
               <select
                 value={category}
                 onChange={(e: any) => setCategory(e.target.value)}
-                className="w-full bg-[#1F2937] border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer"
+                className="w-full bg-[#1F2937] border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer"
               >
-                <option value="info">General Info (Blue)</option>
+                <option value="info">General Info (Emerald)</option>
                 <option value="alert">Security Alert (Amber)</option>
                 <option value="urgent">Urgent Announcement (Red)</option>
-                <option value="promo">Promotional Offer (Purple)</option>
+                <option value="promo">Promotional Offer (Teal)</option>
               </select>
             </div>
 
@@ -218,7 +218,7 @@ export default function NoticeAdminPage() {
                   }}
                   className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all ${
                     targetType === 'all'
-                      ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300'
+                      ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400 font-bold shadow-sm shadow-emerald-500/10'
                       : 'bg-[#1F2937] border-gray-700 text-gray-400 hover:text-white'
                   }`}
                 >
@@ -229,7 +229,7 @@ export default function NoticeAdminPage() {
                   onClick={() => setTargetType('specific')}
                   className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all ${
                     targetType === 'specific'
-                      ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300'
+                      ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400 font-bold shadow-sm shadow-emerald-500/10'
                       : 'bg-[#1F2937] border-gray-700 text-gray-400 hover:text-white'
                   }`}
                 >
@@ -244,7 +244,7 @@ export default function NoticeAdminPage() {
                 <button
                   type="button"
                   onClick={handleOpenUserPicker}
-                  className="w-full flex items-center justify-between bg-[#1F2937] border border-dashed border-indigo-500/50 hover:border-indigo-500 rounded-xl px-4 py-3 text-xs font-semibold text-indigo-300 transition-all cursor-pointer"
+                  className="w-full flex items-center justify-between bg-[#1F2937] border border-dashed border-emerald-500/40 hover:border-emerald-500 rounded-xl px-4 py-3 text-xs font-semibold text-emerald-400 transition-all cursor-pointer"
                 >
                   <span>Select Target Users ({selectedUserIds.length} selected)</span>
                   <Search className="w-4 h-4" />
@@ -253,7 +253,7 @@ export default function NoticeAdminPage() {
                 {selectedUserObjects.length > 0 && (
                   <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 bg-[#1F2937]/50 rounded-xl border border-gray-800">
                     {selectedUserObjects.map((u) => (
-                      <span key={u._id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                      <span key={u._id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-medium">
                         @{u.userTag || u.fullName}
                         <button
                           type="button"
@@ -277,7 +277,7 @@ export default function NoticeAdminPage() {
                 placeholder="Write the notification message here..."
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                className="w-full bg-[#1F2937] border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-colors resize-none"
+                className="w-full bg-[#1F2937] border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition-colors resize-none"
                 required
               />
             </div>
@@ -286,9 +286,9 @@ export default function NoticeAdminPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              <Send className="w-4 h-4" />
+              <Send className="w-4 h-4 text-slate-950 stroke-[2.5]" />
               {submitting ? 'Publishing...' : 'Post Notice'}
             </button>
           </form>
@@ -369,11 +369,11 @@ export default function NoticeAdminPage() {
           <div className="bg-[#111827] border border-[#1F2937] w-full max-w-lg rounded-2xl shadow-2xl p-6 space-y-5">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Users className="w-5 h-5 text-indigo-400" /> Select Target Users
+                <Users className="w-5 h-5 text-emerald-400" /> Select Target Users
               </h3>
               <button
                 onClick={() => setIsUserPickerOpen(false)}
-                className="text-gray-400 hover:text-white font-bold"
+                className="text-gray-400 hover:text-white font-bold cursor-pointer"
               >
                 ✕
               </button>
@@ -390,7 +390,7 @@ export default function NoticeAdminPage() {
                   setUserSearch(e.target.value);
                   fetchUsers(e.target.value);
                 }}
-                className="w-full bg-[#1F2937] border border-gray-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full bg-[#1F2937] border border-gray-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
               />
             </div>
 
@@ -409,7 +409,7 @@ export default function NoticeAdminPage() {
                       onClick={() => toggleSelectUser(u)}
                       className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
                         isSelected
-                          ? 'bg-indigo-600/15 border-indigo-500 text-indigo-300'
+                          ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400 font-medium'
                           : 'bg-[#1F2937]/50 border-gray-800 text-gray-300 hover:bg-gray-800'
                       }`}
                     >
@@ -417,7 +417,7 @@ export default function NoticeAdminPage() {
                         <p className="text-sm font-semibold text-white">{u.fullName || u.userTag}</p>
                         <p className="text-xs text-gray-400">@{u.userTag} • {u.email}</p>
                       </div>
-                      {isSelected && <CheckCircle2 className="w-5 h-5 text-indigo-400" />}
+                      {isSelected && <CheckCircle2 className="w-5 h-5 text-emerald-400" />}
                     </div>
                   );
                 })
@@ -428,7 +428,7 @@ export default function NoticeAdminPage() {
               <button
                 type="button"
                 onClick={() => setIsUserPickerOpen(false)}
-                className="py-2.5 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl transition-all cursor-pointer"
+                className="py-2.5 px-6 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-sm rounded-xl transition-all cursor-pointer shadow-md shadow-emerald-500/20"
               >
                 Done ({selectedUserIds.length} selected)
               </button>

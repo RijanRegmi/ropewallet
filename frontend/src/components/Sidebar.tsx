@@ -53,8 +53,8 @@ export default function Sidebar() {
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all ${
                   isActive
-                    ? 'bg-indigo-600/15 text-indigo-400 border-l-[3px] border-indigo-500'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                    ? 'bg-emerald-500/10 text-emerald-400 border-l-[3px] border-emerald-500 shadow-sm shadow-emerald-500/10 font-semibold'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800/60'
                 }`}
               >
                 <Icon className="w-5 h-5 flex-shrink-0" />
