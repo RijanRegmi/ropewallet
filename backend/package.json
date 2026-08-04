@@ -7,7 +7,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "dev": "tsx watch src/server.ts"
+    "dev": "tsx watch src/server.ts",
+    "security:test": "tsx src/scripts/security_audit.ts"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",

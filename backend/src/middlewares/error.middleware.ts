@@ -22,6 +22,9 @@ export const errorHandler = (
   if (err instanceof CustomError) {
     statusCode = err.statusCode;
     message = err.message;
+  } else if ((err as any).status === 413 || (err as any).type === 'entity.too.large') {
+    statusCode = 413;
+    message = 'Payload Too Large: Request body exceeds maximum allowed 10KB limit';
   } else if (err.name === 'ValidationError') {
     statusCode = 400;
     message = err.message;

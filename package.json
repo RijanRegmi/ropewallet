@@ -14,6 +14,7 @@
     "build": "npm run build --prefix backend && npm run build --prefix frontend",
     "build:backend": "npm run build --prefix backend",
     "build:frontend": "npm run build --prefix frontend",
+    "security:test": "npm run security:test --prefix backend",
     "start": "concurrently -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\" \"npm start --prefix backend\" \"npm start --prefix frontend\""
   },
   "dependencies": {

@@ -137,9 +137,13 @@ export class PaymentController {
         return;
       }
 
-      // 2. Update user's wallet balance
-      user.walletBalance = Number((user.walletBalance + amount).toFixed(2));
-      await user.save();
+      // 2. Atomically update user's wallet balance
+      const updatedUser = await User.findByIdAndUpdate(
+        user._id,
+        { $inc: { walletBalance: amount } },
+        { new: true }
+      );
+      if (updatedUser) user.walletBalance = updatedUser.walletBalance;
 
       // 3. Create Transaction history log
       const last4 = useSavedCard && user.savedCard
@@ -274,30 +278,34 @@ export class PaymentController {
         return;
       }
 
-      // Perform transfer atomically (rollback on failure)
-      const originalSenderBalance = sender.walletBalance;
-      const originalReceiverBalance = receiver.walletBalance;
+      // Perform transfer atomically with balance guard against double-spending
+      const updatedSender = await User.findOneAndUpdate(
+        { _id: sender._id, walletBalance: { $gte: totalCostFromSender } },
+        { $inc: { walletBalance: -totalCostFromSender } },
+        { new: true }
+      );
 
-      try {
-        sender.walletBalance = Number((sender.walletBalance - totalCostFromSender).toFixed(2));
-        receiver.walletBalance = Number((receiver.walletBalance + creditToReceiver).toFixed(2));
-
-        await sender.save();
-        await receiver.save();
-      } catch (saveError: any) {
-        // Rollback both balances on any save failure
-        sender.walletBalance = originalSenderBalance;
-        receiver.walletBalance = originalReceiverBalance;
-        try {
-          await sender.save();
-          await receiver.save();
-        } catch (_) {
-          // Rollback best-effort
-        }
-        console.error('Transfer save failed, rolled back:', saveError.message);
-        res.status(500).json({ success: false, error: 'Transfer failed. No money was deducted.' });
+      if (!updatedSender) {
+        res.status(400).json({ success: false, error: 'Transfer failed: Insufficient funds or concurrent balance modification.' });
         return;
       }
+
+      // Credit receiver balance atomically
+      const updatedReceiver = await User.findByIdAndUpdate(
+        receiver._id,
+        { $inc: { walletBalance: creditToReceiver } },
+        { new: true }
+      );
+
+      if (!updatedReceiver) {
+        // Rollback sender balance if receiver credit fails
+        await User.findByIdAndUpdate(sender._id, { $inc: { walletBalance: totalCostFromSender } });
+        res.status(500).json({ success: false, error: 'Transfer failed during balance credit.' });
+        return;
+      }
+
+      sender.walletBalance = updatedSender.walletBalance;
+      receiver.walletBalance = updatedReceiver.walletBalance;
 
       // Log Transaction
       const transaction = await Transaction.create({
@@ -621,12 +629,24 @@ export class PaymentController {
         }
       }
 
-      // 3. Deduct balance and update pending cashout balance if Host
-      user.walletBalance = Number((user.walletBalance - amount).toFixed(2));
-      if (isHostCashout) {
-        user.pendingCashoutBalance = Number(((user.pendingCashoutBalance || 0) + amount).toFixed(2));
+      // 3. Atomically deduct balance to prevent race condition double-spending
+      const updatedUser = await User.findOneAndUpdate(
+        { _id: user._id, walletBalance: { $gte: amount } },
+        {
+          $inc: {
+            walletBalance: -amount,
+            ...(isHostCashout ? { pendingCashoutBalance: amount } : {}),
+          },
+        },
+        { new: true }
+      );
+
+      if (!updatedUser) {
+        res.status(400).json({ success: false, error: 'Transaction failed: Insufficient wallet balance or concurrent operation.' });
+        return;
       }
-      await user.save();
+      user.walletBalance = updatedUser.walletBalance;
+      user.pendingCashoutBalance = updatedUser.pendingCashoutBalance;
 
       // 4. Create Transaction history log
       const transactionStatus = isHostCashout ? 'pending' : 'completed';
@@ -675,17 +695,27 @@ export class PaymentController {
     const sig = req.headers['stripe-signature'];
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-    let event;
+    let event: Stripe.Event;
 
     try {
-      if (endpointSecret && sig) {
+      if (!endpointSecret) {
+        if (process.env.NODE_ENV === 'production') {
+          console.error('[SECURITY FATAL] STRIPE_WEBHOOK_SECRET missing in production environment');
+          res.status(500).send('Webhook configuration error');
+          return;
+        }
+        console.warn('[SECURITY WARNING] STRIPE_WEBHOOK_SECRET not set. Processing unverified webhook body in local dev mode only.');
+        event = req.body;
+      } else {
+        if (!sig) {
+          res.status(400).send('Missing stripe-signature header');
+          return;
+        }
         const rawBody = (req as any).rawBody || req.body;
         event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
-      } else {
-        event = req.body;
       }
     } catch (err: any) {
-      console.error('Webhook signature verification failed:', err.message);
+      console.error('[SECURITY ALERT] Stripe Webhook signature verification failed:', err.message);
       res.status(400).send(`Webhook Error: ${err.message}`);
       return;
     }
