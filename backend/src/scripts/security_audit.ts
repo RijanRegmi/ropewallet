@@ -117,8 +117,8 @@ async function runSecurityAudit() {
     });
 
     // ─── Test 4: DoS Payload Size Limitation Audit ──────────────────────────
-    console.log('➜ Testing [4/5] DoS Payload Size Limitation (10KB Cap)...');
-    const oversizedBody = JSON.stringify({ data: 'A'.repeat(15 * 1024) }); // 15KB body > 10KB cap
+    console.log('➜ Testing [4/5] DoS Payload Size Limitation (10MB Cap)...');
+    const oversizedBody = JSON.stringify({ data: 'A'.repeat(11 * 1024 * 1024) }); // 11MB body > 10MB cap
     const resPayload = await makeRequest(port, '/api/auth/login', 'POST', {}, oversizedBody);
     const payloadPassed = resPayload.status === 413; // 413 Payload Too Large
 
@@ -127,7 +127,7 @@ async function runSecurityAudit() {
       category: 'DoS Mitigation',
       passed: payloadPassed,
       details: payloadPassed
-        ? `Status 413 Payload Too Large - 15KB oversized payload blocked successfully`
+        ? `Status 413 Payload Too Large - 11MB oversized payload blocked successfully`
         : `Status ${resPayload.status} (Expected 413)`,
     });
 

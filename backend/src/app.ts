@@ -73,9 +73,9 @@ app.use(cors({
   },
 }));
 
-// Limit JSON payload size to prevent DoS (10KB cap)
+// Limit JSON payload size to 10MB to support profile image uploads
 app.use(express.json({
-  limit: '10kb',
+  limit: '10mb',
   verify: (req: any, res, buf) => {
     const url = req.originalUrl || req.url || '';
     if (url.startsWith('/api/webhook') || url.startsWith('/api/p2p')) {
@@ -83,7 +83,7 @@ app.use(express.json({
     }
   }
 }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Global Rate Limiter (Max 100 requests per 15 mins)
 const globalLimiter = rateLimit({

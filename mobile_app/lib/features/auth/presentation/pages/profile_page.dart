@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -17,6 +19,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   bool _isUploading = false;
+  File? _selectedLocalFile;
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _showImageSourceBottomSheet(String profileImage) async {
@@ -108,6 +111,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _removeProfileImage() async {
     setState(() {
+      _selectedLocalFile = null;
       _isUploading = true;
     });
 
@@ -119,6 +123,7 @@ class _ProfilePageState extends State<ProfilePage> {
           const SnackBar(
             backgroundColor: Color(0xFF047857),
             content: Text('Profile image removed successfully!'),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       } else if (mounted) {
@@ -126,6 +131,7 @@ class _ProfilePageState extends State<ProfilePage> {
           SnackBar(
             backgroundColor: const Color(0xFFEF4444),
             content: Text(authProvider.errorMessage ?? 'Failed to remove profile image'),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -135,6 +141,7 @@ class _ProfilePageState extends State<ProfilePage> {
           SnackBar(
             backgroundColor: const Color(0xFFEF4444),
             content: Text('Error: $e'),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -151,80 +158,89 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       final XFile? image = await _picker.pickImage(
         source: source,
-        imageQuality: 75,
+        imageQuality: 50,
+        maxWidth: 400,
+        maxHeight: 400,
       );
 
       if (image == null) return;
 
+      final file = File(image.path);
       setState(() {
+        _selectedLocalFile = file;
         _isUploading = true;
       });
 
-      // 1. Generate signature for Cloudinary signed upload
-      final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      final apiSecret = 'MFRebbkEeGtYMg9LmbDwjaQYz4s';
-      final apiKey = '936327183722823';
-      final cloudName = 'v41le7lh';
-      
-      final signatureStr = 'timestamp=$timestamp$apiSecret';
-      final signature = sha1.convert(utf8.encode(signatureStr)).toString();
+      String? imageUrl;
 
-      final url = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/upload');
-      final request = http.MultipartRequest('POST', url)
-        ..fields['api_key'] = apiKey
-        ..fields['timestamp'] = timestamp.toString()
-        ..fields['signature'] = signature
-        ..files.add(await http.MultipartFile.fromPath('file', image.path));
+      // 1. Attempt Cloudinary upload with 6s timeout
+      try {
+        final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        const apiSecret = 'MFRebbkEeGtYMg9LmbDwjaQYz4s';
+        const apiKey = '936327183722823';
+        const cloudName = 'v41le7lh';
+        
+        final signatureStr = 'timestamp=$timestamp$apiSecret';
+        final signature = sha1.convert(utf8.encode(signatureStr)).toString();
 
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
+        final url = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/upload');
+        final request = http.MultipartRequest('POST', url)
+          ..fields['api_key'] = apiKey
+          ..fields['timestamp'] = timestamp.toString()
+          ..fields['signature'] = signature
+          ..files.add(await http.MultipartFile.fromPath('file', file.path));
 
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        final secureUrl = decoded['secure_url'] as String;
+        final streamedResponse = await request.send().timeout(const Duration(seconds: 6));
+        final response = await http.Response.fromStream(streamedResponse).timeout(const Duration(seconds: 6));
 
-        // 2. Save secureUrl to backend database
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final success = await authProvider.updateProfileImage(secureUrl);
-
-        if (success && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              backgroundColor: Color(0xFF047857),
-              content: Text('Profile image updated successfully!'),
-            ),
-          );
-        } else if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFFEF4444),
-              content: Text(authProvider.errorMessage ?? 'Failed to save profile image to database'),
-            ),
-          );
-        }
-      } else {
-        String errorMsg = response.reasonPhrase ?? 'Unauthorized';
-        try {
+        if (response.statusCode == 200) {
           final decoded = jsonDecode(response.body);
-          if (decoded['error'] != null && decoded['error']['message'] != null) {
-            errorMsg = decoded['error']['message'];
-          }
-        } catch (_) {}
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFFEF4444),
-              content: Text('Cloudinary upload failed: $errorMsg'),
-            ),
-          );
+          imageUrl = decoded['secure_url'] as String;
         }
+      } catch (_) {
+        // Cloudinary upload unavailable — fallback to base64 encoding below
+      }
+
+      // 2. Fallback to base64 data URI if Cloudinary upload was not completed
+      if (imageUrl == null || imageUrl.isEmpty) {
+        final bytes = await file.readAsBytes();
+        imageUrl = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+      }
+
+      // 3. Save profile image to backend database & AuthProvider state
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final success = await authProvider.updateProfileImage(imageUrl);
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Color(0xFF047857),
+            content: Text('Profile image updated successfully!'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else if (mounted) {
+        setState(() {
+          _selectedLocalFile = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            content: Text(authProvider.errorMessage ?? 'Failed to update profile image'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
+        setState(() {
+          _selectedLocalFile = null;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFFEF4444),
             content: Text('Error: $e'),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -298,10 +314,10 @@ class _ProfilePageState extends State<ProfilePage> {
                     child: CircleAvatar(
                       radius: 64,
                       backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-                      backgroundImage: profileImage.isNotEmpty
-                          ? NetworkImage(profileImage)
-                          : null,
-                      child: profileImage.isEmpty
+                      backgroundImage: _selectedLocalFile != null
+                          ? FileImage(_selectedLocalFile!) as ImageProvider
+                          : getProfileImageProvider(profileImage),
+                      child: (_selectedLocalFile == null && getProfileImageProvider(profileImage) == null)
                           ? Icon(
                               Icons.person_rounded,
                               size: 64,

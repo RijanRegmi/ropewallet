@@ -420,6 +420,7 @@ class AuthProvider with ChangeNotifier {
       if (response.statusCode == 200 && responseData['success'] == true) {
         if (_user != null) {
           _user!['profileImage'] = profileImage;
+          await _secureStorage.write(key: 'cached_user_profile', value: jsonEncode(_user));
         }
         notifyListeners();
         return true;
@@ -689,4 +690,21 @@ class AuthProvider with ChangeNotifier {
       await authProvider.logout(walletProvider: walletProvider);
     }
   }
+}
+
+/// Helper function to robustly construct an ImageProvider for URLs, base64 data URIs, or empty strings.
+ImageProvider? getProfileImageProvider(String? urlOrData) {
+  if (urlOrData == null || urlOrData.trim().isEmpty) return null;
+  final str = urlOrData.trim();
+  if (str.startsWith('data:image/')) {
+    try {
+      final base64Str = str.split(',').last;
+      return MemoryImage(base64Decode(base64Str));
+    } catch (_) {
+      return null;
+    }
+  } else if (str.startsWith('http://') || str.startsWith('https://')) {
+    return NetworkImage(str);
+  }
+  return null;
 }

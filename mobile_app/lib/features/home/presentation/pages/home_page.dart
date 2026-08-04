@@ -285,10 +285,8 @@ class _HomePageState extends State<HomePage> {
                       child: CircleAvatar(
                         radius: 26,
                         backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-                        backgroundImage: profileImage.isNotEmpty
-                            ? NetworkImage(profileImage)
-                            : null,
-                        child: profileImage.isEmpty
+                        backgroundImage: getProfileImageProvider(profileImage),
+                        child: getProfileImageProvider(profileImage) == null
                             ? Icon(
                                 Icons.person_rounded,
                                 size: 30,
