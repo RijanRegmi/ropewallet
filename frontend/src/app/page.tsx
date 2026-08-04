@@ -304,12 +304,12 @@ export default function ProfessionalWhiteLandingPage() {
                   <ArrowRight className="w-4 h-4" />
                 </a>
                 <a
-                  href="#mobile-app"
-                  onClick={(e) => handleSmoothScroll(e, 'mobile-app')}
+                  href="/ropewallet.apk"
+                  download="RopeWallet.apk"
                   className="px-8 py-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 font-bold text-sm rounded-2xl shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
                 >
-                  <Smartphone className="w-4 h-4" />
-                  Download Mobile App
+                  <Smartphone className="w-4 h-4 text-emerald-600" />
+                  Download APK File
                 </a>
               </div>
 
@@ -625,10 +625,9 @@ export default function ProfessionalWhiteLandingPage() {
                 </a>
 
                 <a
-                  href="https://play.google.com/store/apps"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Get RopeWallet on Google Play Store"
+                  href="/ropewallet.apk"
+                  download="RopeWallet.apk"
+                  aria-label="Download RopeWallet Android APK"
                   className="w-[210px] h-[60px] bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/40 font-extrabold text-xs rounded-2xl shadow-xl shadow-emerald-600/30 hover:shadow-emerald-600/50 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3.5 cursor-pointer shrink-0"
                 >
                   {/* Official Google Play Store Icon */}
