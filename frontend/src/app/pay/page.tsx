@@ -302,7 +302,7 @@ function PayContent() {
               <span className="font-semibold">${finalAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-danger">
-              <span>Service fee (15%):</span>
+              <span>Service fee:</span>
               <span>-${platformFee.toFixed(2)}</span>
             </div>
             <div className="flex justify-between border-t border-dark-border/50 pt-2 text-success font-bold text-sm">

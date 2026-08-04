@@ -54,13 +54,22 @@ app.use(async (req, res, next) => {
 app.use((helmet as any)({
   contentSecurityPolicy: false, // Allow inline scripts for admin portal
 }));
-app.use(mongoSanitize() as any); // Prevent NoSQL Injection
+app.use((req, res, next) => {
+  if (req.body) mongoSanitize.sanitize(req.body);
+  if (req.params) mongoSanitize.sanitize(req.params);
+  if (req.query) mongoSanitize.sanitize(req.query);
+  next();
+});
 app.use(cookieParser());  // Parse cookies for admin auth
 
 // CORS configuration
 app.use(cors({
   credentials: true,
-  origin: true, // Allow all origins with credentials
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, server-to-server, Next.js rewrites)
+    if (!origin) return callback(null, true);
+    return callback(null, origin);
+  },
 }));
 
 // Limit JSON payload size to prevent DOS (with rawBody capture for Stripe webhooks)

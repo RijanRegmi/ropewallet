@@ -1853,7 +1853,7 @@ export class AdminController {
         <div class="value">$${Number(data.totalCashFlow || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
       </div>
       <div class="stat-card success">
-        <div class="label">💵 Platform Revenue (15%)</div>
+        <div class="label">💵 Platform Revenue</div>
         <div class="value">$${Number(data.totalPlatformFee || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
       </div>
       <div class="stat-card danger">

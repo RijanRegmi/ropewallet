@@ -57,6 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Backend returns { success, token, admin: {...} } (not data)
     const res = await apiRequest<any>('/admin/login', 'POST', { email, password });
     if (res.success && (res as any).admin) {
+      if ((res as any).token && typeof window !== 'undefined') {
+        localStorage.setItem('admin_token', (res as any).token);
+      }
       setAdmin((res as any).admin);
       router.push('/admin/dashboard');
       return { success: true };
@@ -65,6 +68,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('admin_token');
+    }
     // Call logout endpoint to clear cookie
     fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/admin/logout`, {
       method: 'POST',

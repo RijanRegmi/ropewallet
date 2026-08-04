@@ -14,7 +14,12 @@ export default function AdminLayout({
 
   if (isLoginPage) {
     return (
-      <div className="min-h-screen bg-[#0B0F1A] text-gray-100">
+      <div
+        className="min-h-screen text-white selection:bg-[#1F4959] selection:text-white"
+        style={{
+          background: 'linear-gradient(135deg, #011425 0%, #0d2030 40%, #1F4959 100%)',
+        }}
+      >
         {children}
       </div>
     );
@@ -22,7 +27,12 @@ export default function AdminLayout({
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#0B0F1A] text-gray-100 flex">
+      <div
+        className="min-h-screen text-white flex selection:bg-[#1F4959] selection:text-white"
+        style={{
+          background: 'radial-gradient(ellipse at top right, rgba(31,73,89,0.45) 0%, #011425 55%, #011020 100%)',
+        }}
+      >
         <Sidebar />
         <main className="flex-1 ml-64 p-8 min-h-screen">
           {children}

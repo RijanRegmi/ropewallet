@@ -2,10 +2,7 @@ const getApiBase = () => {
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-    return '/api';
-  }
-  return 'http://localhost:5000/api';
+  return '/api';
 };
 
 export async function apiRequest<T>(
@@ -15,11 +12,20 @@ export async function apiRequest<T>(
 ): Promise<{ success: boolean; data?: T; error?: string; message?: string }> {
   try {
     const apiBase = getApiBase();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (typeof window !== 'undefined') {
+      const storedToken = localStorage.getItem('admin_token');
+      if (storedToken) {
+        headers['Authorization'] = `Bearer ${storedToken}`;
+      }
+    }
+
     const opts: RequestInit = {
       method,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       credentials: 'include',
     };
 
@@ -46,7 +52,7 @@ export async function apiRequest<T>(
     return data;
   } catch (err: any) {
     console.error('API Network Error:', err);
-    return { success: false, error: err.message || 'Network error occurred' };
+    return { success: false, error: err.message || 'Cannot connect to server. Please check your connection.' };
   }
 }
 

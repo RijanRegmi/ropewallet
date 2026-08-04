@@ -9,14 +9,20 @@ const PORT = process.env.PORT || 5000;
 
 // Connect to Database and start server (only if running locally / non-serverless)
 const startServer = async () => {
-  await connectDB();
-  
-  // Start background P2P deposit automated email polling ONLY in persistent server environments
-  if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') {
-    startP2PAutomationService(20000);
-    app.listen(PORT, () => {
+  // Always start HTTP listener on port 5000 first so proxy connections do not get ECONNREFUSED
+  if (!process.env.VERCEL) {
+    app.listen(Number(PORT), '0.0.0.0', () => {
       console.log(`Server is running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
     });
+  }
+
+  try {
+    await connectDB();
+    if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') {
+      startP2PAutomationService(20000);
+    }
+  } catch (err: any) {
+    console.error('Database connection error on server startup:', err.message || err);
   }
 };
 

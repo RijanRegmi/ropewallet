@@ -172,18 +172,18 @@ export default function UsersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-white">User Management</h2>
-          <p className="text-sm text-gray-400 mt-1">Real-time filtering, creation, role editing, and account status</p>
+          <p className="text-sm mt-1" style={{ color: '#5C7C89' }}>Real-time filtering, creation, role editing, and account status</p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="relative w-72">
+          <div className="relative flex-1 sm:w-80">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="Search by name, email, or $tag..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-[#1F2937] border border-gray-700 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500 transition-all"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm text-white focus:outline-none transition-all placeholder-[#5C7C89]" style={{ background: 'rgba(31,73,89,0.30)', border: '1px solid rgba(92,124,137,0.30)' }}
             />
           </div>
 
@@ -193,7 +193,7 @@ export default function UsersPage() {
               setIsModalOpen(true);
             }}
             title="Create a new user account"
-            className="cursor-pointer flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 active:scale-95 text-white font-bold text-sm rounded-xl shadow-lg transition-all"
+            className="cursor-pointer flex items-center gap-2 px-4 py-2.5 font-extrabold text-sm rounded-xl transition-all active:scale-95" style={{ background: 'linear-gradient(135deg, #1F4959, #5C7C89)', border: '1px solid rgba(92,124,137,0.40)', color: '#fff', boxShadow: '0 4px 16px rgba(31,73,89,0.40)' }}
           >
             <Plus className="w-4 h-4" />
             New User
@@ -202,23 +202,23 @@ export default function UsersPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-3 border-b border-[#1F2937] pb-3">
+      <div className="flex items-center gap-3 pb-3" style={{ borderBottom: '1px solid rgba(92,124,137,0.18)' }}>
         <button
           onClick={() => setActiveTab('users')}
-          className={`px-4 py-2 text-sm font-bold rounded-xl transition-all cursor-pointer ${activeTab === 'users'
-              ? 'bg-indigo-600 text-white shadow-md'
-              : 'bg-[#111827] text-gray-400 hover:text-white border border-gray-800'
-            }`}
+          className="px-4 py-2 text-sm font-bold rounded-xl transition-all cursor-pointer"
+          style={activeTab === 'users'
+            ? { background: 'linear-gradient(135deg, #1F4959, #5C7C89)', color: '#fff', boxShadow: '0 4px 16px rgba(31,73,89,0.40)', border: '1px solid rgba(92,124,137,0.40)' }
+            : { background: 'rgba(31,73,89,0.20)', color: 'rgba(168,196,204,0.70)', border: '1px solid rgba(92,124,137,0.20)' }}
         >
           User & Host Accounts ({filteredUsers.length})
         </button>
 
         <button
           onClick={() => setActiveTab('host_requests')}
-          className={`px-4 py-2 text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center gap-2 ${activeTab === 'host_requests'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'bg-[#111827] text-gray-400 hover:text-white border border-gray-800'
-            }`}
+          className="px-4 py-2 text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center gap-2"
+          style={activeTab === 'host_requests'
+            ? { background: 'linear-gradient(135deg, #1F4959, #5C7C89)', color: '#fff', boxShadow: '0 4px 16px rgba(31,73,89,0.40)', border: '1px solid rgba(92,124,137,0.40)' }
+            : { background: 'rgba(31,73,89,0.20)', color: 'rgba(168,196,204,0.70)', border: '1px solid rgba(92,124,137,0.20)' }}
         >
           Become a Host Requests
           {hostRequests.filter((r) => r.status === 'pending').length > 0 && (
@@ -230,11 +230,11 @@ export default function UsersPage() {
       </div>
 
       {activeTab === 'host_requests' ? (
-        <div className="bg-[#111827] border border-[#1F2937] rounded-2xl overflow-hidden shadow-lg p-6 space-y-4">
+        <div className="rounded-2xl overflow-hidden p-6 space-y-4" style={{ background: 'rgba(13,32,48,0.70)', backdropFilter: 'blur(20px)', border: '1px solid rgba(92,124,137,0.20)', boxShadow: '0 8px 32px rgba(1,20,37,0.50)' }}>
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-bold text-white">Incoming Become a Host Connection Requests ({hostRequests.length})</h3>
-              <p className="text-xs text-gray-400">Potential hosts requesting access to the platform</p>
+              <p className="text-xs" style={{ color: '#5C7C89' }}>Potential hosts requesting access to the platform</p>
             </div>
           </div>
 
@@ -245,7 +245,7 @@ export default function UsersPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {hostRequests.map((hr) => (
-                <div key={hr._id} className="bg-[#1F2937]/60 border border-gray-800 rounded-xl p-5 space-y-3">
+                <div key={hr._id} className="rounded-xl p-5 space-y-3" style={{ background: 'rgba(31,73,89,0.25)', border: '1px solid rgba(92,124,137,0.22)' }}>
                   <div className="flex items-center justify-between">
                     <span className="font-extrabold text-white text-base">{hr.fullName}</span>
                     <span className={`px-2.5 py-1 text-xs font-semibold rounded-lg uppercase ${hr.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
@@ -265,7 +265,7 @@ export default function UsersPage() {
                     <p className="text-gray-500 text-[10px] pt-1">Requested: {new Date(hr.createdAt).toLocaleString()}</p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-800">
+                  <div className="flex flex-wrap items-center gap-2 pt-2" style={{ borderTop: '1px solid rgba(92,124,137,0.20)' }}>
                     <button
                       onClick={() => handleUpdateHostRequestStatus(hr._id, 'contacted')}
                       className="px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white text-xs font-bold rounded-lg transition-all cursor-pointer"
@@ -280,7 +280,7 @@ export default function UsersPage() {
                     </button>
                     <a
                       href={`mailto:${hr.email}`}
-                      className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold rounded-lg transition-all cursor-pointer"
+                      className="px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer" style={{ background: 'rgba(92,124,137,0.15)', border: '1px solid rgba(92,124,137,0.25)', color: '#a8c4cc' }}
                     >
                       Send Email
                     </a>
@@ -291,10 +291,10 @@ export default function UsersPage() {
           )}
         </div>
       ) : (
-        <div className="bg-[#111827] border border-[#1F2937] rounded-2xl overflow-hidden shadow-lg">
+        <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(13,32,48,0.70)', backdropFilter: 'blur(20px)', border: '1px solid rgba(92,124,137,0.20)', boxShadow: '0 8px 32px rgba(1,20,37,0.50)' }}>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-gray-300">
-              <thead className="bg-[#1F2937]/50 text-xs uppercase text-gray-400 font-semibold">
+              <thead className="text-xs uppercase font-semibold" style={{ background: 'rgba(92,124,137,0.08)', color: 'rgba(92,124,137,0.80)' }}>
                 <tr>
                   <th className="px-6 py-3.5">User</th>
                   <th className="px-6 py-3.5">Email</th>
@@ -306,11 +306,11 @@ export default function UsersPage() {
                   <th className="px-6 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1F2937]">
+              <tbody>
                 {loading ? (
                   <tr>
                     <td colSpan={8} className="px-6 py-12 text-center text-gray-400">
-                      <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mx-auto mb-2"></div>
+                      <div className="w-8 h-8 border-2 rounded-full animate-spin mx-auto mb-2" style={{ borderColor: 'rgba(92,124,137,0.20)', borderTopColor: '#5C7C89' }}></div>
                       Loading users...
                     </td>
                   </tr>
@@ -322,12 +322,14 @@ export default function UsersPage() {
                   </tr>
                 ) : (
                   filteredUsers.map((u) => (
-                    <tr key={u._id} className="hover:bg-gray-800/30 transition-all">
+                    <tr key={u._id} className="transition-all" style={{ borderBottom: '1px solid rgba(92,124,137,0.10)' }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(92,124,137,0.06)'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}>
                       <td className="px-6 py-4 font-bold text-white">
                         {u.fullName || `${u.firstName || ''} ${u.lastName || ''}`}
                       </td>
                       <td className="px-6 py-4">{u.email}</td>
-                      <td className="px-6 py-4 font-mono text-indigo-400 font-medium">
+                      <td className="px-6 py-4 font-mono font-medium" style={{ color: '#7ba5b5' }}>
                         {u.userTag ? (u.userTag.startsWith('$') ? u.userTag : `$${u.userTag}`) : '-'}
                       </td>
                       <td className="px-6 py-4 font-bold text-white">
@@ -347,7 +349,7 @@ export default function UsersPage() {
                         <select
                           value={(u.role === 'user' || u.role === 'customer') ? 'customer' : (u.role === 'admin' || u.role === 'host') ? 'host' : 'superadmin'}
                           onChange={(e) => handleRoleChange(u._id, e.target.value)}
-                          className="px-2.5 py-1 bg-gray-800 border border-gray-700 rounded-lg text-xs font-semibold text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+                          className="px-2.5 py-1 rounded-lg text-xs font-semibold text-white focus:outline-none cursor-pointer" style={{ background: 'rgba(31,73,89,0.50)', border: '1px solid rgba(92,124,137,0.30)' }}
                         >
                           <option value="customer">Customer</option>
                           <option value="host">Host</option>
@@ -364,7 +366,7 @@ export default function UsersPage() {
                               setSelectedUser(u);
                               setIsModalOpen(true);
                             }}
-                            className="cursor-pointer p-2 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white active:scale-95 transition-all"
+                            className="cursor-pointer p-2 rounded-lg active:scale-95 transition-all" style={{ background: 'rgba(92,124,137,0.12)', color: '#7ba5b5', border: '1px solid rgba(92,124,137,0.22)' }}
                             title="Edit User"
                           >
                             <Edit className="w-4 h-4" />
@@ -396,15 +398,15 @@ export default function UsersPage() {
           </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 p-4 border-t border-[#1F2937]">
+            <div className="flex items-center justify-center gap-2 p-4" style={{ borderTop: '1px solid rgba(92,124,137,0.15)' }}>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                 <button
                   key={p}
                   onClick={() => setPage(p)}
-                  className={`cursor-pointer px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all active:scale-95 ${p === page
-                      ? 'bg-indigo-600 text-white border-indigo-500'
-                      : 'bg-gray-800 text-gray-300 border-gray-700 hover:border-gray-500 hover:text-white'
-                    }`}
+                  className="cursor-pointer px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95"
+                  style={p === page
+                    ? { background: 'linear-gradient(135deg,#1F4959,#5C7C89)', color: '#fff', border: '1px solid rgba(92,124,137,0.50)' }
+                    : { background: 'rgba(31,73,89,0.25)', color: 'rgba(168,196,204,0.70)', border: '1px solid rgba(92,124,137,0.22)' }}
                 >
                   {p}
                 </button>

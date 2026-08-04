@@ -757,7 +757,7 @@ export class P2PController {
       <!-- Fee Breakdown -->
       <div class="fee-breakdown" id="feeBreakdown" style="display:none;">
         <div class="fee-row"><span>You send</span><span id="feeSend">$0.00</span></div>
-        <div class="fee-row"><span>Service fee (15%)</span><span id="feeFee">$0.00</span></div>
+        <div class="fee-row"><span>Service fee</span><span id="feeFee">$0.00</span></div>
         <div class="fee-row"><span>Recipient receives</span><span id="feeNet">$0.00</span></div>
       </div>
 

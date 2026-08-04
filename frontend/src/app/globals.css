@@ -1,24 +1,30 @@
 @import "tailwindcss";
 
 @theme {
-  --color-dark-bg: #0B0F1A;
-  --color-dark-surface: #111827;
-  --color-dark-surface-2: #1F2937;
-  --color-dark-surface-3: #374151;
-  --color-dark-border: #1F2937;
-  --color-dark-text: #F9FAFB;
-  --color-dark-text-secondary: #9CA3AF;
-  --color-primary: #6366F1;
-  --color-primary-hover: #818CF8;
+  --color-dark-bg: #011425;
+  --color-dark-surface: #0d2030;
+  --color-dark-surface-2: #1F4959;
+  --color-dark-surface-3: #2a5f72;
+  --color-dark-border: #5C7C89;
+  --color-dark-text: #FFFFFF;
+  --color-dark-text-secondary: #a8c4cc;
+  --color-primary: #5C7C89;
+  --color-primary-hover: #7ba5b5;
   --color-success: #10B981;
   --color-warning: #F59E0B;
   --color-danger: #EF4444;
-  --color-info: #3B82F6;
+  --color-info: #5C7C89;
 }
 
 :root {
-  --background: #0B0F1A;
-  --foreground: #F9FAFB;
+  --background: #011425;
+  --foreground: #FFFFFF;
+  --teal-primary: #5C7C89;
+  --teal-dark: #1F4959;
+  --teal-deeper: #011425;
+  --teal-glass: rgba(31, 73, 89, 0.45);
+  --teal-border: rgba(92, 124, 137, 0.28);
+  --teal-glow: rgba(92, 124, 137, 0.20);
 }
 
 /* ─── Base ──────────────────────────────────────────────────── */
@@ -32,8 +38,6 @@ body {
 }
 
 /* ─── Global Cursor Rules ───────────────────────────────────── */
-
-/* All clickable elements get pointer */
 button,
 a,
 [role="button"],
@@ -44,7 +48,6 @@ summary {
   cursor: pointer !important;
 }
 
-/* Disabled elements get not-allowed */
 button:disabled,
 input:disabled,
 select:disabled,
@@ -53,7 +56,6 @@ textarea:disabled {
   opacity: 0.5;
 }
 
-/* Text inputs get text cursor */
 input[type="text"],
 input[type="email"],
 input[type="password"],
@@ -65,103 +67,119 @@ textarea {
   cursor: text !important;
 }
 
-/* Selects get pointer */
-select {
-  cursor: pointer !important;
-}
-
-/* Links get pointer */
-a {
-  cursor: pointer !important;
-}
-
-/* Table rows that are clickable */
-tr.clickable {
-  cursor: pointer;
-}
+select { cursor: pointer !important; }
+a { cursor: pointer !important; }
+tr.clickable { cursor: pointer; }
 
 /* ─── Focus ring ────────────────────────────────────────────── */
 button:focus-visible,
 a:focus-visible,
 summary:focus-visible {
-  outline: 2px solid #6366F1;
+  outline: 2px solid #5C7C89;
   outline-offset: 2px;
   border-radius: 8px;
 }
 
-input:focus,
-input:focus-visible,
-select:focus,
-select:focus-visible,
-textarea:focus,
-textarea:focus-visible {
+input:focus, input:focus-visible,
+select:focus, select:focus-visible,
+textarea:focus, textarea:focus-visible {
   outline: none !important;
 }
 
-/* ─── Smooth transitions for interactive elements ───────────── */
-button,
-a,
-input,
-select,
-textarea {
+/* ─── Transitions ───────────────────────────────────────────── */
+button, a, input, select, textarea {
   transition: all 0.15s ease;
 }
 
-/* ─── Active / click press effect ──────────────────────────── */
 button:not(:disabled):active {
   transform: scale(0.97);
 }
 
 /* ─── Custom Scrollbar ──────────────────────────────────────── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #0B0F1A;
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #011425; }
 ::-webkit-scrollbar-thumb {
-  background: #1F2937;
+  background: rgba(92, 124, 137, 0.35);
   border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #374151;
+  background: rgba(92, 124, 137, 0.60);
   cursor: pointer;
 }
 
 /* ─── Inputs ────────────────────────────────────────────────── */
-input,
-select {
-  color-scheme: dark;
-}
+input, select { color-scheme: dark; }
 
-/* ─── Page fade-in animation ────────────────────────────────── */
+/* ─── Animations ────────────────────────────────────────────── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+.animate-fade-in { animation: fadeIn 0.3s ease forwards; }
 
-.animate-fade-in {
-  animation: fadeIn 0.3s ease forwards;
-}
-
-/* ─── Hero Floating Phone Animation ─────────────────────────── */
 @keyframes float {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-14px) rotate(1.2deg); }
+  50%       { transform: translateY(-14px) rotate(1.2deg); }
+}
+.animate-float { animation: float 5s ease-in-out infinite; }
+
+/* ─── Selection ─────────────────────────────────────────────── */
+[title] { cursor: pointer; }
+::selection { background: #1F4959; color: white; }
+
+/* ─── Glass utilities ───────────────────────────────────────── */
+.glass {
+  background: rgba(15, 35, 52, 0.60);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(92, 124, 137, 0.22);
 }
 
-.animate-float {
-  animation: float 5s ease-in-out infinite;
+.glass-surface {
+  background: rgba(31, 73, 89, 0.50);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(92, 124, 137, 0.28);
 }
 
-/* ─── Tooltip via title attr (browser native) ───────────────── */
-[title] {
-  cursor: pointer;
+.glass-card {
+  background: rgba(13, 32, 48, 0.70);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(92, 124, 137, 0.20);
+  box-shadow: 0 8px 32px rgba(1, 20, 37, 0.50), inset 0 1px 0 rgba(255,255,255,0.04);
 }
 
-/* ─── Selection color ───────────────────────────────────────── */
-::selection {
-  background: #6366F1;
-  color: white;
+.glass-card:hover {
+  border-color: rgba(92, 124, 137, 0.45);
+  box-shadow: 0 12px 40px rgba(1, 20, 37, 0.60), 0 0 24px rgba(92, 124, 137, 0.12), inset 0 1px 0 rgba(255,255,255,0.06);
+  transform: translateY(-2px);
+}
+
+.glass-btn {
+  background: rgba(92, 124, 137, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(92, 124, 137, 0.25);
+  color: #d0e8ef;
+  transition: all 0.2s ease;
+}
+
+.glass-btn:hover {
+  background: rgba(92, 124, 137, 0.22);
+  border-color: rgba(92, 124, 137, 0.50);
+  box-shadow: 0 0 20px rgba(92, 124, 137, 0.18);
+}
+
+/* ─── Teal glow pulse ───────────────────────────────────────── */
+@keyframes tealPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(92, 124, 137, 0.35); }
+  50%       { box-shadow: 0 0 0 8px rgba(92, 124, 137, 0); }
+}
+.glow-teal { animation: tealPulse 2.5s ease-in-out infinite; }
+
+/* ─── Active sidebar item shimmer ───────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
 }

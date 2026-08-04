@@ -144,7 +144,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
 
                 _buildPdfDetailRow('Sender', senderName),
                 _buildPdfDetailRow('Recipient', receiverName),
-                _buildPdfDetailRow('Platform Fee (15%)', feeText),
+                _buildPdfDetailRow('Platform Fee', feeText),
                 _buildPdfDetailRow('Net Amount', netText),
                 _buildPdfDetailRow('Remarks', remarks),
 
@@ -400,7 +400,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
                   _buildDetailRow('Date & Time', formattedDate, isDark),
                   _buildDetailRow('Sender', senderName, isDark),
                   _buildDetailRow('Recipient', receiverName, isDark),
-                  _buildDetailRow('Platform Fee (15%)', feeText, isDark),
+                  _buildDetailRow('Platform Fee', feeText, isDark),
                   _buildDetailRow('Net Amount Received', netText, isDark),
                   _buildDetailRow('Remarks', remarks, isDark),
                 ],
