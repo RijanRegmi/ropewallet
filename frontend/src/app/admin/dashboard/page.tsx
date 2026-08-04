@@ -41,11 +41,11 @@ export default function DashboardPage() {
   ];
 
   const glassCard = {
-    background: 'rgba(13, 32, 48, 0.70)',
-    backdropFilter: 'blur(20px) saturate(160%)',
-    WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-    border: '1px solid rgba(92, 124, 137, 0.20)',
-    boxShadow: '0 8px 32px rgba(1, 20, 37, 0.50), inset 0 1px 0 rgba(255,255,255,0.04)',
+    background: 'linear-gradient(135deg, rgba(28, 62, 82, 0.65) 0%, rgba(13, 35, 52, 0.85) 100%)',
+    backdropFilter: 'blur(24px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+    border: '1px solid rgba(92, 124, 137, 0.38)',
+    boxShadow: '0 10px 36px rgba(0, 10, 20, 0.60), inset 0 1px 0 rgba(255,255,255,0.12)',
   };
 
   return (
@@ -66,25 +66,25 @@ export default function DashboardPage() {
               style={glassCard}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLDivElement;
-                el.style.borderColor = 'rgba(92,124,137,0.45)';
+                el.style.borderColor = 'rgba(92,124,137,0.65)';
                 el.style.transform = 'translateY(-3px)';
-                el.style.boxShadow = `0 16px 48px rgba(1,20,37,0.60), 0 0 28px rgba(92,124,137,0.12), inset 0 1px 0 rgba(255,255,255,0.06)`;
+                el.style.boxShadow = `0 18px 48px rgba(0,10,20,0.75), 0 0 28px rgba(92,124,137,0.20), inset 0 1px 0 rgba(255,255,255,0.18)`;
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLDivElement;
-                el.style.borderColor = 'rgba(92,124,137,0.20)';
+                el.style.borderColor = 'rgba(92,124,137,0.38)';
                 el.style.transform = 'translateY(0)';
-                el.style.boxShadow = '0 8px 32px rgba(1,20,37,0.50), inset 0 1px 0 rgba(255,255,255,0.04)';
+                el.style.boxShadow = '0 10px 36px rgba(0, 10, 20, 0.60), inset 0 1px 0 rgba(255,255,255,0.12)';
               }}
             >
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#5C7C89' }}>{card.label}</span>
+                <span className="text-xs font-bold uppercase tracking-wide" style={{ color: '#a8c4cc' }}>{card.label}</span>
                 {/* Glass icon bubble */}
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center"
                   style={{
-                    background: 'rgba(92,124,137,0.12)',
-                    border: '1px solid rgba(92,124,137,0.22)',
+                    background: 'rgba(92,124,137,0.20)',
+                    border: '1px solid rgba(92,124,137,0.35)',
                     backdropFilter: 'blur(8px)',
                   }}
                 >
@@ -101,11 +101,11 @@ export default function DashboardPage() {
       <div
         className="rounded-2xl overflow-hidden"
         style={{
-          background: 'rgba(8, 20, 32, 0.75)',
+          background: 'linear-gradient(135deg, rgba(22, 54, 72, 0.65) 0%, rgba(10, 28, 42, 0.88) 100%)',
           backdropFilter: 'blur(28px) saturate(180%)',
           WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-          border: '1px solid rgba(92, 124, 137, 0.20)',
-          boxShadow: '0 8px 40px rgba(1, 20, 37, 0.50), inset 0 1px 0 rgba(255,255,255,0.04)',
+          border: '1px solid rgba(92, 124, 137, 0.35)',
+          boxShadow: '0 12px 40px rgba(0, 10, 20, 0.65), inset 0 1px 0 rgba(255,255,255,0.10)',
         }}
       >
         <div className="p-5" style={{ borderBottom: '1px solid rgba(92,124,137,0.15)' }}>

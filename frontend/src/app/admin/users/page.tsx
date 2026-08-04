@@ -291,7 +291,7 @@ export default function UsersPage() {
           )}
         </div>
       ) : (
-        <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(13,32,48,0.70)', backdropFilter: 'blur(20px)', border: '1px solid rgba(92,124,137,0.20)', boxShadow: '0 8px 32px rgba(1,20,37,0.50)' }}>
+        <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(22, 54, 72, 0.65) 0%, rgba(10, 28, 42, 0.88) 100%)', backdropFilter: 'blur(28px) saturate(180%)', border: '1px solid rgba(92,124,137,0.35)', boxShadow: '0 12px 40px rgba(0,10,20,0.65), inset 0 1px 0 rgba(255,255,255,0.10)' }}>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-gray-300">
               <thead className="text-xs uppercase font-semibold" style={{ background: 'rgba(92,124,137,0.08)', color: 'rgba(92,124,137,0.80)' }}>
