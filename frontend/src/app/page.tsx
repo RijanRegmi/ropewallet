@@ -115,7 +115,7 @@ export default function ProfessionalWhiteLandingPage() {
           onClick={(e) => handleSmoothScroll(e, 'become-host')}
           className="underline hover:text-emerald-400 font-bold ml-1 flex items-center gap-0.5 text-xs text-white"
         >
-          Become a Host Inquiry <ChevronRight className="w-3 h-3" />
+          Become a Host <ChevronRight className="w-3 h-3" />
         </a>
       </div>
 
@@ -512,27 +512,36 @@ export default function ProfessionalWhiteLandingPage() {
                 </div>
               </div>
 
-              {/* Download Buttons */}
+              {/* Download Buttons with Official Logos (Equal Dimensions) */}
               <div className="flex flex-wrap items-center gap-4">
                 <a
                   href="#"
-                  className="px-6 py-3.5 bg-white text-slate-950 hover:bg-slate-100 font-extrabold text-xs rounded-xl shadow-lg transition-all flex items-center gap-3 cursor-pointer"
+                  className="w-[210px] h-[60px] bg-white text-slate-950 hover:bg-slate-100 font-extrabold text-xs rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3.5 cursor-pointer border border-slate-200 shrink-0"
                 >
-                  <Apple className="w-5 h-5" />
+                  {/* Authentic Apple Logo */}
+                  <svg className="w-6 h-6 fill-slate-950 shrink-0" viewBox="0 0 384 512">
+                    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-92.1zm-57.6-150.3c23.2-28.6 37.8-68.4 33-107.4-32.9 2.5-73.4 23.4-96.1 50-20.9 24.3-38.3 64.7-32.8 102.7 36.7 2.8 72.7-16.7 95.9-45.3z" />
+                  </svg>
                   <div className="text-left leading-tight">
-                    <span className="text-[10px] font-semibold text-slate-500 block uppercase">Download for</span>
-                    <span className="text-sm font-black">iOS App Store</span>
+                    <span className="text-[10px] font-bold text-slate-500 block uppercase tracking-wider">Download on the</span>
+                    <span className="text-sm font-black text-slate-950">App Store</span>
                   </div>
                 </a>
 
                 <a
                   href="#"
-                  className="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all flex items-center gap-3 cursor-pointer"
+                  className="w-[210px] h-[60px] bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/40 font-extrabold text-xs rounded-2xl shadow-xl shadow-emerald-600/30 hover:shadow-emerald-600/50 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3.5 cursor-pointer shrink-0"
                 >
-                  <Play className="w-5 h-5 fill-current" />
+                  {/* Official Google Play Store Icon */}
+                  <svg className="w-6 h-6 shrink-0 drop-shadow-xs" viewBox="0 0 512 512" fill="none">
+                    <path d="M99.617 8.057a32.062 32.062 0 0 0-14.739 5.863C76.993 19.349 72 29.832 72 41.528v428.944c0 11.696 4.993 22.179 12.878 27.608a32.062 32.062 0 0 0 14.739 5.863L314.07 256 99.617 8.057z" fill="#00A0FF"/>
+                    <path d="M380.05 190.05l-65.98 65.95 65.98 65.95 72.82-41.97c14.28-8.24 22.86-23.01 22.86-39.93s-8.58-31.69-22.86-39.93l-72.82-41.97z" fill="#FFC800"/>
+                    <path d="M99.617 8.057L314.07 256l65.98-65.95L120.3 12.162c-6.19-3.57-13.37-5.07-20.683-4.105z" fill="#00F076"/>
+                    <path d="M99.617 503.943c7.313.965 14.493-.535 20.683-4.105l259.75-149.943L314.07 256 99.617 503.943z" fill="#FF3A44"/>
+                  </svg>
                   <div className="text-left leading-tight">
-                    <span className="text-[10px] font-semibold text-emerald-200 block uppercase">Download for</span>
-                    <span className="text-sm font-black">Android APK</span>
+                    <span className="text-[10px] font-bold text-emerald-100/90 block uppercase tracking-wider">GET IT ON</span>
+                    <span className="text-sm font-black text-white">Google Play</span>
                   </div>
                 </a>
               </div>
