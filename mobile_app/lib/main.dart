@@ -104,13 +104,15 @@ class _AuthWrapperState extends State<AuthWrapper> {
     if (authProvider.isLoading && authProvider.user == null) {
       return Scaffold(
         backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFFFFFFF),
-        body: const SizedBox.shrink(),
+        body: const Center(
+          child: CircularProgressIndicator(color: Color(0xFF10B981)),
+        ),
       );
     }
 
-    // Direct routing based on login authentication state
-    if (authProvider.isAuthenticated) {
-      final hasPin = authProvider.user?['hasPin'] == true;
+    // Direct routing based on login authentication state & complete user profile availability
+    if (authProvider.isAuthenticated && authProvider.user != null) {
+      final hasPin = authProvider.user!['hasPin'] == true;
       if (!hasPin) {
         return const SetPinPage();
       }

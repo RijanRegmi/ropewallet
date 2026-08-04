@@ -215,19 +215,19 @@ class SecurityProvider with ChangeNotifier {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  const Text('Enter 4-Digit Security PIN to authorize', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  const Text('Enter 6-Digit Security PIN to authorize', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                   const SizedBox(height: 10),
                   TextField(
                     controller: pinController,
                     keyboardType: TextInputType.number,
                     obscureText: true,
-                    maxLength: 4,
+                    maxLength: 6,
                     autofocus: true,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 24, letterSpacing: 10, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
                     decoration: InputDecoration(
                       counterText: '',
-                      hintText: '••••',
+                      hintText: '••••••',
                       errorText: pinError,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -242,9 +242,9 @@ class SecurityProvider with ChangeNotifier {
                           ? null
                           : () async {
                               final pin = pinController.text.trim();
-                              if (pin.length < 4) {
+                              if (pin.length < 6) {
                                 setSheetState(() {
-                                  pinError = 'Please enter 4-digit PIN';
+                                  pinError = 'Please enter 6-digit PIN';
                                 });
                                 return;
                               }

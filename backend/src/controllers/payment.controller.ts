@@ -215,11 +215,12 @@ export class PaymentController {
       let receiver = await User.findOne({ qrCodeData: receiverQrData });
       if (!receiver) {
         const cleanInput = receiverQrData.trim().toLowerCase();
-        const tagToSearch = cleanInput.startsWith('$') ? cleanInput : `$${cleanInput}`;
+        const tagWithDollar = cleanInput.startsWith('$') ? cleanInput : `$${cleanInput}`;
+        const tagWithoutDollar = cleanInput.startsWith('$') ? cleanInput.substring(1) : cleanInput;
         receiver = await User.findOne({
           $or: [
-            { userTag: tagToSearch },
-            { userTag: cleanInput },
+            { userTag: tagWithDollar },
+            { userTag: tagWithoutDollar },
             { email: cleanInput }
           ]
         });

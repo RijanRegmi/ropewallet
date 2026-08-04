@@ -47,25 +47,37 @@ class AuthProvider with ChangeNotifier {
     try {
       final token = await _secureStorage.read(key: 'auth_token');
       if (token == null) {
+        _token = null;
+        _user = null;
         _isLoading = false;
         notifyListeners();
         return;
       }
 
       _token = token;
-      notifyListeners(); // Redirect immediately if token is present
       
-      // Fetch profile from backend to verify token validity in background
+      // Fetch profile from backend to verify token validity
       final response = await _apiClient.get(ApiConstants.profile);
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         _user = responseData['data'];
+        await _secureStorage.write(key: 'cached_user_profile', value: jsonEncode(_user));
       } else {
         // Token is invalid/expired
-        await logout();
+        _token = null;
+        _user = null;
+        await _secureStorage.delete(key: 'auth_token');
+        await _secureStorage.delete(key: 'cached_user_profile');
       }
     } catch (e) {
       _errorMessage = 'Could not reach server. Working offline.';
+      // Try restoring cached user profile for offline mode
+      try {
+        final cachedStr = await _secureStorage.read(key: 'cached_user_profile');
+        if (cachedStr != null && cachedStr.isNotEmpty) {
+          _user = jsonDecode(cachedStr);
+        }
+      } catch (_) {}
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -97,6 +109,7 @@ class AuthProvider with ChangeNotifier {
         _user = responseData['data']['user'];
         
         await _secureStorage.write(key: 'auth_token', value: _token!);
+        await _secureStorage.write(key: 'cached_user_profile', value: jsonEncode(_user));
         // Save credentials for biometric login
         await _secureStorage.write(key: 'saved_email', value: email);
         await _secureStorage.write(key: 'saved_password', value: password);
@@ -614,6 +627,7 @@ class AuthProvider with ChangeNotifier {
     _isLoading = false;
     _errorMessage = null;
     await _secureStorage.delete(key: 'auth_token');
+    await _secureStorage.delete(key: 'cached_user_profile');
     walletProvider?.reset();
     notifyListeners();
   }
@@ -663,14 +677,11 @@ class AuthProvider with ChangeNotifier {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final walletProvider = Provider.of<WalletProvider>(context, listen: false);
 
-      await authProvider.logout(walletProvider: walletProvider);
+      // Pop all dialogs and sub-routes back to root first
+      Navigator.of(context).popUntil((route) => route.isFirst);
 
-      if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const LoginPage()),
-          (route) => false,
-        );
-      }
+      // Perform logout & reset state (AuthWrapper will cleanly render LoginPage)
+      await authProvider.logout(walletProvider: walletProvider);
     }
   }
 }

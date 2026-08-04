@@ -72,13 +72,7 @@ class _SetPinPageState extends State<SetPinPage> {
 
           final authProvider = Provider.of<AuthProvider>(context, listen: false);
           authProvider.markPinAsSet();
-
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const HomePage()),
-            );
-          }
+          await authProvider.tryAutoLogin();
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
