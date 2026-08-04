@@ -16,11 +16,11 @@ class AppTheme {
   static const Color surfaceLight = Colors.white;
   static const Color surfaceDark = Color(0xFF121212);    // Dark Slate Card
 
-  static const Color textLight = Color(0xFF042F24);      // Deep Forest Text
-  static const Color textLightSecondary = Color(0xFF3B5E54); // Soft Emerald-Gray
+  static const Color textLight = Color(0xFF0F172A);          // Deep Slate 900
+  static const Color textLightSecondary = Color(0xFF64748B); // High Contrast Slate 500
   
-  static const Color textDark = Color(0xFFECFDF5);       // Very Light Mint
-  static const Color textDarkSecondary = Color(0xFF6EE7B7);  // Mint Secondary Text
+  static const Color textDark = Color(0xFFF8FAFC);           // High Contrast Slate 50
+  static const Color textDarkSecondary = Color(0xFF94A3B8);  // Crisp Slate 400
 
   // Light Theme
   static ThemeData get lightTheme {

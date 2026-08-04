@@ -42,6 +42,11 @@ class _LoginPageState extends State<LoginPage> {
     );
 
     if (success) {
+      // Save credentials for potential biometric login
+      const storage = FlutterSecureStorage();
+      await storage.write(key: 'saved_email', value: _emailController.text.trim());
+      await storage.write(key: 'saved_password', value: _passwordController.text);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -351,7 +356,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
 
                         // Biometric login button
-                        if (securityProvider.isBiometricSupported) ...[
+                        if (securityProvider.isBiometricSupported && securityProvider.useBiometrics) ...[
                           const SizedBox(height: 16),
                           SizedBox(
                             width: double.infinity,

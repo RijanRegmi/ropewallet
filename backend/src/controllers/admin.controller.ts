@@ -640,6 +640,114 @@ export class AdminController {
     }
   }
 
+  // ─── Host Payout / Cashout Requests Approval ───────────────────────────
+  static async listPendingPayouts(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 25;
+      const status = (req.query.status as string) || 'pending';
+
+      const filter: any = { type: 'withdrawal' };
+      if (status !== 'all') filter.status = status;
+
+      const [payouts, total] = await Promise.all([
+        Transaction.find(filter)
+          .sort({ createdAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .populate('sender', 'fullName email userTag savedCard walletBalance pendingCashoutBalance role'),
+        Transaction.countDocuments(filter),
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          payouts,
+          pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async approvePayout(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const txn = await Transaction.findById(req.params.id);
+
+      if (!txn) {
+        res.status(404).json({ success: false, error: 'Transaction not found' });
+        return;
+      }
+      if (txn.status !== 'pending') {
+        res.status(400).json({ success: false, error: 'This payout request is not pending' });
+        return;
+      }
+
+      const user = await User.findById(txn.sender);
+      if (!user) {
+        res.status(404).json({ success: false, error: 'Host user not found' });
+        return;
+      }
+
+      // Decrement pendingCashoutBalance (amount is permanently cut from total balance)
+      user.pendingCashoutBalance = Math.max(0, Number(((user.pendingCashoutBalance || 0) - txn.amount).toFixed(2)));
+      await user.save({ validateBeforeSave: false });
+
+      // Update transaction status
+      txn.status = 'completed';
+      await txn.save();
+
+      res.json({
+        success: true,
+        message: 'Payout request approved successfully.',
+        data: txn,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async declinePayout(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { reason } = req.body;
+      const txn = await Transaction.findById(req.params.id);
+
+      if (!txn) {
+        res.status(404).json({ success: false, error: 'Transaction not found' });
+        return;
+      }
+      if (txn.status !== 'pending') {
+        res.status(400).json({ success: false, error: 'This payout request is not pending' });
+        return;
+      }
+
+      const user = await User.findById(txn.sender);
+      if (!user) {
+        res.status(404).json({ success: false, error: 'Host user not found' });
+        return;
+      }
+
+      // Refund requested amount back to actual balance (walletBalance) & decrement pending
+      user.walletBalance = Number((user.walletBalance + txn.amount).toFixed(2));
+      user.pendingCashoutBalance = Math.max(0, Number(((user.pendingCashoutBalance || 0) - txn.amount).toFixed(2)));
+      await user.save({ validateBeforeSave: false });
+
+      // Update transaction status
+      txn.status = 'declined';
+      txn.declinedReason = reason || 'Declined by Super Admin';
+      await txn.save();
+
+      res.json({
+        success: true,
+        message: 'Payout request declined. Funds refunded back to host available balance.',
+        data: txn,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // ─── P2P Account Management ────────────────────────────────────
   static async listP2PAccounts(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {

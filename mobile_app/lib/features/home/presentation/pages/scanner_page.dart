@@ -36,24 +36,12 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
   bool _isSheetExpanded = false;
 
   bool _isValidQrData(String qrCodeData) {
-    final lowerData = qrCodeData.toLowerCase();
+    if (qrCodeData.trim() == 'admin-qr') return true;
+    if (qrCodeData.startsWith('ropewallet://')) return true;
     
-    // External transfer QR
-    if (lowerData.contains('cash.app') || 
-        (qrCodeData.startsWith('\$') && (lowerData.contains('/') || lowerData.contains('.')))) {
-      return true;
-    }
-    if (lowerData.contains('venmo.com') || lowerData.startsWith('venmo://')) {
-      return true;
-    }
-    
-    // Domestic QR
-    if (qrCodeData == 'admin-qr') {
-      return true;
-    }
-    
-    final domesticRegex = RegExp(r'^\$[a-zA-Z0-9]+$');
-    return domesticRegex.hasMatch(qrCodeData);
+    // RopeWallet user tag pattern (e.g. $test-c290 or $john123)
+    final domesticRegex = RegExp(r'^\$[a-zA-Z0-9_-]+$');
+    return domesticRegex.hasMatch(qrCodeData.trim());
   }
 
   @override
@@ -363,7 +351,7 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
                             backgroundColor: const Color(0xFFEF4444),
                             behavior: SnackBarBehavior.floating,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            content: const Text('Invalid QR code format.'),
+                            content: const Text('Invalid QR Code.'),
                             duration: const Duration(seconds: 2),
                           ),
                         );
@@ -584,10 +572,19 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
                 child: RepaintBoundary(
                   child: GestureDetector(
                     onVerticalDragUpdate: (details) {
-                      if (details.primaryDelta! < -5) {
+                      if (details.primaryDelta! < -3) {
                         if (!_isSheetExpanded) _toggleSheet();
-                      } else if (details.primaryDelta! > 5) {
+                      } else if (details.primaryDelta! > 3) {
                         if (_isSheetExpanded) _toggleSheet();
+                      }
+                    },
+                    onVerticalDragEnd: (details) {
+                      if (details.primaryVelocity != null) {
+                        if (details.primaryVelocity! > 150 && _isSheetExpanded) {
+                          _toggleSheet();
+                        } else if (details.primaryVelocity! < -150 && !_isSheetExpanded) {
+                          _toggleSheet();
+                        }
                       }
                     },
                     child: Container(

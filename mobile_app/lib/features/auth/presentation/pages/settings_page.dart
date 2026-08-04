@@ -96,10 +96,11 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Column(
               children: [
                 ListTile(
-                  leading: const Icon(Icons.brightness_6_outlined, color: Color(0xFF4F46E5)),
+                  leading: const Icon(Icons.brightness_6_outlined, color: Color(0xFF10B981)),
                   title: const Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: const Text('Toggle between light and dark modes'),
                   trailing: Switch(
+                    activeColor: const Color(0xFF10B981),
                     value: themeProvider.themeMode == ThemeMode.dark,
                     onChanged: (val) {
                       themeProvider.toggleTheme();
@@ -120,12 +121,13 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 // Biometrics toggle
                 ListTile(
-                  leading: const Icon(Icons.fingerprint_rounded, color: Color(0xFF4F46E5)),
+                  leading: const Icon(Icons.fingerprint_rounded, color: Color(0xFF10B981)),
                   title: const Text('Biometric Authentication', style: TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text(securityProvider.isBiometricSupported
                       ? 'Use Fingerprint / FaceID to authorize'
                       : 'Biometrics unavailable'),
                   trailing: Switch(
+                    activeColor: const Color(0xFF10B981),
                     value: securityProvider.useBiometrics && securityProvider.isBiometricSupported,
                     onChanged: securityProvider.isBiometricSupported
                         ? (val) => _toggleBiometrics(val, securityProvider)
@@ -136,7 +138,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 
                 // Change Password
                 ListTile(
-                  leading: const Icon(Icons.lock_outline_rounded, color: Color(0xFF4F46E5)),
+                  leading: const Icon(Icons.lock_outline_rounded, color: Color(0xFF10B981)),
                   title: const Text('Change Password', style: TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: const Text('Update account login password'),
                   trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
@@ -146,7 +148,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
                 // Change Pin
                 ListTile(
-                  leading: const Icon(Icons.dialpad_rounded, color: Color(0xFF4F46E5)),
+                  leading: const Icon(Icons.dialpad_rounded, color: Color(0xFF10B981)),
                   title: const Text('Change Transaction PIN', style: TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: const Text('Update 6-digit transaction authorization code'),
                   trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
@@ -157,8 +159,8 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: 28),
 
-          // Section: Admin Management
-          if (authProvider.isAdmin) ...[
+          // Section: Admin Management (Super Admin only)
+          if (authProvider.isSuperAdmin) ...[
             _buildSectionHeader('Admin Management Portal', isDark),
             const SizedBox(height: 12),
             Container(
@@ -166,9 +168,9 @@ class _SettingsPageState extends State<SettingsPage> {
               child: Column(
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF4F46E5)),
+                    leading: const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF10B981)),
                     title: Text(authProvider.isSuperAdmin ? 'Super Admin Portal Dashboard' : 'Admin Portal Dashboard', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Manage overview stats, users, deposits & P2P accounts'),
+                    subtitle: const Text('Manage system users & notices'),
                     trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
                     onTap: () {
                       Navigator.push(
@@ -177,21 +179,20 @@ class _SettingsPageState extends State<SettingsPage> {
                       );
                     },
                   ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.person_add_alt_1_outlined, color: Color(0xFF10B981)),
-                    title: const Text('Create User Account', style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text(authProvider.isSuperAdmin
-                        ? 'Create User, Admin, or Super Admin'
-                        : 'Create regular User account'),
-                    trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const CreateUserPage()),
-                      );
-                    },
-                  ),
+                  if (authProvider.isSuperAdmin) ...[
+                    ListTile(
+                      leading: const Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF10B981)),
+                      title: const Text('Create New Account', style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: const Text('Register user, host, or admin'),
+                      trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const CreateUserPage()),
+                        );
+                      },
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -206,7 +207,7 @@ class _SettingsPageState extends State<SettingsPage> {
             child: const Column(
               children: [
                 ListTile(
-                  leading: Icon(Icons.info_outline_rounded, color: Color(0xFF4F46E5)),
+                  leading: Icon(Icons.info_outline_rounded, color: Color(0xFF10B981)),
                   title: Text('App Version', style: TextStyle(fontWeight: FontWeight.bold)),
                   trailing: Text(
                     '1.0.0',
@@ -215,7 +216,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
 
                 ListTile(
-                  leading: Icon(Icons.verified_user_outlined, color: Color(0xFF4F46E5)),
+                  leading: Icon(Icons.verified_user_outlined, color: Color(0xFF10B981)),
                   title: Text('Developer', style: TextStyle(fontWeight: FontWeight.bold)),
                   trailing: Text(
                     'RJN',

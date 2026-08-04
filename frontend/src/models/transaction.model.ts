@@ -3,6 +3,7 @@ export interface TransactionModel {
   type: string;
   amount: number;
   fee?: number;
+  netAmount?: number;
   platformFee?: number;
   stripeFee?: number;
   netProfit?: number;

@@ -66,6 +66,10 @@ const userSchema = new Schema<IUser>(
       type: Number,
       default: 0.00,
     },
+    pendingCashoutBalance: {
+      type: Number,
+      default: 0.00,
+    },
     qrCodeData: {
       type: String,
       unique: true,

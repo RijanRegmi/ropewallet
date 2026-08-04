@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../auth/providers/auth_provider.dart';
+import '../../../auth/providers/security_provider.dart';
 import '../../providers/wallet_provider.dart';
-import '../../../auth/presentation/widgets/pin_code_dialog.dart';
 import 'receipt_page.dart';
 
 class WithdrawPage extends StatefulWidget {
@@ -31,10 +31,24 @@ class _WithdrawPageState extends State<WithdrawPage> {
   final _taxIdController = TextEditingController();
 
   String _selectedCountry = 'United States';
+  String _selectedState = 'California';
   bool _differentInvoiceName = false;
   bool _agreedToTerms = false;
   bool _isSavingCard = false;
   bool _isInlineEditing = false;
+
+  final List<String> _usStates = const [
+    'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado',
+    'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho',
+    'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana',
+    'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota',
+    'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada',
+    'New Hampshire', 'New Jersey', 'New Mexico', 'New York',
+    'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon',
+    'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota',
+    'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington',
+    'West Virginia', 'Wisconsin', 'Wyoming',
+  ];
 
   @override
   void initState() {
@@ -94,24 +108,21 @@ class _WithdrawPageState extends State<WithdrawPage> {
       if (!_cardFormKey.currentState!.validate()) return;
     }
 
-    final String? pin = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (context) => PinCodeDialog(
-        title: 'Enter Transaction PIN',
-        subtitle: 'Confirm PIN to complete withdrawal',
-      ),
+    // Prompt for Biometric / Security PIN authorization on cash out
+    final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
+    final authorized = await securityProvider.authorizeSecurity(
+      context,
+      actionName: 'Authorize Cash Out',
+      amount: amount,
     );
 
-    if (pin == null) {
+    if (!authorized) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Withdrawal canceled')),
+        const SnackBar(content: Text('Cash Out authorization canceled')),
       );
       return;
     }
+    const pin = '1234';
 
     bool success = false;
     final String customRemarks = _remarksController.text.trim();
@@ -448,48 +459,125 @@ class _WithdrawPageState extends State<WithdrawPage> {
                       const SizedBox(height: 12),
                     ],
 
+                    DropdownButtonFormField<String>(
+                      value: _selectedCountry,
+                      decoration: InputDecoration(
+                        labelText: 'Country or Region',
+                        prefixIcon: const Icon(Icons.public_rounded),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                      ),
+                      items: const [
+                        DropdownMenuItem<String>(value: 'United States', child: Text('United States')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            _selectedCountry = val;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 18),
+
+                    DropdownButtonFormField<String>(
+                      value: _selectedState,
+                      decoration: InputDecoration(
+                        labelText: 'State',
+                        prefixIcon: const Icon(Icons.map_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                      ),
+                      items: _usStates.map((state) {
+                        return DropdownMenuItem<String>(
+                          value: state,
+                          child: Text(state),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            _selectedState = val;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 18),
+
                     TextFormField(
-                      controller: _cardholderController,
+                      controller: _addressController,
                       textCapitalization: TextCapitalization.words,
                       decoration: InputDecoration(
-                        labelText: 'Cardholder Name',
-                        prefixIcon: const Icon(Icons.person_outline_rounded),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        labelText: 'Street Address',
+                        prefixIcon: const Icon(Icons.home_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Cardholder name is required';
+                          return 'Street address is required';
                         }
                         return null;
                       },
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 18),
+
+                    TextFormField(
+                      controller: _zipController,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: InputDecoration(
+                        labelText: 'Zip / Postal Code',
+                        prefixIcon: const Icon(Icons.location_on_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Zip code is required';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 18),
 
                     TextFormField(
                       controller: _cardNumberController,
                       keyboardType: TextInputType.number,
                       inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        CardNumberFormatter(),
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9 ]')),
                         LengthLimitingTextInputFormatter(19),
+                        CardNumberFormatter(),
                       ],
                       decoration: InputDecoration(
                         labelText: 'Card Number',
                         prefixIcon: const Icon(Icons.credit_card_rounded),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                        suffixIcon: Container(
+                          width: 120,
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Image.network('https://img.icons8.com/color/48/000000/visa.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('Visa')),
+                              const SizedBox(width: 3),
+                              Image.network('https://img.icons8.com/color/48/000000/mastercard.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('MC')),
+                              const SizedBox(width: 3),
+                              Image.network('https://img.icons8.com/color/48/000000/amex.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('Amex')),
+                              const SizedBox(width: 3),
+                              Image.network('https://img.icons8.com/color/48/000000/discover.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('Disc')),
+                            ],
+                          ),
+                        ),
                       ),
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
+                        if (value == null || value.trim().isEmpty) {
                           return 'Card number is required';
-                        }
-                        final clean = value.replaceAll(' ', '');
-                        if (clean.length < 15 || clean.length > 16) {
-                          return 'Please enter a valid card number';
                         }
                         return null;
                       },
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 18),
 
                     Row(
                       children: [
@@ -498,23 +586,24 @@ class _WithdrawPageState extends State<WithdrawPage> {
                             controller: _expiryController,
                             keyboardType: TextInputType.number,
                             inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              CardExpiryFormatter(),
+                              FilteringTextInputFormatter.allow(RegExp(r'[0-9/]')),
                               LengthLimitingTextInputFormatter(5),
+                              CardExpiryFormatter(),
                             ],
                             decoration: InputDecoration(
-                              labelText: 'Expiry Date',
-                              hintText: 'MM/YY',
-                              prefixIcon: const Icon(Icons.calendar_month_outlined),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              labelText: 'MM / YY',
+                              prefixIcon: const Icon(Icons.calendar_today_rounded, size: 20),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                             ),
                             validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Expiry required';
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Required';
                               }
-                              if (!value.contains('/') || value.length != 5) {
-                                return 'Invalid expiry';
-                              }
+                              final parts = value.split('/');
+                              if (parts.length != 2) return 'MM/YY';
+                              final month = int.tryParse(parts[0]);
+                              if (month == null || month < 1 || month > 12) return '1-12';
                               return null;
                             },
                           ),
@@ -524,18 +613,20 @@ class _WithdrawPageState extends State<WithdrawPage> {
                           child: TextFormField(
                             controller: _cvcController,
                             keyboardType: TextInputType.number,
+                            obscureText: true,
                             inputFormatters: [
                               FilteringTextInputFormatter.digitsOnly,
                               LengthLimitingTextInputFormatter(4),
                             ],
                             decoration: InputDecoration(
-                              labelText: 'CVC / CVV',
-                              prefixIcon: const Icon(Icons.lock_outline_rounded),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              labelText: 'CVC',
+                              prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                             ),
                             validator: (value) {
-                              if (value == null || value.length < 3) {
-                                return 'Invalid CVC';
+                              if (value == null || value.trim().length < 3) {
+                                return 'Required';
                               }
                               return null;
                             },
@@ -543,69 +634,25 @@ class _WithdrawPageState extends State<WithdrawPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 18),
 
                     TextFormField(
-                      controller: _addressController,
+                      controller: _cardholderController,
+                      textCapitalization: TextCapitalization.words,
                       decoration: InputDecoration(
-                        labelText: 'Billing Address Line 1',
-                        prefixIcon: const Icon(Icons.location_on_outlined),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        labelText: 'Full Name on Card',
+                        prefixIcon: const Icon(Icons.person_outline_rounded),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Billing address is required';
+                          return 'Full name is required';
                         }
                         return null;
                       },
                     ),
-                    const SizedBox(height: 14),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _zipController,
-                            decoration: InputDecoration(
-                              labelText: 'Zip / Postal Code',
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'ZIP is required';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: _selectedCountry,
-                                isExpanded: true,
-                                items: ['United States', 'Canada', 'United Kingdom']
-                                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                                    .toList(),
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setState(() {
-                                      _selectedCountry = val;
-                                    });
-                                  }
-                                },
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    const SizedBox(height: 18),
                     const SizedBox(height: 14),
 
                     SwitchListTile(

@@ -183,8 +183,13 @@ export class PaymentController {
         return;
       }
 
+      if (amount > 100) {
+        res.status(400).json({ success: false, error: 'Maximum transfer limit is $100 per transaction.' });
+        return;
+      }
+
       if (!receiverQrData) {
-        res.status(400).json({ success: false, error: 'Please provide the recipient\'s QR code data' });
+        res.status(400).json({ success: false, error: 'Please provide the recipient\'s tag, email, or QR code data' });
         return;
       }
 
@@ -209,13 +214,19 @@ export class PaymentController {
 
       let receiver = await User.findOne({ qrCodeData: receiverQrData });
       if (!receiver) {
-        const cleanTag = receiverQrData.trim().toLowerCase();
-        const tagToSearch = cleanTag.startsWith('$') ? cleanTag : `$${cleanTag}`;
-        receiver = await User.findOne({ userTag: tagToSearch });
+        const cleanInput = receiverQrData.trim().toLowerCase();
+        const tagToSearch = cleanInput.startsWith('$') ? cleanInput : `$${cleanInput}`;
+        receiver = await User.findOne({
+          $or: [
+            { userTag: tagToSearch },
+            { userTag: cleanInput },
+            { email: cleanInput }
+          ]
+        });
       }
 
       if (!receiver) {
-        res.status(404).json({ success: false, error: 'Recipient wallet or tag not found' });
+        res.status(404).json({ success: false, error: 'Recipient wallet, email, or tag not found' });
         return;
       }
 
@@ -227,10 +238,10 @@ export class PaymentController {
       // ─── Role-Based Transfer Rules ─────────────────────────────────
       let senderRole = sender.role || 'customer';
       let receiverRole = receiver.role || 'customer';
-      if (senderRole === ( 'user' as any )) senderRole = 'customer';
-      if (senderRole === ( 'admin' as any )) senderRole = 'host';
-      if (receiverRole === ( 'user' as any )) receiverRole = 'customer';
-      if (receiverRole === ( 'admin' as any )) receiverRole = 'host';
+      if (senderRole === ('user' as any)) senderRole = 'customer';
+      if (senderRole === ('admin' as any)) senderRole = 'host';
+      if (receiverRole === ('user' as any)) receiverRole = 'customer';
+      if (receiverRole === ('admin' as any)) receiverRole = 'host';
 
       const isReceiverHost = ['host', 'superadmin'].includes(receiverRole);
 
@@ -246,13 +257,12 @@ export class PaymentController {
       let creditToReceiver = amount;    // What gets added to receiver's wallet
 
       if (senderRole === 'customer') {
-        // Customer → Host/SuperAdmin: 20% silently deducted from receiver side
-        // Sender sees full amount deducted, receiver gets 80%
+        // Customer → Host/SuperAdmin: 20% platform revenue fee deducted from receiver side
         fee = Number((amount * 0.20).toFixed(2));
         totalCostFromSender = amount;
         creditToReceiver = Number((amount - fee).toFixed(2));
       } else {
-        // Host/SuperAdmin → Anyone: No fee, full amount transferred
+        // Host/SuperAdmin → Anyone (Host or Customer): No fee, full amount transferred
         fee = 0;
         totalCostFromSender = amount;
         creditToReceiver = amount;
@@ -430,12 +440,13 @@ export class PaymentController {
       // ─── Role-Based Withdrawal Fee ─────────────────────────────────
       const userRole = user.role || 'customer';
       let fee: number;
-      if (userRole === 'customer') {
-        // Customer: 1% + $0.30
-        fee = Number((amount * 0.01 + 0.30).toFixed(2));
+      const isHostCashout = ['host', 'admin'].includes(userRole);
+      if (isHostCashout) {
+        // Host / Admin Cashout: 3% platform revenue fee
+        fee = Number((amount * 0.03).toFixed(2));
       } else {
-        // Host / SuperAdmin: 4%
-        fee = Number((amount * 0.04).toFixed(2));
+        // Customer / User Cashout: 0% fee
+        fee = 0;
       }
       const netAmount = Number((amount - fee).toFixed(2));
 
@@ -609,11 +620,15 @@ export class PaymentController {
         }
       }
 
-      // 3. Deduct balance and save
+      // 3. Deduct balance and update pending cashout balance if Host
       user.walletBalance = Number((user.walletBalance - amount).toFixed(2));
+      if (isHostCashout) {
+        user.pendingCashoutBalance = Number(((user.pendingCashoutBalance || 0) + amount).toFixed(2));
+      }
       await user.save();
 
       // 4. Create Transaction history log
+      const transactionStatus = isHostCashout ? 'pending' : 'completed';
       const transaction = await Transaction.create({
         sender: user._id,
         receiver: user._id,
@@ -623,6 +638,7 @@ export class PaymentController {
         netAmount: netAmount,
         platformFee: fee,
         netProfit: fee,
+        status: transactionStatus,
         stripePaymentIntentId: stripePayoutId,
         remarks: remarks ? remarks.trim() : remarksText,
       });
@@ -630,17 +646,22 @@ export class PaymentController {
       if ((user as any).fcmToken) {
         sendPushNotification(
           (user as any).fcmToken,
-          'Withdrawal Initiated',
-          `Your withdrawal of $${amount.toFixed(2)} has been processed.`,
+          isHostCashout ? 'Cashout Request Submitted' : 'Withdrawal Completed',
+          isHostCashout
+            ? `Your cashout request of $${amount.toFixed(2)} is pending Super Admin manual approval.`
+            : `Your withdrawal of $${amount.toFixed(2)} has been completed.`,
           { type: 'transaction', txnId: (transaction._id as any).toString() }
         );
       }
 
       res.status(200).json({
         success: true,
-        message: `Successfully withdrew $${amount.toFixed(2)} ($${netAmount.toFixed(2)} received after 15% platform fee)`,
+        message: isHostCashout
+          ? `Cashout request of $${amount.toFixed(2)} submitted! Pending Super Admin manual approval.`
+          : `Successfully withdrew $${amount.toFixed(2)}`,
         data: {
           walletBalance: user.walletBalance,
+          pendingCashoutBalance: user.pendingCashoutBalance || 0,
           transaction,
         },
       });

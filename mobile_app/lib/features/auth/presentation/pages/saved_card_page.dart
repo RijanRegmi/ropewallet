@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/security_provider.dart';
 
 class SavedCardPage extends StatefulWidget {
   const SavedCardPage({super.key});
@@ -24,17 +25,30 @@ class _SavedCardPageState extends State<SavedCardPage> {
   final _taxIdController = TextEditingController();
 
   String _selectedCountry = 'United States';
+  String _selectedState = 'California';
   bool _differentInvoiceName = false;
   bool _agreedToTerms = false;
 
   bool _isEditing = false;
   bool _isSaving = false;
 
-  // List of countries
+  // List of countries (USA primary)
   final List<String> _countries = [
     'United States',
-    'Canada',
-    'United Kingdom',
+  ];
+
+  // List of all 50 US States
+  final List<String> _usStates = const [
+    'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado',
+    'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho',
+    'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana',
+    'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota',
+    'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada',
+    'New Hampshire', 'New Jersey', 'New Mexico', 'New York',
+    'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon',
+    'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota',
+    'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington',
+    'West Virginia', 'Wisconsin', 'Wyoming',
   ];
 
   @override
@@ -83,9 +97,9 @@ class _SavedCardPageState extends State<SavedCardPage> {
   String _getTaxIdHint() {
     switch (_selectedCountry) {
       case 'United States':
-        return '12-3456789';
+        return 'Tax ID or SSN';
       default:
-        return 'Enter Tax ID';
+        return 'Tax ID Number';
     }
   }
 
@@ -98,6 +112,10 @@ class _SavedCardPageState extends State<SavedCardPage> {
       );
       return;
     }
+
+    final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
+    final authorized = await securityProvider.authorizeSecurity(context, actionName: 'Authorize Card Link');
+    if (!authorized) return;
 
     setState(() {
       _isSaving = true;
@@ -446,32 +464,13 @@ class _SavedCardPageState extends State<SavedCardPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Full name', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _cardholderController,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: InputDecoration(
-                        hintText: 'Rijan Regmi',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Full name is required';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 18),
-                    
-                    const Text('Country or region', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                    const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
                       value: _selectedCountry,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        labelText: 'Country or Region',
+                        prefixIcon: const Icon(Icons.public_rounded),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                       ),
                       items: _countries.map((country) {
                         return DropdownMenuItem<String>(
@@ -489,15 +488,38 @@ class _SavedCardPageState extends State<SavedCardPage> {
                     ),
                     const SizedBox(height: 18),
 
-                    const Text('Address line 1', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                    const SizedBox(height: 6),
+                    DropdownButtonFormField<String>(
+                      value: _selectedState,
+                      decoration: InputDecoration(
+                        labelText: 'State',
+                        prefixIcon: const Icon(Icons.map_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                      ),
+                      items: _usStates.map((state) {
+                        return DropdownMenuItem<String>(
+                          value: state,
+                          child: Text(state),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            _selectedState = val;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 18),
+
                     TextFormField(
                       controller: _addressController,
                       textCapitalization: TextCapitalization.words,
                       decoration: InputDecoration(
-                        hintText: 'Street address, P.O. box',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        labelText: 'Street Address',
+                        prefixIcon: const Icon(Icons.home_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
@@ -508,15 +530,14 @@ class _SavedCardPageState extends State<SavedCardPage> {
                     ),
                     const SizedBox(height: 18),
 
-                    const Text('Billing Zip / Postal Code', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                    const SizedBox(height: 6),
                     TextFormField(
                       controller: _zipController,
                       textCapitalization: TextCapitalization.characters,
                       decoration: InputDecoration(
-                        hintText: 'e.g. 44600 or 90210',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        labelText: 'Zip / Postal Code',
+                        prefixIcon: const Icon(Icons.location_on_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
@@ -527,8 +548,6 @@ class _SavedCardPageState extends State<SavedCardPage> {
                     ),
                     const SizedBox(height: 18),
 
-                    const Text('Card number', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                    const SizedBox(height: 6),
                     TextFormField(
                       controller: _cardNumberController,
                       keyboardType: TextInputType.number,
@@ -538,9 +557,10 @@ class _SavedCardPageState extends State<SavedCardPage> {
                         CardNumberFormatter(),
                       ],
                       decoration: InputDecoration(
-                        hintText: '1234 5678 1234 5678',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        labelText: 'Card Number',
+                        prefixIcon: const Icon(Icons.credit_card_rounded),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                         suffixIcon: Container(
                           width: 130,
                           padding: const EdgeInsets.only(right: 12.0),
@@ -574,72 +594,77 @@ class _SavedCardPageState extends State<SavedCardPage> {
                     Row(
                       children: [
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Expiration date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                              const SizedBox(height: 6),
-                              TextFormField(
-                                controller: _expiryController,
-                                keyboardType: TextInputType.number,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.allow(RegExp(r'[0-9/]')),
-                                  LengthLimitingTextInputFormatter(5),
-                                  _ExpiryInputFormatter(),
-                                ],
-                                decoration: InputDecoration(
-                                  hintText: 'MM / YY',
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                ),
-                                autovalidateMode: AutovalidateMode.onUserInteraction,
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return 'Required';
-                                  }
-                                  final parts = value.split('/');
-                                  if (parts.length != 2) return 'MM/YY';
-                                  final month = int.tryParse(parts[0]);
-                                  if (month == null || month < 1 || month > 12) return '1-12';
-                                  return null;
-                                },
-                              ),
+                          child: TextFormField(
+                            controller: _expiryController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'[0-9/]')),
+                              LengthLimitingTextInputFormatter(5),
+                              _ExpiryInputFormatter(),
                             ],
+                            decoration: InputDecoration(
+                              labelText: 'MM / YY',
+                              prefixIcon: const Icon(Icons.calendar_today_rounded, size: 20),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                            ),
+                            autovalidateMode: AutovalidateMode.onUserInteraction,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Required';
+                              }
+                              final parts = value.split('/');
+                              if (parts.length != 2) return 'MM/YY';
+                              final month = int.tryParse(parts[0]);
+                              if (month == null || month < 1 || month > 12) return '1-12';
+                              return null;
+                            },
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Security code', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                              const SizedBox(height: 6),
-                              TextFormField(
-                                controller: _cvcController,
-                                keyboardType: TextInputType.number,
-                                obscureText: true,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
-                                  LengthLimitingTextInputFormatter(4),
-                                ],
-                                decoration: InputDecoration(
-                                  hintText: 'CVC',
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                  suffixIcon: const Icon(Icons.credit_card_rounded, size: 20),
-                                ),
-                                autovalidateMode: AutovalidateMode.onUserInteraction,
-                                validator: (value) {
-                                  if (value == null || value.trim().length < 3) {
-                                    return 'Required';
-                                  }
-                                  return null;
-                                },
-                              ),
+                          child: TextFormField(
+                            controller: _cvcController,
+                            keyboardType: TextInputType.number,
+                            obscureText: true,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(4),
                             ],
+                            decoration: InputDecoration(
+                              labelText: 'CVC',
+                              prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                            ),
+                            autovalidateMode: AutovalidateMode.onUserInteraction,
+                            validator: (value) {
+                              if (value == null || value.trim().length < 3) {
+                                return 'Required';
+                              }
+                              return null;
+                            },
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 18),
+
+                    TextFormField(
+                      controller: _cardholderController,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: InputDecoration(
+                        labelText: 'Full Name on Card',
+                        prefixIcon: const Icon(Icons.person_outline_rounded),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Full name is required';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 18),
 
@@ -663,7 +688,7 @@ class _SavedCardPageState extends State<SavedCardPage> {
                         controller: _invoiceNameController,
                         textCapitalization: TextCapitalization.words,
                         decoration: InputDecoration(
-                          hintText: 'Invoice name (e.g. Business Name)',
+                          hintText: 'Business or Invoice Name',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         ),

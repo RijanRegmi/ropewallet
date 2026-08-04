@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:ropewallet/features/auth/providers/auth_provider.dart';
+import 'package:ropewallet/features/auth/providers/security_provider.dart';
 import 'package:ropewallet/features/auth/presentation/pages/profile_page.dart';
 import '../../providers/wallet_provider.dart';
 import 'deposit_page.dart';
@@ -33,6 +34,7 @@ class _HomePageState extends State<HomePage> {
   bool _isInit = false;
   String? _currentUserId;
   List<dynamic> _activeP2pAccounts = [];
+  int _unreadNoticeCount = 0;
 
   @override
   void didChangeDependencies() {
@@ -45,7 +47,141 @@ class _HomePageState extends State<HomePage> {
       _isInit = true;
       Provider.of<WalletProvider>(context, listen: false).fetchTransactions();
       _fetchActiveP2pAccounts();
+      _fetchUnreadNoticesCount();
+      _checkBiometricsPrompt();
     }
+  }
+
+  Future<void> _fetchUnreadNoticesCount() async {
+    try {
+      final response = await ApiClient().get('/notices');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          final List notices = data['data'];
+          int unread = 0;
+          for (var n in notices) {
+            if (n['isRead'] != true) {
+              unread++;
+            }
+          }
+          if (mounted) {
+            setState(() {
+              _unreadNoticeCount = unread;
+            });
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  void _checkBiometricsPrompt() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
+      if (securityProvider.isBiometricSupported &&
+          !securityProvider.useBiometrics &&
+          !securityProvider.hasPromptedBiometrics) {
+        _showBiometricSetupBottomSheet(securityProvider);
+      }
+    });
+  }
+
+  void _showBiometricSetupBottomSheet(SecurityProvider securityProvider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.fingerprint_rounded, color: Color(0xFF10B981), size: 30),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Enable Biometric Security',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Would you like to enable Face ID or Fingerprint authentication for faster and more secure sign-ins?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.white70 : Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await securityProvider.setHasPromptedBiometrics(true);
+                    final authenticated = await securityProvider.authenticateBiometrically();
+                    if (authenticated) {
+                      await securityProvider.setUseBiometrics(true);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Biometric login enabled successfully!'),
+                            backgroundColor: const Color(0xFF10B981),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: const Text('Enable Biometrics', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: TextButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await securityProvider.setHasPromptedBiometrics(true);
+                  },
+                  child: Text(
+                    'Not Now',
+                    style: TextStyle(
+                      color: isDark ? Colors.white60 : Colors.black54,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _fetchActiveP2pAccounts() async {
@@ -90,7 +226,13 @@ class _HomePageState extends State<HomePage> {
 
     final user = authProvider.user ?? {};
     final fullName = user['fullName'] ?? 'Wallet User';
-    final balance = user['walletBalance'] ?? 0.00;
+    final double availableBalance = user['walletBalance'] is num 
+        ? (user['walletBalance'] as num).toDouble() 
+        : (double.tryParse(user['walletBalance']?.toString() ?? '0') ?? 0.00);
+    final double pendingCashout = user['pendingCashoutBalance'] is num 
+        ? (user['pendingCashoutBalance'] as num).toDouble() 
+        : (double.tryParse(user['pendingCashoutBalance']?.toString() ?? '0') ?? 0.00);
+    final double totalBalance = availableBalance + pendingCashout;
     final qrData = user['qrCodeData'] ?? 'no-qr-data';
     final profileImage = user['profileImage'] ?? '';
     final transactions = walletProvider.transactions;
@@ -196,18 +338,19 @@ class _HomePageState extends State<HomePage> {
                           size: 26,
                           color: isDark ? Colors.white : Colors.black87,
                         ),
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            width: 9,
-                            height: 9,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFEF4444),
-                              shape: BoxShape.circle,
+                        if (_unreadNoticeCount > 0)
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              width: 9,
+                              height: 9,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFEF4444),
+                                shape: BoxShape.circle,
+                              ),
                             ),
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -215,108 +358,193 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 20),
 
-              // Premium Wallet Balance Card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24.0),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      theme.primaryColor,
-                      theme.primaryColor.withBlue(210),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: [
-                    BoxShadow(
-                      color: theme.primaryColor.withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 8),
+              // Premium Wallet Balance Card (Clickable to inspect balance breakdown)
+              GestureDetector(
+                onTap: () {
+                  showModalBottomSheet(
+                    context: context,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                     ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Total Balance',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                    builder: (ctx) => Container(
+                      padding: const EdgeInsets.all(28),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.account_balance_wallet_rounded, color: theme.primaryColor, size: 28),
+                              const SizedBox(width: 12),
+                              const Text('Balance Summary', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                            ],
                           ),
-                        ),
-                        // Eye Toggle Button for balance hiding
-                        GestureDetector(
-                          onTap: () {
-                            walletProvider.toggleBalanceVisibility();
-                          },
-                          child: Icon(
-                            isBalanceHidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                            color: Colors.white,
-                            size: 20,
+                          const SizedBox(height: 20),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Available Balance:', style: TextStyle(fontWeight: FontWeight.w600)),
+                                    Text('\$${availableBalance.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                  ],
+                                ),
+                                const Divider(height: 24),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Pending Cashout Amount:', style: TextStyle(color: Colors.grey)),
+                                    Text('\$${pendingCashout.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                                  ],
+                                ),
+                                const Divider(height: 24),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Total Balance (incl. Pending):', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    Text('\$${totalBalance.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: theme.primaryColor)),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      isBalanceHidden
-                          ? '\$xxxx.xx'
-                          : '\$${balance is num ? balance.toStringAsFixed(2) : double.parse(balance.toString()).toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 34,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: theme.primaryColor,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              ),
+                              child: const Text('Close'),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Active Sponsor Bank',
-                          style: TextStyle(
-                            color: Colors.white60,
-                            fontSize: 12,
-                          ),
-                        ),
-                        Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF34D399),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            const Text(
-                              'Connected',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        )
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24.0),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        theme.primaryColor,
+                        theme.primaryColor.withBlue(210),
                       ],
-                    )
-                  ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.primaryColor.withOpacity(0.3),
+                        blurRadius: 15,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Available Balance',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          // Eye Toggle Button for balance hiding
+                          GestureDetector(
+                            onTap: () {
+                              walletProvider.toggleBalanceVisibility();
+                            },
+                            child: Icon(
+                              isBalanceHidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        isBalanceHidden
+                            ? '\$xxxx.xx'
+                            : '\$${availableBalance.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 34,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        isBalanceHidden
+                            ? 'Total (incl. pending): \$xxxx.xx'
+                            : 'Total (incl. pending): \$${totalBalance.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.85),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Active Sponsor Bank',
+                            style: TextStyle(
+                              color: Colors.white60,
+                              fontSize: 12,
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF34D399),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'Connected',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          )
+                        ],
+                      )
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 28),
 
-              // Admin Management Portal Banner Card
-              if (authProvider.isAdmin) ...[
+              // Admin Management Portal Banner Card (Super Admin only)
+              if (authProvider.isSuperAdmin) ...[
                 GestureDetector(
                   onTap: () {
                     Navigator.push(

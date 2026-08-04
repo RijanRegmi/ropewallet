@@ -12,6 +12,7 @@ export interface IUser extends Document {
   transactionPin?: string;
   profileImage?: string;
   walletBalance: number;
+  pendingCashoutBalance?: number;
   qrCodeData: string;
   isFrozen: boolean;
   frozenAt?: Date;

@@ -55,6 +55,51 @@ export async function declineDepositAction(id: string, reason: string) {
   }
 }
 
+// ─── Host Payout / Cashout Requests actions ───────────────────────
+
+export async function getPayoutsAction(status = 'pending') {
+  try {
+    const headers = await getAuthHeader();
+    const res = await fetch(`${BACKEND_API_URL}/admin/payouts?status=${status}`, {
+      method: 'GET',
+      headers,
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Connection failed' };
+  }
+}
+
+export async function approvePayoutAction(id: string) {
+  try {
+    const headers = await getAuthHeader();
+    const res = await fetch(`${BACKEND_API_URL}/admin/payouts/${id}/approve`, {
+      method: 'PUT',
+      headers,
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Connection failed' };
+  }
+}
+
+export async function declinePayoutAction(id: string, reason: string) {
+  try {
+    const headers = await getAuthHeader();
+    const res = await fetch(`${BACKEND_API_URL}/admin/payouts/${id}/decline`, {
+      method: 'PUT',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ reason }),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Connection failed' };
+  }
+}
+
 // ─── P2P Configured Handles actions ───────────────────────
 
 export async function getP2PAccountsAction() {

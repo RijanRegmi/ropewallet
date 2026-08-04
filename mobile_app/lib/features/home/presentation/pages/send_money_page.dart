@@ -182,14 +182,14 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                   : TextFormField(
                       controller: _recipientController,
                       decoration: InputDecoration(
-                        labelText: 'Recipient User Tag',
+                        labelText: 'Recipient \$Tag or Email',
                         prefixIcon: const Icon(Icons.qr_code_2_rounded),
-                        hintText: '\$tag',
+                        hintText: '\$tag or email@domain.com',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Please enter the recipient tag';
+                          return 'Please enter the recipient \$tag or email';
                         }
                         return null;
                       },
@@ -243,6 +243,9 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                   final amount = double.tryParse(value);
                   if (amount == null || amount <= 0) {
                     return 'Please enter a valid amount';
+                  }
+                  if (amount > 100) {
+                    return 'Maximum transfer limit is \$100 per transaction';
                   }
                   if (amount > userBalance) {
                     return 'Insufficient balance';

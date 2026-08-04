@@ -81,14 +81,14 @@ export class AuthService {
     // 3. Delete OTP record so it can't be re-used
     await Otp.deleteOne({ email: emailNorm });
 
-    // 4. Auto-generate Chime-style unique tag ($firstName123)
+    // 4. Auto-generate RopeWallet unique tag ($firstName-xxxx e.g. $test-c290)
     let generatedTag = '';
     let isUnique = false;
     let attempts = 0;
     while (!isUnique && attempts < 100) {
-      const randomNum = Math.floor(100 + Math.random() * 900); // 3 digits
-      const cleanFirst = data.firstName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-      generatedTag = `$${cleanFirst}${randomNum}`;
+      const cleanFirst = data.firstName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'user';
+      const randomChars = Math.random().toString(36).substring(2, 6).toLowerCase(); // 4 random alphanumeric chars
+      generatedTag = `$${cleanFirst}-${randomChars}`;
       const existing = await User.findOne({ userTag: generatedTag });
       if (!existing) {
         isUnique = true;
@@ -96,7 +96,9 @@ export class AuthService {
       attempts++;
     }
     if (!isUnique) {
-      generatedTag = `$${data.firstName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}${Math.floor(1000 + Math.random() * 9000)}`;
+      const cleanFirst = data.firstName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'user';
+      const fallbackSuffix = Math.random().toString(36).substring(2, 6).toLowerCase();
+      generatedTag = `$${cleanFirst}-${fallbackSuffix}`;
     }
 
     // 5. Generate unique wallet QR data using this tag!

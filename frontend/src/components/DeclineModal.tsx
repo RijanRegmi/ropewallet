@@ -6,11 +6,13 @@ import { apiRequest } from '@/lib/api';
 interface DeclineModalProps {
   isOpen: boolean;
   depositId: string | null;
+  endpoint?: string;
+  title?: string;
   onClose: () => void;
   onSuccess: (msg: string) => void;
 }
 
-export default function DeclineModal({ isOpen, depositId, onClose, onSuccess }: DeclineModalProps) {
+export default function DeclineModal({ isOpen, depositId, endpoint, title, onClose, onSuccess }: DeclineModalProps) {
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -22,11 +24,12 @@ export default function DeclineModal({ isOpen, depositId, onClose, onSuccess }: 
     setLoading(true);
     setError('');
 
-    const res = await apiRequest(`/admin/deposits/${depositId}/decline`, 'PUT', { reason });
+    const targetUrl = endpoint || `/admin/deposits/${depositId}/decline`;
+    const res = await apiRequest(targetUrl, 'PUT', { reason });
     setLoading(false);
 
     if (res.success) {
-      onSuccess('Deposit declined successfully');
+      onSuccess(res.message || 'Transaction declined successfully');
       setReason('');
       onClose();
     } else {

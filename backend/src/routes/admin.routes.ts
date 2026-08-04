@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { AdminController } from '../controllers/admin.controller.js';
-import { adminProtect } from '../middlewares/admin.middleware.js';
+import { adminProtect, superAdminOnly } from '../middlewares/admin.middleware.js';
 
 const router = Router();
 
@@ -23,7 +23,7 @@ router.get('/dashboard-data', AdminController.getDashboard);
 // User Management
 router.get('/users', AdminController.listUsers);
 router.get('/users/:id', AdminController.getUser);
-router.post('/users', AdminController.createUser);
+router.post('/users', superAdminOnly, AdminController.createUser);
 router.put('/users/:id', AdminController.editUser);
 router.delete('/users/:id', AdminController.deleteUser);
 router.put('/users/:id/freeze', AdminController.freezeUser);
@@ -34,6 +34,11 @@ router.put('/users/:id/role', AdminController.updateUserRole);
 router.get('/deposits', AdminController.listPendingDeposits);
 router.put('/deposits/:id/approve', AdminController.approveDeposit);
 router.put('/deposits/:id/decline', AdminController.declineDeposit);
+
+// Host Payout / Cashout Requests (Super Admin approval required)
+router.get('/payouts', superAdminOnly, AdminController.listPendingPayouts);
+router.put('/payouts/:id/approve', superAdminOnly, AdminController.approvePayout);
+router.put('/payouts/:id/decline', superAdminOnly, AdminController.declinePayout);
 
 // P2P Account Management
 router.get('/p2p-accounts', AdminController.listP2PAccounts);
