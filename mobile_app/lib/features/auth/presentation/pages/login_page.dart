@@ -196,7 +196,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Your premium personal P2P wallet',
+                  'Your premium personal digital wallet',
                   style: TextStyle(
                     fontSize: 14,
                     color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),

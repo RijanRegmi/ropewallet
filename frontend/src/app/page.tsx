@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   ShieldCheck,
@@ -30,6 +30,30 @@ import {
 import { apiRequest } from '@/lib/api';
 
 export default function ProfessionalWhiteLandingPage() {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    // Trigger smooth initial load split-out animation after 150ms mount delay
+    const timer = setTimeout(() => {
+      setIsLoaded(true);
+    }, 150);
+
+    const handleScroll = () => {
+      if (window.scrollY > 50) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
   // Become a Host Form State
   const [hostForm, setHostForm] = useState({
     fullName: '',
@@ -44,6 +68,10 @@ export default function ProfessionalWhiteLandingPage() {
 
   const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
     e.preventDefault();
+    if (targetId === 'hero') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     const elem = document.getElementById(targetId);
     if (elem) {
       elem.scrollIntoView({ behavior: 'smooth' });
@@ -81,7 +109,7 @@ export default function ProfessionalWhiteLandingPage() {
         <span className="inline-flex items-center gap-1.5 bg-emerald-500 text-slate-950 font-bold px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider">
           New
         </span>
-        <span>RopeWallet 2.0 Instant P2P Settlement Engine is now live!</span>
+        <span>RopeWallet 2.0 Instant Settlement Engine is now live!</span>
         <a
           href="#become-host"
           onClick={(e) => handleSmoothScroll(e, 'become-host')}
@@ -91,22 +119,38 @@ export default function ProfessionalWhiteLandingPage() {
         </a>
       </div>
 
-      {/* Main Header / Navigation */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center bg-white shadow-md shadow-emerald-600/10 border border-slate-100">
-              <img src="/ropewallet.png" alt="RopeWallet Logo" className="w-full h-full object-contain" />
+      {/* Main Navigation Bar */}
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/80 transition-all duration-300">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          {/* Animated Interactive Logo & Splitting Text */}
+          <a
+            href="#hero"
+            onClick={(e) => handleSmoothScroll(e, 'hero')}
+            className="flex items-center group cursor-pointer select-none"
+          >
+            {/* 3D Logo Icon: Animates scale and shadow during split */}
+            <div
+              className={`relative z-10 w-11 h-11 rounded-2xl bg-slate-900 flex items-center justify-center text-white shrink-0 border border-slate-800 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isScrolled || !isLoaded ? 'scale-95 shadow-md' : 'scale-105 shadow-xl shadow-slate-900/20'
+                }`}
+            >
+              <img src="/ropewallet.png" alt="RopeWallet Logo" className="w-full h-full object-cover rounded-2xl" />
             </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-extrabold tracking-tight text-slate-900 leading-none">
+
+            {/* Splitting Brand Text: Emerges & splits out from behind the logo icon to the right on load & top section */}
+            <div
+              className={`flex flex-col justify-center overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] origin-left ${isScrolled || !isLoaded
+                ? 'max-w-0 opacity-0 -translate-x-6 scale-90 pointer-events-none'
+                : 'max-w-[240px] opacity-100 translate-x-0 scale-100 ml-3.5'
+                }`}
+            >
+              <span className="text-xl font-extrabold tracking-tight text-slate-900 leading-none whitespace-nowrap">
                 RopeWallet
               </span>
-              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mt-0.5">
+              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mt-1 whitespace-nowrap">
                 ENTERPRISE WALLET
               </span>
             </div>
-          </div>
+          </a>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
             <a href="#gateways" onClick={(e) => handleSmoothScroll(e, 'gateways')} className="hover:text-slate-900 transition-colors">
@@ -140,7 +184,7 @@ export default function ProfessionalWhiteLandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-12 pb-20 lg:pt-20 lg:pb-28 overflow-hidden bg-gradient-to-b from-slate-50/60 via-white to-white">
+      <section id="hero" className="relative pt-12 pb-20 lg:pt-20 lg:pb-28 overflow-hidden bg-gradient-to-b from-slate-50/60 via-white to-white">
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Content Column */}
@@ -148,12 +192,12 @@ export default function ProfessionalWhiteLandingPage() {
               {/* Badge */}
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold mb-8 shadow-xs">
                 <Sparkles className="w-4 h-4 text-emerald-600" />
-                <span>Ultra-Secure Enterprise P2P Payment Gateway Engine</span>
+                <span>Ultra-Secure Enterprise Payment Gateway Engine</span>
               </div>
 
               {/* Headline */}
               <h1 className="text-4xl sm:text-6xl lg:text-6xl font-black tracking-tight text-slate-900 leading-[1.08] mb-6">
-                The Ultra-Secure Enterprise P2P Payment Gateway &{' '}
+                The Ultra-Secure Enterprise Payment Gateway &{' '}
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600">
                   Digital Wallet Engine
                 </span>
@@ -171,7 +215,7 @@ export default function ProfessionalWhiteLandingPage() {
                   className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-2xl shadow-xl shadow-emerald-600/25 transition-all hover:scale-[1.03] active:scale-[0.98] flex items-center gap-3 cursor-pointer"
                 >
                   <UserPlus className="w-5 h-5" />
-                  Become a Host (Submit Inquiry)
+                  Become a Host
                   <ArrowRight className="w-4 h-4" />
                 </a>
                 <a
@@ -201,15 +245,13 @@ export default function ProfessionalWhiteLandingPage() {
                   </div>
 
                   <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-blue-500/40 transition-all">
-                    <div className="bg-[#008CFF]/15 px-2 py-0.5 rounded border border-[#008CFF]/30">
-                      <span className="font-extrabold text-[#008CFF] text-[10px]">venmo</span>
+                    <div className="bg-[#008CFF]/15 px-3 py-1 rounded-lg border border-[#008CFF]/30">
+                      <span className="font-extrabold text-[#008CFF] text-xs">venmo</span>
                     </div>
-                    <span className="font-extrabold text-xs text-slate-800">Venmo</span>
                   </div>
 
                   <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-purple-500/40 transition-all">
                     <img src="https://img.icons8.com/color/96/apple-pay.png" alt="Apple Pay" className="h-6 object-contain" />
-                    <span className="font-extrabold text-xs text-slate-800">Apple Pay</span>
                   </div>
                 </div>
               </div>
@@ -249,11 +291,11 @@ export default function ProfessionalWhiteLandingPage() {
                   <div className="w-3 h-3 bg-[#0B0F1A] border border-slate-800 rounded-full mx-auto absolute top-1.5 left-1/2 -translate-x-1/2 z-30 shadow-inner" />
 
                   {/* Phone Screen Display with App Screenshot */}
-                  <div className="bg-[#0B0F1A] rounded-[32px] sm:rounded-[36px] overflow-hidden pt-4 sm:pt-5">
+                  <div className="bg-[#0B0F1A] rounded-[32px] sm:rounded-[36px] overflow-hidden">
                     <img
                       src="/app_hero_mockup.png"
                       alt="RopeWallet Android Mobile App UI"
-                      className="w-full h-auto object-cover rounded-b-[30px] sm:rounded-b-[34px] shadow-inner"
+                      className="w-full h-auto object-cover rounded-[32px] sm:rounded-[36px]"
                     />
                   </div>
                 </div>
@@ -274,7 +316,7 @@ export default function ProfessionalWhiteLandingPage() {
               Become an Authorized Host
             </h2>
             <p className="text-slate-600 text-base sm:text-lg">
-              Submit your inquiry directly to Super Admin to receive host credentials and manage P2P deposit flows.
+              Submit your inquiry directly to Super Admin to receive host credentials and manage deposit flows.
             </p>
           </div>
 
@@ -441,7 +483,7 @@ export default function ProfessionalWhiteLandingPage() {
                 Access System via the Official Mobile App
               </h2>
               <p className="text-slate-300 text-base sm:text-lg leading-relaxed mb-8">
-                Hosts and customers access system features directly inside the official RopeWallet Mobile Application. Generate P2P deposit links, track live status, manage balances, and send payouts seamlessly.
+                Hosts and customers access system features directly inside the official RopeWallet Mobile Application. Generate deposit links, track live status, manage balances, and send payouts seamlessly.
               </p>
 
               <div className="space-y-4 mb-10">

@@ -591,7 +591,7 @@ class _HomePageState extends State<HomePage> {
                                 ),
                                 const SizedBox(height: 2),
                                 const Text(
-                                  'Users, Deposits, P2P Accounts & Analytics',
+                                  'Users, Deposits & Analytics',
                                   style: TextStyle(color: Colors.white70, fontSize: 12),
                                 ),
                               ],
@@ -1303,7 +1303,7 @@ class _ShareLinkBottomSheetState extends State<_ShareLinkBottomSheet> {
             
             // Customer Tag Field
             Text(
-              'Customer P2P Tag / Name (e.g. \$alice99)',
+              'Customer Tag / Name (e.g. \$alice99)',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,

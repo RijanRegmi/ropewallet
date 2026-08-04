@@ -1,7 +1,7 @@
 {
-  "name": "RopeWallet",
+  "name": "RopeWallet – Enterprise Digital Wallet",
   "short_name": "RopeWallet",
-  "description": "Secure digital wallet platform for deposits, withdrawals, and P2P transfers",
+  "description": "Secure digital wallet platform for managing deposits, withdrawals, and instant payment settlement",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0B0F1A",
