@@ -175,7 +175,7 @@ export default function UsersPage() {
           <p className="text-sm mt-1" style={{ color: '#5C7C89' }}>Real-time filtering, creation, role editing, and account status</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-80">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -193,7 +193,7 @@ export default function UsersPage() {
               setIsModalOpen(true);
             }}
             title="Create a new user account"
-            className="cursor-pointer flex items-center gap-2 px-4 py-2.5 font-extrabold text-sm rounded-xl transition-all active:scale-95" style={{ background: 'linear-gradient(135deg, #1F4959, #5C7C89)', border: '1px solid rgba(92,124,137,0.40)', color: '#fff', boxShadow: '0 4px 16px rgba(31,73,89,0.40)' }}
+            className="cursor-pointer flex items-center justify-center gap-2 px-4 py-2.5 font-extrabold text-sm rounded-xl transition-all active:scale-95 shrink-0" style={{ background: 'linear-gradient(135deg, #1F4959, #5C7C89)', border: '1px solid rgba(92,124,137,0.40)', color: '#fff', boxShadow: '0 4px 16px rgba(31,73,89,0.40)' }}
           >
             <Plus className="w-4 h-4" />
             New User
@@ -202,7 +202,7 @@ export default function UsersPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-3 pb-3" style={{ borderBottom: '1px solid rgba(92,124,137,0.18)' }}>
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 pb-3" style={{ borderBottom: '1px solid rgba(92,124,137,0.18)' }}>
         <button
           onClick={() => setActiveTab('users')}
           className="px-4 py-2 text-sm font-bold rounded-xl transition-all cursor-pointer"

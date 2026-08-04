@@ -28,13 +28,13 @@ export default function AdminLayout({
   return (
     <AuthGuard>
       <div
-        className="min-h-screen text-white flex selection:bg-[#1F4959] selection:text-white"
+        className="min-h-screen text-white flex flex-col lg:flex-row selection:bg-[#1F4959] selection:text-white"
         style={{
           background: 'radial-gradient(ellipse at top right, rgba(31,73,89,0.45) 0%, #011425 55%, #011020 100%)',
         }}
       >
         <Sidebar />
-        <main className="flex-1 ml-64 p-8 min-h-screen">
+        <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 min-h-screen pt-20 lg:pt-8 w-full max-w-full overflow-x-hidden">
           {children}
         </main>
       </div>
