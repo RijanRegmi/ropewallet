@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, CreditCard, Link as LinkIcon, Download, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, Link as LinkIcon, Download, LogOut, Bell } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import ConfirmModal from '@/components/ConfirmModal';
+import { FEATURE_FLAGS } from '@/lib/featureFlags';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -16,7 +17,8 @@ export default function Sidebar() {
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Pending Deposits', href: '/admin/deposits', icon: CreditCard },
-    { name: 'P2P Accounts', href: '/admin/p2p-accounts', icon: LinkIcon },
+    { name: 'Notice Center', href: '/admin/notices', icon: Bell },
+    ...(FEATURE_FLAGS.ENABLE_P2P ? [{ name: 'P2P Accounts', href: '/admin/p2p-accounts', icon: LinkIcon }] : []),
   ];
 
   const initials = admin?.fullName

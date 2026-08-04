@@ -391,4 +391,25 @@ export class AuthController {
       next(error);
     }
   }
+
+  static async updateFcmToken(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id || (req as any).user?._id;
+      const { fcmToken } = req.body;
+
+      if (!userId) {
+        res.status(401).json({ success: false, error: 'Unauthorized' });
+        return;
+      }
+
+      await User.findByIdAndUpdate(userId, { fcmToken: fcmToken || '' });
+
+      res.status(200).json({
+        success: true,
+        message: 'FCM push token updated successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

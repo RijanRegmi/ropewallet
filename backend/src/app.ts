@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import p2pRoutes from './routes/p2p.routes.js';
+import noticeRoutes from './routes/notice.routes.js';
 import { PaymentController } from './controllers/payment.controller.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import { connectDB } from './config/db.js';
@@ -119,6 +120,7 @@ app.use(['/api/payments', '/payments'], paymentRoutes);
 app.use(['/api/admin', '/admin'], adminRoutes);
 app.use(['/api/p2p', '/p2p'], p2pRoutes);
 app.use(['/api/pay', '/pay'], p2pOrderRoutes);
+app.use(['/api/notices', '/notices'], noticeRoutes);
 
 // Catch 404 routes
 app.use((req, res) => {

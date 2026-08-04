@@ -15,6 +15,11 @@ class ApiConstants {
   static const String localComputerIp = '192.168.1.7'; // Change to your local IP address
   static const String ngrokUrl = 'https://your-ngrok-tunnel-url.ngrok-free.app'; // Change to your ngrok URL
   static const String stripePublishableKey = 'pk_live_51TsQ96EAXnJUFOnkpg5J6wq4ZNg79gk3lxsdhFDKXk0CPPTS24OYkDf4E4xPnNLc9epU3YA0eoi5cSKXi0iQ5n5900ZKKnbUvY';
+  
+  // ================= FEATURE FLAGS =================
+  // Toggle enableP2P to true/false to enable or disable all P2P features app-wide.
+  static const bool enableP2P = false;
+  // =================================================
   // ====================================================================
 
   static String get baseUrl {

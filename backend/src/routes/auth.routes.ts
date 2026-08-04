@@ -22,5 +22,6 @@ router.post('/change-password', protect, AuthController.changePassword);
 router.post('/change-pin', protect, AuthController.changePin);
 router.post('/save-card', protect, AuthController.saveCard);
 router.delete('/delete-card', protect, AuthController.deleteCard);
+router.post('/fcm-token', protect, AuthController.updateFcmToken);
 
 export default router;

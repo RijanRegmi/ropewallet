@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/constants/api_constants.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../../auth/presentation/widgets/pin_code_dialog.dart';
@@ -377,6 +378,27 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
     
     final savedCard = user['savedCard'];
     final hasSavedCard = savedCard != null && savedCard['cardNumber'] != null && savedCard['cardNumber'].toString().isNotEmpty;
+
+    if (!ApiConstants.enableP2P) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Chime Services')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.cloud_off_rounded, size: 64, color: Colors.grey),
+                SizedBox(height: 16),
+                Text('P2P Services Disabled', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                SizedBox(height: 8),
+                Text('P2P transfers and Chime gateway features are currently disabled.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(

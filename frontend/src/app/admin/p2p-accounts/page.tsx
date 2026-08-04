@@ -6,9 +6,29 @@ import { P2PAccountModel, P2PListResponse } from '@/models/p2p-account.model';
 import P2PModal from '@/components/P2PModal';
 import ConfirmModal from '@/components/ConfirmModal';
 import Toast from '@/components/Toast';
-import { Plus, Edit, Trash2, Link as LinkIcon, CheckCircle2, XCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, Link as LinkIcon, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { FEATURE_FLAGS } from '@/lib/featureFlags';
 
 export default function P2PAccountsPage() {
+  if (!FEATURE_FLAGS.ENABLE_P2P) {
+    return (
+      <div className="space-y-6 max-w-4xl">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-white">P2P Payment Accounts</h2>
+            <p className="text-sm text-gray-400 mt-1">P2P features are currently disabled in feature flags configuration.</p>
+          </div>
+        </div>
+        <div className="bg-[#1F2937]/50 border border-[#374151] rounded-2xl p-8 text-center text-gray-400">
+          To re-enable P2P deposit accounts, turn on <code className="text-indigo-400 font-mono">ENABLE_P2P = true</code> in <code className="text-indigo-400 font-mono">frontend/src/lib/featureFlags.ts</code>.
+        </div>
+      </div>
+    );
+  }
+
   const [accounts, setAccounts] = useState<P2PAccountModel[]>([]);
   const [loading, setLoading] = useState(true);
 

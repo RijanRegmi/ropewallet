@@ -5,6 +5,7 @@ import Stripe from 'stripe';
 import { User } from '../models/user.model.js';
 import { Transaction } from '../models/transaction.model.js';
 import { CustomError } from '../middlewares/error.middleware.js';
+import { sendPushNotification } from '../services/push_notification.service.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy_key_for_initialization_12345');
 
@@ -625,6 +626,15 @@ export class PaymentController {
         stripePaymentIntentId: stripePayoutId,
         remarks: remarks ? remarks.trim() : remarksText,
       });
+
+      if ((user as any).fcmToken) {
+        sendPushNotification(
+          (user as any).fcmToken,
+          'Withdrawal Initiated',
+          `Your withdrawal of $${amount.toFixed(2)} has been processed.`,
+          { type: 'transaction', txnId: (transaction._id as any).toString() }
+        );
+      }
 
       res.status(200).json({
         success: true,

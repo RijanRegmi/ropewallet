@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/constants/api_constants.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/create_user_page.dart';
 import '../../../auth/presentation/widgets/pin_code_dialog.dart';
@@ -40,7 +41,7 @@ class _AdminPortalPageState extends State<AdminPortalPage> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: ApiConstants.enableP2P ? 4 : 3, vsync: this);
     _loadAllAdminData();
   }
 
@@ -55,7 +56,9 @@ class _AdminPortalPageState extends State<AdminPortalPage> with SingleTickerProv
     _fetchDashboardData();
     _fetchUsersData();
     _fetchPendingDeposits();
-    _fetchP2pAccounts();
+    if (ApiConstants.enableP2P) {
+      _fetchP2pAccounts();
+    }
   }
 
   // ─── Data Fetching Methods ──────────────────────────────────────────
@@ -629,11 +632,12 @@ class _AdminPortalPageState extends State<AdminPortalPage> with SingleTickerProv
           labelColor: theme.primaryColor,
           unselectedLabelColor: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
           indicatorColor: theme.primaryColor,
-          tabs: const [
-            Tab(icon: Icon(Icons.dashboard_outlined), text: 'Overview'),
-            Tab(icon: Icon(Icons.people_alt_outlined), text: 'Users'),
-            Tab(icon: Icon(Icons.pending_actions_outlined), text: 'Deposits'),
-            Tab(icon: Icon(Icons.account_balance_wallet_outlined), text: 'P2P Accounts'),
+          tabs: [
+            const Tab(icon: Icon(Icons.dashboard_outlined), text: 'Overview'),
+            const Tab(icon: Icon(Icons.people_alt_outlined), text: 'Users'),
+            const Tab(icon: Icon(Icons.pending_actions_outlined), text: 'Deposits'),
+            if (ApiConstants.enableP2P)
+              const Tab(icon: Icon(Icons.account_balance_wallet_outlined), text: 'P2P Accounts'),
           ],
         ),
       ),
@@ -643,7 +647,8 @@ class _AdminPortalPageState extends State<AdminPortalPage> with SingleTickerProv
           _buildOverviewTab(isDark, theme),
           _buildUsersTab(isDark, theme, authProvider),
           _buildDepositsTab(isDark, theme),
-          _buildP2pTab(isDark, theme),
+          if (ApiConstants.enableP2P)
+            _buildP2pTab(isDark, theme),
         ],
       ),
       floatingActionButton: _tabController.index == 1

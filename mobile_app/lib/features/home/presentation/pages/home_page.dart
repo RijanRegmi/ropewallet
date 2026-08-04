@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:ropewallet/core/network/api_client.dart';
+import 'package:ropewallet/core/constants/api_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -19,6 +20,7 @@ import 'bank_transfer_page.dart';
 import 'usdt_transfer_page.dart';
 import 'p2p_gateway_order_page.dart';
 import '../../../admin/presentation/pages/admin_portal_page.dart';
+import '../../notifications/presentation/pages/notification_center_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -174,6 +176,36 @@ class _HomePageState extends State<HomePage> {
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                             letterSpacing: -0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const NotificationCenterPage()),
+                      );
+                    },
+                    icon: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Icon(
+                          Icons.notifications_none_rounded,
+                          size: 26,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            width: 9,
+                            height: 9,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFEF4444),
+                              shape: BoxShape.circle,
+                            ),
                           ),
                         ),
                       ],
@@ -440,6 +472,9 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 16),
               Builder(
                 builder: (context) {
+                  if (!ApiConstants.enableP2P) {
+                    return const SizedBox.shrink();
+                  }
                   final hasChime = _activeP2pAccounts.any((a) => a['platform'] == 'chime');
                   final hasCashApp = _activeP2pAccounts.any((a) => a['platform'] == 'cashapp');
                   final hasVenmo = _activeP2pAccounts.any((a) => a['platform'] == 'venmo');
@@ -864,7 +899,9 @@ class _ShareLinkBottomSheetState extends State<_ShareLinkBottomSheet> {
         .map((a) => (a['platform'] as String).toLowerCase())
         .toSet();
 
-    if (activePlatforms.isNotEmpty) {
+    if (!ApiConstants.enableP2P) {
+      _availableMethods = [];
+    } else if (activePlatforms.isNotEmpty) {
       _availableMethods = _allMethods.where((m) => activePlatforms.contains(m['id'])).toList();
     } else {
       // Fallback: Default to chime if none explicitly enabled

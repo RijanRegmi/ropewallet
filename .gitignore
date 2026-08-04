@@ -33,3 +33,10 @@ pnpm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
+
+# Firebase Sensitive Credentials & Keys
+*firebase-adminsdk*.json
+*service-account*.json
+google-services.json
+GoogleService-Info.plist
+

@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Avatar from '@/components/Avatar';
 import { ApiClient } from '@/lib/api';
+import { FEATURE_FLAGS } from '@/lib/featureFlags';
 
 interface PaymentRequestDetails {
   _id: string;
@@ -330,9 +331,9 @@ function PayContent() {
               }
               return true;
             }).map((method) => {
-              // Hide Chime/Venmo if they are not configured for this receiver
-              const isP2P = method.id === 'chime' || method.id === 'venmo';
-              if (isP2P && !data.p2pAccounts.some((a) => a.platform === method.id)) {
+              // Hide P2P options if P2P feature flag is false or method not configured
+              const isP2P = method.id === 'chime' || method.id === 'venmo' || method.id === 'cashapp';
+              if (isP2P && (!FEATURE_FLAGS.ENABLE_P2P || !data.p2pAccounts.some((a) => a.platform === method.id))) {
                 return null;
               }
 
@@ -358,7 +359,7 @@ function PayContent() {
         </div>
 
         {/* Chime / Venmo Instructions */}
-        {currentP2PHandle && (
+        {FEATURE_FLAGS.ENABLE_P2P && currentP2PHandle && (
           <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 mb-6 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
             <h3 className="font-extrabold text-sm text-primary-hover">
               Send via {selectedMethod === 'chime' ? 'Chime' : 'Venmo'}

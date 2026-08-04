@@ -50,6 +50,10 @@ const userSchema = new Schema<IUser>(
       unique: true,
       trim: true,
     },
+    fcmToken: {
+      type: String,
+      default: '',
+    },
     transactionPin: {
       type: String,
       select: false, // Don't return PIN by default for safety
