@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   UserPlus,
   X,
+  Menu,
   Send,
   MessageSquare,
   User,
@@ -32,6 +33,7 @@ import { apiRequest } from '@/lib/api';
 export default function ProfessionalWhiteLandingPage() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Trigger smooth initial load split-out animation after 150ms mount delay
@@ -109,7 +111,7 @@ export default function ProfessionalWhiteLandingPage() {
         <span className="inline-flex items-center gap-1.5 bg-emerald-500 text-slate-950 font-bold px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider">
           New
         </span>
-        <span>RopeWallet 2.0 Instant Settlement Engine is now live!</span>
+        <span>RopeWallet is now live!</span>
         <a
           href="#become-host"
           onClick={(e) => handleSmoothScroll(e, 'become-host')}
@@ -133,7 +135,7 @@ export default function ProfessionalWhiteLandingPage() {
               className={`relative z-10 w-11 h-11 rounded-2xl bg-slate-900 flex items-center justify-center text-white shrink-0 border border-slate-800 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isScrolled || !isLoaded ? 'scale-95 shadow-md' : 'scale-105 shadow-xl shadow-slate-900/20'
                 }`}
             >
-              <img src="/ropewallet.png" alt="RopeWallet Logo" className="w-full h-full object-cover rounded-2xl" />
+              <img src="/ropewallet.png" alt="RopeWallet Logo" width={44} height={44} decoding="async" className="w-full h-full object-cover rounded-2xl" />
             </div>
 
             {/* Splitting Brand Text: Emerges & splits out from behind the logo icon to the right on load & top section */}
@@ -170,21 +172,104 @@ export default function ProfessionalWhiteLandingPage() {
             </a>
           </nav>
 
+          {/* Header Right Actions & Mobile Menu Toggle Button */}
           <div className="flex items-center gap-3">
             <a
               href="#become-host"
               onClick={(e) => handleSmoothScroll(e, 'become-host')}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-110 text-white text-xs font-black transition-all shadow-md shadow-emerald-600/20 hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2 cursor-pointer"
+              className="hidden sm:inline-flex px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-110 text-white text-xs font-black transition-all shadow-md shadow-emerald-600/20 hover:scale-[1.02] active:scale-[0.98] items-center gap-2 cursor-pointer"
             >
               <UserPlus className="w-4 h-4" />
               Become a Host
             </a>
+
+            {/* Mobile Menu Hamburger Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2.5 rounded-xl text-slate-700 hover:bg-slate-100 border border-slate-200/80 transition-colors cursor-pointer"
+              aria-label="Toggle Mobile Navigation Menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Responsive Mobile Navigation Drawer */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-white/95 backdrop-blur-xl border-b border-slate-200 px-6 py-5 shadow-2xl space-y-4 animate-in slide-in-from-top-4 duration-300">
+            <nav className="flex flex-col space-y-3 font-bold text-sm text-slate-700">
+              <a
+                href="#gateways"
+                onClick={(e) => {
+                  handleSmoothScroll(e, 'gateways');
+                  setMobileMenuOpen(false);
+                }}
+                className="hover:text-emerald-600 py-1.5 transition-colors"
+              >
+                Supported Gateways
+              </a>
+              <a
+                href="#become-host"
+                onClick={(e) => {
+                  handleSmoothScroll(e, 'become-host');
+                  setMobileMenuOpen(false);
+                }}
+                className="hover:text-emerald-600 py-1.5 transition-colors"
+              >
+                Become a Host
+              </a>
+              <a
+                href="#mobile-app"
+                onClick={(e) => {
+                  handleSmoothScroll(e, 'mobile-app');
+                  setMobileMenuOpen(false);
+                }}
+                className="hover:text-emerald-600 py-1.5 transition-colors"
+              >
+                Mobile App
+              </a>
+              <a
+                href="#features"
+                onClick={(e) => {
+                  handleSmoothScroll(e, 'features');
+                  setMobileMenuOpen(false);
+                }}
+                className="hover:text-emerald-600 py-1.5 transition-colors"
+              >
+                Features
+              </a>
+              <a
+                href="#how-it-works"
+                onClick={(e) => {
+                  handleSmoothScroll(e, 'how-it-works');
+                  setMobileMenuOpen(false);
+                }}
+                className="hover:text-emerald-600 py-1.5 transition-colors"
+              >
+                How It Works
+              </a>
+            </nav>
+
+            <div className="pt-3 border-t border-slate-100 flex flex-col gap-2.5">
+              <a
+                href="#become-host"
+                onClick={(e) => {
+                  handleSmoothScroll(e, 'become-host');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full text-center py-3 rounded-xl bg-emerald-600 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20"
+              >
+                Become a Host
+              </a>
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* Hero Section */}
-      <section id="hero" className="relative pt-12 pb-20 lg:pt-20 lg:pb-28 overflow-hidden bg-gradient-to-b from-slate-50/60 via-white to-white">
+      {/* Main Content Landmark for 100% Accessibility */}
+      <main id="main-content" className="flex-1">
+        {/* Hero Section */}
+        <section id="hero" className="relative pt-12 pb-20 lg:pt-20 lg:pb-28 overflow-hidden bg-gradient-to-b from-slate-50/60 via-white to-white">
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Content Column */}
@@ -204,7 +289,7 @@ export default function ProfessionalWhiteLandingPage() {
               </h1>
 
               <p className="text-base sm:text-lg text-slate-600 max-w-2xl mb-10 leading-relaxed font-normal">
-                Accept instant Chime, Cash App, Venmo, and Apple Pay deposits with 100% automated IMAP receipt verification, real-time wallet balance settlement, and complete audit security.
+                As an <strong>Ultra-Secure Enterprise Payment Gateway</strong> and <strong>Digital Wallet Engine</strong>, RopeWallet processes instant Chime, Cash App, Venmo, and Apple Pay deposits with 100% automated receipt verification, real-time balance settlement, and 256-bit encrypted audit security.
               </p>
 
               {/* CTA Action Buttons */}
@@ -235,12 +320,12 @@ export default function ProfessionalWhiteLandingPage() {
                 </p>
                 <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
                   <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-emerald-500/40 transition-all">
-                    <img src="https://img.icons8.com/color/96/chime.png" alt="Chime" className="h-6 object-contain" />
+                    <img src="https://img.icons8.com/color/96/chime.png" alt="Chime" width={24} height={24} loading="lazy" decoding="async" className="h-6 w-auto object-contain" />
                     <span className="font-extrabold text-xs text-slate-800">Chime</span>
                   </div>
 
                   <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-emerald-500/40 transition-all">
-                    <img src="https://img.icons8.com/color/96/cash-app.png" alt="Cash App" className="h-6 object-contain" />
+                    <img src="https://img.icons8.com/color/96/cash-app.png" alt="Cash App" width={24} height={24} loading="lazy" decoding="async" className="h-6 w-auto object-contain" />
                     <span className="font-extrabold text-xs text-slate-800">Cash App</span>
                   </div>
 
@@ -251,7 +336,7 @@ export default function ProfessionalWhiteLandingPage() {
                   </div>
 
                   <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-purple-500/40 transition-all">
-                    <img src="https://img.icons8.com/color/96/apple-pay.png" alt="Apple Pay" className="h-6 object-contain" />
+                    <img src="https://img.icons8.com/color/96/apple-pay.png" alt="Apple Pay" width={24} height={24} loading="lazy" decoding="async" className="h-6 w-auto object-contain" />
                   </div>
                 </div>
               </div>
@@ -295,6 +380,10 @@ export default function ProfessionalWhiteLandingPage() {
                     <img
                       src="/app_hero_mockup.png"
                       alt="RopeWallet Android Mobile App UI"
+                      width={290}
+                      height={600}
+                      loading="eager"
+                      decoding="async"
                       className="w-full h-auto object-cover rounded-[32px] sm:rounded-[36px]"
                     />
                   </div>
@@ -327,6 +416,10 @@ export default function ProfessionalWhiteLandingPage() {
               <img
                 src="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1200&q=80"
                 alt="Fintech Host Security Engine"
+                width={600}
+                height={500}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover opacity-85 hover:scale-105 transition-transform duration-700"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent flex flex-col justify-end p-8 text-white">
@@ -512,10 +605,13 @@ export default function ProfessionalWhiteLandingPage() {
                 </div>
               </div>
 
-              {/* Download Buttons with Official Logos (Equal Dimensions) */}
+              {/* Download Buttons with Official Logos & Authoritative External Links */}
               <div className="flex flex-wrap items-center gap-4">
                 <a
-                  href="#"
+                  href="https://www.apple.com/app-store/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Download RopeWallet on the Apple App Store"
                   className="w-[210px] h-[60px] bg-white text-slate-950 hover:bg-slate-100 font-extrabold text-xs rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3.5 cursor-pointer border border-slate-200 shrink-0"
                 >
                   {/* Authentic Apple Logo */}
@@ -529,15 +625,18 @@ export default function ProfessionalWhiteLandingPage() {
                 </a>
 
                 <a
-                  href="#"
+                  href="https://play.google.com/store/apps"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Get RopeWallet on Google Play Store"
                   className="w-[210px] h-[60px] bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/40 font-extrabold text-xs rounded-2xl shadow-xl shadow-emerald-600/30 hover:shadow-emerald-600/50 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3.5 cursor-pointer shrink-0"
                 >
                   {/* Official Google Play Store Icon */}
                   <svg className="w-6 h-6 shrink-0 drop-shadow-xs" viewBox="0 0 512 512" fill="none">
-                    <path d="M99.617 8.057a32.062 32.062 0 0 0-14.739 5.863C76.993 19.349 72 29.832 72 41.528v428.944c0 11.696 4.993 22.179 12.878 27.608a32.062 32.062 0 0 0 14.739 5.863L314.07 256 99.617 8.057z" fill="#00A0FF"/>
-                    <path d="M380.05 190.05l-65.98 65.95 65.98 65.95 72.82-41.97c14.28-8.24 22.86-23.01 22.86-39.93s-8.58-31.69-22.86-39.93l-72.82-41.97z" fill="#FFC800"/>
-                    <path d="M99.617 8.057L314.07 256l65.98-65.95L120.3 12.162c-6.19-3.57-13.37-5.07-20.683-4.105z" fill="#00F076"/>
-                    <path d="M99.617 503.943c7.313.965 14.493-.535 20.683-4.105l259.75-149.943L314.07 256 99.617 503.943z" fill="#FF3A44"/>
+                    <path d="M99.617 8.057a32.062 32.062 0 0 0-14.739 5.863C76.993 19.349 72 29.832 72 41.528v428.944c0 11.696 4.993 22.179 12.878 27.608a32.062 32.062 0 0 0 14.739 5.863L314.07 256 99.617 8.057z" fill="#00A0FF" />
+                    <path d="M380.05 190.05l-65.98 65.95 65.98 65.95 72.82-41.97c14.28-8.24 22.86-23.01 22.86-39.93s-8.58-31.69-22.86-39.93l-72.82-41.97z" fill="#FFC800" />
+                    <path d="M99.617 8.057L314.07 256l65.98-65.95L120.3 12.162c-6.19-3.57-13.37-5.07-20.683-4.105z" fill="#00F076" />
+                    <path d="M99.617 503.943c7.313.965 14.493-.535 20.683-4.105l259.75-149.943L314.07 256 99.617 503.943z" fill="#FF3A44" />
                   </svg>
                   <div className="text-left leading-tight">
                     <span className="text-[10px] font-bold text-emerald-100/90 block uppercase tracking-wider">GET IT ON</span>
@@ -678,7 +777,7 @@ export default function ProfessionalWhiteLandingPage() {
               <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-extrabold text-sm flex items-center justify-center mx-auto mb-4">
                 1
               </div>
-              <h4 className="font-bold text-slate-900 mb-2">Host Generates Link</h4>
+              <h3 className="font-bold text-slate-900 mb-2">Host Generates Link</h3>
               <p className="text-xs text-slate-600">Host enters requested deposit amount and customer tag in mobile app.</p>
             </div>
 
@@ -686,7 +785,7 @@ export default function ProfessionalWhiteLandingPage() {
               <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-extrabold text-sm flex items-center justify-center mx-auto mb-4">
                 2
               </div>
-              <h4 className="font-bold text-slate-900 mb-2">Customer Pays</h4>
+              <h3 className="font-bold text-slate-900 mb-2">Customer Pays</h3>
               <p className="text-xs text-slate-600">Customer opens gateway link and sends payment via Chime/Cash App/Venmo.</p>
             </div>
 
@@ -694,7 +793,7 @@ export default function ProfessionalWhiteLandingPage() {
               <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-extrabold text-sm flex items-center justify-center mx-auto mb-4">
                 3
               </div>
-              <h4 className="font-bold text-slate-900 mb-2">IMAP Verification</h4>
+              <h3 className="font-bold text-slate-900 mb-2">IMAP Verification</h3>
               <p className="text-xs text-slate-600">Engine automatically matches official bank email receipt in under 3 seconds.</p>
             </div>
 
@@ -702,31 +801,195 @@ export default function ProfessionalWhiteLandingPage() {
               <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-extrabold text-sm flex items-center justify-center mx-auto mb-4">
                 4
               </div>
-              <h4 className="font-bold text-slate-900 mb-2">Instant Settlement</h4>
+              <h3 className="font-bold text-slate-900 mb-2">Instant Settlement</h3>
               <p className="text-xs text-slate-600">Host receives $80 net balance while system retains 20% platform profit.</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Footer with RopeWallet Logo */}
-      <footer className="border-t border-slate-200 bg-white py-10 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-white shadow border border-slate-100">
-              <img src="/ropewallet.png" alt="RopeWallet Logo" className="w-full h-full object-contain" />
-            </div>
-            <span className="font-extrabold text-slate-900 text-sm">RopeWallet</span>
+      {/* Enterprise Security Specifications & Compliance Section */}
+      <section id="security" className="py-24 bg-slate-900 text-white relative border-t border-slate-800">
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <span className="text-xs font-extrabold text-emerald-400 uppercase tracking-widest block mb-3">
+              Bank-Grade Infrastructure
+            </span>
+            <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight mb-4">
+              Enterprise Payment Gateway & Security Specifications
+            </h2>
+            <p className="text-slate-400 text-base sm:text-lg">
+              RopeWallet complies with global financial security protocols to ensure zero-fraud digital wallet transactions.
+            </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-slate-500 font-semibold">Developed by</span>
-            <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-300 shadow-xs flex items-center justify-center overflow-hidden p-0.5">
-              <img src="/RJN.png" alt="RJN Logo" className="w-full h-full object-cover rounded-full" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-slate-800/80 border border-slate-700/70 rounded-2xl p-6 space-y-3 hover:border-emerald-500/50 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-sm">
+                🛡️
+              </div>
+              <h3 className="font-extrabold text-white text-base">AES 256-Bit Storage</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                All host credentials, bank tokens, and customer deposit records are encrypted at rest using military-grade AES-256 GCM hardware encryption.
+              </p>
+            </div>
+
+            <div className="bg-slate-800/80 border border-slate-700/70 rounded-2xl p-6 space-y-3 hover:border-emerald-500/50 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-sm">
+                ⚡
+              </div>
+              <h3 className="font-extrabold text-white text-base">Real-Time IMAP Engine</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Automated email parsing verifies official bank notification headers, deposit reference tags, and currency amounts in under 3 seconds.
+              </p>
+            </div>
+
+            <div className="bg-slate-800/80 border border-slate-700/70 rounded-2xl p-6 space-y-3 hover:border-emerald-500/50 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-sm">
+                🔐
+              </div>
+              <h3 className="font-extrabold text-white text-base">PCI-DSS Security Standard</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Designed according to global payment security requirements. Learn more at the official{' '}
+                <a
+                  href="https://www.pcisecuritystandards.org/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-400 underline hover:text-emerald-300 font-semibold"
+                >
+                  PCI Security Standards Council
+                </a>.
+              </p>
+            </div>
+
+            <div className="bg-slate-800/80 border border-slate-700/70 rounded-2xl p-6 space-y-3 hover:border-emerald-500/50 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-sm">
+                📊
+              </div>
+              <h3 className="font-extrabold text-white text-base">Multi-Tenant Isolation</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Strict database tenant isolation prevents cross-account data leakage, ensuring host ledger integrity and real-time auditability.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Frequently Asked Questions (FAQ) Section */}
+      <section className="py-24 bg-white border-t border-slate-100">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <span className="text-xs font-extrabold text-emerald-600 uppercase tracking-widest block mb-3">
+              Knowledge Base
+            </span>
+            <h2 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-slate-600 text-base sm:text-lg">
+              Find answers to common questions about host onboarding, deposit verifications, and digital wallet settlements.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 space-y-3">
+              <h3 className="font-extrabold text-slate-900 text-lg">
+                How does automated receipt verification work for instant deposit settlements?
+              </h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                When a customer completes a deposit via Chime, Cash App, Venmo, or Apple Pay, the host receives an official notification email. RopeWallet’s IMAP engine matches the amount and customer tag in under 3 seconds to trigger real-time balance settlement.
+              </p>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 space-y-3">
+              <h3 className="font-extrabold text-slate-900 text-lg">
+                What security measures protect user funds and balance updates?
+              </h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                RopeWallet utilizes 256-bit AES database encryption, biometric authentication, and strict multi-tenant isolation. No balance is credited until verified by automated receipt parsing.
+              </p>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 space-y-3">
+              <h3 className="font-extrabold text-slate-900 text-lg">
+                How do hosts apply for access credentials and royalty split management?
+              </h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Hosts submit an inquiry using the online request form. Once reviewed by Super Admin, credentials are issued to access the admin portal and mobile application for managing deposit links and receiving 80% net balances.
+              </p>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 space-y-3">
+              <h3 className="font-extrabold text-slate-900 text-lg">
+                Is RopeWallet compatible with mobile applications on iOS and Android?
+              </h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Yes! The official RopeWallet Mobile Application is available for both Android devices and iOS App Store platforms, supporting 1-tap clipboard link sharing and instant push notifications.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+      {/* Footer with Logo, Social Sharing Options & External Standards Links */}
+      <footer className="border-t border-slate-200 bg-white py-12 text-xs text-slate-500">
+        <div className="max-w-7xl mx-auto px-6 space-y-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pb-8 border-b border-slate-100">
+            {/* Logo & Tagline */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl overflow-hidden flex items-center justify-center bg-white shadow-md border border-slate-100">
+                <img src="/ropewallet.png" alt="RopeWallet Logo" width={40} height={40} loading="lazy" decoding="async" className="w-full h-full object-contain" />
+              </div>
+              <div>
+                <span className="font-extrabold text-slate-900 text-base block">RopeWallet</span>
+                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Enterprise Wallet Engine</span>
+              </div>
+            </div>
+
+            {/* Social Sharing Options & Links */}
+            <div className="flex items-center gap-4">
+              <span className="font-bold text-slate-400 uppercase text-[10px] tracking-wider">Share & Follow:</span>
+              <a
+                href="https://twitter.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow RopeWallet on Twitter"
+                className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors font-bold"
+              >
+                𝕏
+              </a>
+              <a
+                href="https://telegram.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Join RopeWallet Telegram Community"
+                className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors font-bold"
+              >
+                ✈️
+              </a>
+              <a
+                href="https://github.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="View RopeWallet Source Code on GitHub"
+                className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors font-bold"
+              >
+                🐙
+              </a>
             </div>
           </div>
 
-          <p>© 2026 RopeWallet Payment Gateway Engine. All rights reserved.</p>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-500 font-semibold">Engineered by</span>
+              <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-300 shadow-xs flex items-center justify-center overflow-hidden p-0.5">
+                <img src="/RJN.png" alt="RJN Logo" width={32} height={32} loading="lazy" decoding="async" className="w-full h-full object-cover rounded-full" />
+              </div>
+              <span className="font-bold text-slate-800">RJN Tech Solutions</span>
+            </div>
+
+            <p>© 2026 RopeWallet Digital Wallet & Payment Gateway Engine. All rights reserved.</p>
+          </div>
         </div>
       </footer>
     </div>

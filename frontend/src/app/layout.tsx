@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     template: "%s | RopeWallet",
   },
   description:
-    "RopeWallet is the ultra-secure enterprise digital wallet platform for managing deposits, withdrawals, instant gateway settlements, and card payments with 256-bit encryption.",
+    "RopeWallet is an ultra-secure enterprise digital wallet platform for instant deposit settlements, withdrawals, and 256-bit encrypted card payments.",
   keywords: [
     "RopeWallet",
     "digital wallet",
