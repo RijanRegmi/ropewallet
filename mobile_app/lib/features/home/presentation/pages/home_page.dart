@@ -20,7 +20,7 @@ import 'bank_transfer_page.dart';
 import 'usdt_transfer_page.dart';
 import 'p2p_gateway_order_page.dart';
 import '../../../admin/presentation/pages/admin_portal_page.dart';
-import '../../notifications/presentation/pages/notification_center_page.dart';
+import 'package:ropewallet/features/notifications/presentation/pages/notification_center_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
