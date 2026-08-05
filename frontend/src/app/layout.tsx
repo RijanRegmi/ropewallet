@@ -25,6 +25,8 @@ export const metadata: Metadata = {
     "RopeWallet is an ultra-secure enterprise digital wallet platform for instant deposit settlements, withdrawals, and 256-bit encrypted card payments.",
   keywords: [
     "RopeWallet",
+    "rope wallet",
+    "rope wallet app",
     "digital wallet",
     "enterprise wallet",
     "payment gateway",
@@ -32,8 +34,8 @@ export const metadata: Metadata = {
     "secure wallet",
     "mobile wallet app",
     "RJN Tech",
-    "crypto wallet",
     "fintech platform",
+    "online payment gateway",
   ],
   authors: [{ name: "RopeWallet Team", url: "https://www.ropewallet.com" }],
   creator: "RJN",
@@ -106,7 +108,9 @@ export default function RootLayout({
         "url": "https://www.ropewallet.com",
         "logo": "https://www.ropewallet.com/ropewallet.png",
         "sameAs": [
-          "https://twitter.com/ropewallet"
+          "https://x.com",
+          "https://facebook.com",
+          "https://instagram.com"
         ],
         "description": "RopeWallet provides ultra-secure enterprise digital wallet solutions, instant payment settlement, and mobile app integration."
       },
