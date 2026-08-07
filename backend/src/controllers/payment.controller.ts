@@ -178,12 +178,16 @@ export class PaymentController {
         ? user.savedCard.cardBrand
         : 'Debit Card';
 
+      // Calculate exact Stripe processing fee deducted by Stripe (2.9% + $0.30)
+      const exactStripeFee = Number(((amount * 0.029) + 0.30).toFixed(2));
+
       const transaction = await Transaction.create({
         receiver: user._id,
         type: 'deposit',
         amount: amount,
         fee: 0,
         netAmount: amount,
+        stripeFee: exactStripeFee,
         stripePaymentIntentId: paymentIntent.id,
         remarks: remarks ? remarks.trim() : `Deposit from ${cardBrand} ending in ${last4}`,
       });
@@ -787,6 +791,11 @@ export class PaymentController {
       user.walletBalance = updatedUser.walletBalance;
       user.pendingCashoutBalance = updatedUser.pendingCashoutBalance;
 
+      // Calculate Stripe payout fee (1% for card instant payout min $0.50, or $0.25 for ACH bank payout)
+      const calculatedStripeFee = method === 'bank'
+        ? 0.25
+        : (method === 'usdt' ? 0.00 : Math.max(0.50, Number((amount * 0.01).toFixed(2))));
+
       // 4. Create Transaction history log
       const transactionStatus = isHostCashout ? 'pending' : 'completed';
       const transaction = await Transaction.create({
@@ -797,7 +806,8 @@ export class PaymentController {
         fee: fee,
         netAmount: netAmount,
         platformFee: fee,
-        netProfit: fee,
+        stripeFee: calculatedStripeFee,
+        netProfit: Number((fee - calculatedStripeFee).toFixed(2)),
         status: transactionStatus,
         stripePaymentIntentId: stripePayoutId,
         remarks: remarks ? remarks.trim() : remarksText,
