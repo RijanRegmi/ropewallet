@@ -44,7 +44,15 @@ export class PaymentController {
         }
       }
 
-      // ─── ANTI-FRAUD RISK CONTROL 1: Daily Card Deposit Cap ($2,500 Max) ───
+      // ─── ANTI-FRAUD RISK CONTROL 1: Card Deposit Limits (Single, Daily & Monthly) ───
+      if (amount > 500.00) {
+        res.status(400).json({
+          success: false,
+          error: 'Maximum single deposit limit is $500.00 per transaction to protect against fraud.'
+        });
+        return;
+      }
+
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
       const todayDeposits = await Transaction.aggregate([
@@ -52,10 +60,26 @@ export class PaymentController {
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]);
       const currentDailySum = todayDeposits[0]?.total || 0;
-      if (currentDailySum + amount > 2500) {
+      if (currentDailySum + amount > 1000.00) {
         res.status(400).json({
           success: false,
-          error: `Daily card deposit limit reached ($2,500.00 max). Your current daily total is $${currentDailySum.toFixed(2)}.`,
+          error: `Daily card deposit limit reached ($1,000.00 max). Your current daily total is $${currentDailySum.toFixed(2)}.`,
+        });
+        return;
+      }
+
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      const monthDeposits = await Transaction.aggregate([
+        { $match: { receiver: user._id, type: 'deposit', status: 'completed', createdAt: { $gte: startOfMonth } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]);
+      const currentMonthlySum = monthDeposits[0]?.total || 0;
+      if (currentMonthlySum + amount > 3000.00) {
+        res.status(400).json({
+          success: false,
+          error: `Monthly card deposit limit reached ($3,000.00 max). Your current monthly total is $${currentMonthlySum.toFixed(2)}.`,
         });
         return;
       }
@@ -203,6 +227,62 @@ export class PaymentController {
         return;
       }
 
+      let senderRole = sender.role || 'customer';
+      if (senderRole === ('user' as any)) senderRole = 'customer';
+      if (senderRole === ('admin' as any)) senderRole = 'host';
+
+      // Enforce daily ($500) and monthly ($2,000) transfer caps for customer accounts
+      if (senderRole === 'customer') {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const todayTransfers = await Transaction.aggregate([
+          {
+            $match: {
+              sender: sender._id,
+              type: 'transfer',
+              status: { $ne: 'declined' },
+              createdAt: { $gte: startOfDay },
+            },
+          },
+          { $group: { _id: null, total: { $sum: '$amount' } } },
+        ]);
+
+        const currentDailyTransferSum = todayTransfers[0]?.total || 0;
+        if (currentDailyTransferSum + amount > 500.00) {
+          res.status(400).json({
+            success: false,
+            error: `Daily transfer limit reached ($500.00 max). Your current daily total is $${currentDailyTransferSum.toFixed(2)}.`,
+          });
+          return;
+        }
+
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
+        const monthTransfers = await Transaction.aggregate([
+          {
+            $match: {
+              sender: sender._id,
+              type: 'transfer',
+              status: { $ne: 'declined' },
+              createdAt: { $gte: startOfMonth },
+            },
+          },
+          { $group: { _id: null, total: { $sum: '$amount' } } },
+        ]);
+
+        const currentMonthlyTransferSum = monthTransfers[0]?.total || 0;
+        if (currentMonthlyTransferSum + amount > 2000.00) {
+          res.status(400).json({
+            success: false,
+            error: `Monthly transfer limit reached ($2,000.00 max). Your current monthly total is $${currentMonthlyTransferSum.toFixed(2)}.`,
+          });
+          return;
+        }
+      }
+
       if (sender.transactionPin) {
         const { pin } = req.body;
         if (!pin) {
@@ -241,10 +321,7 @@ export class PaymentController {
       }
 
       // ─── Role-Based Transfer Rules ─────────────────────────────────
-      let senderRole = sender.role || 'customer';
       let receiverRole = receiver.role || 'customer';
-      if (senderRole === ('user' as any)) senderRole = 'customer';
-      if (senderRole === ('admin' as any)) senderRole = 'host';
       if (receiverRole === ('user' as any)) receiverRole = 'customer';
       if (receiverRole === ('admin' as any)) receiverRole = 'host';
 
@@ -417,14 +494,77 @@ export class PaymentController {
         res.status(400).json({ success: false, error: 'Minimum withdrawal amount is $5.00' });
         return;
       }
-      if (amount > 5000.00) {
-        res.status(400).json({ success: false, error: 'Maximum single withdrawal limit is $5,000.00 per transaction' });
-        return;
-      }
 
       const user = await User.findById(userId).select('+transactionPin');
       if (!user) {
         res.status(404).json({ success: false, error: 'User not found' });
+        return;
+      }
+
+      const userRole = user.role || 'customer';
+      const isAdminOrHost = ['admin', 'host', 'superadmin'].includes(userRole);
+
+      // ─── Withdrawal Limits (Single & Daily) ──────────────────────
+      const maxSingleWithdrawal = isAdminOrHost ? 2500.00 : 500.00;
+      if (amount > maxSingleWithdrawal) {
+        res.status(400).json({
+          success: false,
+          error: `Maximum single withdrawal limit is $${maxSingleWithdrawal.toFixed(2)} per transaction.`
+        });
+        return;
+      }
+
+      // Enforce $1,000 daily withdrawal limit for standard users
+      if (!isAdminOrHost) {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const todayWithdrawals = await Transaction.aggregate([
+          {
+            $match: {
+              sender: user._id,
+              type: 'withdrawal',
+              status: { $ne: 'declined' },
+              createdAt: { $gte: startOfDay },
+            },
+          },
+          { $group: { _id: null, total: { $sum: '$amount' } } },
+        ]);
+
+        const currentDailyWithdrawalSum = todayWithdrawals[0]?.total || 0;
+        if (currentDailyWithdrawalSum + amount > 1000.00) {
+          res.status(400).json({
+            success: false,
+            error: `Daily withdrawal limit reached ($1,000.00 max). Your current daily total is $${currentDailyWithdrawalSum.toFixed(2)}.`,
+          });
+          return;
+        }
+      }
+
+      // Enforce Monthly withdrawal limit ($3,000 for standard users, $15,000 for admin/host)
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const monthWithdrawals = await Transaction.aggregate([
+        {
+          $match: {
+            sender: user._id,
+            type: 'withdrawal',
+            status: { $ne: 'declined' },
+            createdAt: { $gte: startOfMonth },
+          },
+        },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]);
+
+      const currentMonthlyWithdrawalSum = monthWithdrawals[0]?.total || 0;
+      const maxMonthlyWithdrawal = isAdminOrHost ? 15000.00 : 3000.00;
+      if (currentMonthlyWithdrawalSum + amount > maxMonthlyWithdrawal) {
+        res.status(400).json({
+          success: false,
+          error: `Monthly withdrawal limit reached ($${maxMonthlyWithdrawal.toFixed(2)} max per month). Your current monthly total is $${currentMonthlyWithdrawalSum.toFixed(2)}.`,
+        });
         return;
       }
 
@@ -447,9 +587,8 @@ export class PaymentController {
       }
 
       // ─── Role-Based Withdrawal Fee ─────────────────────────────────
-      const userRole = user.role || 'customer';
       let fee: number;
-      const isHostCashout = ['host', 'admin'].includes(userRole);
+      const isHostCashout = isAdminOrHost;
       if (isHostCashout) {
         // Host / Admin Cashout: 3% platform revenue fee
         fee = Number((amount * 0.03).toFixed(2));

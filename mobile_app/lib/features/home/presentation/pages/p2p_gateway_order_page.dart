@@ -329,22 +329,6 @@ class _P2PGatewayOrderPageState extends State<P2PGatewayOrderPage> {
         elevation: 0,
         title: const Text('P2P Payment Hub', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share_rounded, color: emeraldAccentColor),
-            tooltip: 'Share Gateway Link',
-            onPressed: () {
-              final shareableUrl = 'https://www.ropewallet.com/pay/hub/${widget.orderId}';
-              Clipboard.setData(ClipboardData(text: shareableUrl));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Payment Gateway Link copied! Share with customer.'),
-                  backgroundColor: emeraldColor,
-                ),
-              );
-            },
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

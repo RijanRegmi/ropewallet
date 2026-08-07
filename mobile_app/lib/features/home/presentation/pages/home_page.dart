@@ -203,20 +203,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _copyPaymentLink(String qrData) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return _ShareLinkBottomSheet(
-          qrData: qrData,
-          activeP2pAccounts: _activeP2pAccounts,
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -606,7 +592,7 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 24),
               ],
 
-              // Action Cards (Scan, Send, Deposit, Withdraw, Link Card, Share)
+              // Action Cards (Scan, Send, Deposit, Payout)
               Row(
                 children: [
                   _buildActionCard(
@@ -659,29 +645,6 @@ class _HomePageState extends State<HomePage> {
                         MaterialPageRoute(builder: (context) => const WithdrawPage()),
                       );
                     },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  _buildActionCard(
-                    Icons.link_rounded,
-                    'Link Card',
-                    const Color(0xFF8B5CF6),
-                    () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const DepositPage()),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 12),
-                  _buildActionCard(
-                    Icons.share_rounded,
-                    'Share Link',
-                    const Color(0xFFEC4899),
-                    () => _copyPaymentLink(qrData),
                   ),
                 ],
               ),
