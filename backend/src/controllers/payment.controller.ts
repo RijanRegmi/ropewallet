@@ -187,8 +187,8 @@ export class PaymentController {
         const cardToken = await stripe.tokens.create({
           card: {
             number: cleanNum,
-            exp_month: parseInt(expMonth),
-            exp_year: parseInt(expYear),
+            exp_month: expMonth,
+            exp_year: expYear,
             cvc,
             name: user.fullName || user.email,
           },
