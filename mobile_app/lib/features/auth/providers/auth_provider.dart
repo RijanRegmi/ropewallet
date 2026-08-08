@@ -41,6 +41,16 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  void updateWalletBalance(double newBalance) {
+    if (_user != null) {
+      _user!['walletBalance'] = newBalance;
+      try {
+        _secureStorage.write(key: 'cached_user_profile', value: jsonEncode(_user));
+      } catch (_) {}
+      notifyListeners();
+    }
+  }
+
   // Load saved token and user on startup with instant local cache render
   Future<void> tryAutoLogin() async {
     _isAutoLoggingIn = true;

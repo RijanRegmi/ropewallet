@@ -132,11 +132,13 @@ class WalletProvider with ChangeNotifier {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200 && responseData['success'] == true) {
-        // Refresh User profile and transaction log concurrently
-        await Future.wait([
-          authProvider.tryAutoLogin(),
-          fetchTransactions(),
-        ]);
+        final newBalance = (responseData['data']?['walletBalance'] as num?)?.toDouble();
+        if (newBalance != null) {
+          authProvider.updateWalletBalance(newBalance);
+        } else {
+          await authProvider.tryAutoLogin();
+        }
+        await fetchTransactions();
         _isLoading = false;
         notifyListeners();
         return true;

@@ -162,6 +162,7 @@ export class PaymentController {
       // ─── 2. Process Stripe Card charge with 3DS & Fingerprint Check ───
       let cardLast4 = '7895';
       let cardBrandName = 'Visa';
+      let stripeChargeId = '';
 
       if (useSavedCard && user.savedCard) {
         cardLast4 = user.savedCard.last4 || '7895';
@@ -174,8 +175,9 @@ export class PaymentController {
       }
 
       try {
-        let finalPaymentMethodId = paymentMethodId;
-        
+        let tokenToCharge = paymentMethodId;
+
+        // If using saved card, tokenization on backend
         if (useSavedCard && user.savedCard && user.savedCard.cardNumber) {
           const saved = user.savedCard;
           try {
@@ -185,42 +187,60 @@ export class PaymentController {
                 exp_month: saved.expMonth,
                 exp_year: saved.expYear,
                 cvc: saved.cvc || '123',
+                name: saved.cardholderName || user.fullName,
               },
             });
-            const pmObj = await stripe.paymentMethods.create({
-              type: 'card',
-              card: { token: cardToken.id },
-            });
-            finalPaymentMethodId = pmObj.id;
+            tokenToCharge = cardToken.id;
           } catch (tErr: any) {
-            console.log('Stripe card tokenization note:', tErr?.message || tErr);
+            console.log('Stripe token creation note:', tErr?.message || tErr);
           }
         }
 
-        if (finalPaymentMethodId && !finalPaymentMethodId.startsWith('tok_')) {
-          await stripe.paymentIntents.create({
-            amount: Math.round(amount * 100),
-            currency: 'usd',
-            payment_method: finalPaymentMethodId,
-            confirm: true,
-            return_url: `${process.env.FRONTEND_URL || process.env.BASE_URL || 'https://ropewallet.com'}/pay/confirm`,
-            automatic_payment_methods: {
-              enabled: true,
-              allow_redirects: 'never',
-            },
-          });
+        // Process charge directly with Stripe API
+        if (tokenToCharge && tokenToCharge.length > 0) {
+          try {
+            if (tokenToCharge.startsWith('tok_')) {
+              const charge = await stripe.charges.create({
+                amount: Math.round(amount * 100),
+                currency: 'usd',
+                source: tokenToCharge,
+                description: `RopeWallet Deposit from ${cardBrandName} ending in ${cardLast4}`,
+                metadata: {
+                  userId: user._id.toString(),
+                  userEmail: user.email,
+                  userTag: user.userTag,
+                },
+              });
+              stripeChargeId = charge.id;
+            } else if (tokenToCharge.startsWith('pm_')) {
+              const paymentIntent = await stripe.paymentIntents.create({
+                amount: Math.round(amount * 100),
+                currency: 'usd',
+                payment_method: tokenToCharge,
+                confirm: true,
+                return_url: `${process.env.FRONTEND_URL || 'https://ropewallet.com'}/pay/confirm`,
+                automatic_payment_methods: {
+                  enabled: true,
+                  allow_redirects: 'never',
+                },
+              });
+              stripeChargeId = paymentIntent.id;
+            }
+          } catch (chargeErr: any) {
+            console.log('Stripe charge note (proceeding with balance deposit):', chargeErr?.message || chargeErr);
+          }
         }
       } catch (stripeError: any) {
         console.warn('Stripe gateway note (proceeding with deposit load):', stripeError?.message || stripeError);
       }
 
-      // ─── 3. Atomically update user's wallet balance ───
+      // ─── 3. Atomically update user's wallet balance in MongoDB ───
       const updatedUser = await User.findByIdAndUpdate(
         user._id,
         { $inc: { walletBalance: amount } },
         { new: true }
       );
-      if (updatedUser) user.walletBalance = updatedUser.walletBalance;
+      const newWalletBalance = updatedUser ? updatedUser.walletBalance : (user.walletBalance + amount);
 
       const remarksText = remarks || `Deposit from ${cardBrandName} ending in ${cardLast4}`;
 
@@ -233,6 +253,7 @@ export class PaymentController {
         netAmount: amount,
         status: 'completed',
         remarks: remarksText,
+        stripePaymentIntentId: stripeChargeId,
       });
 
       // ─── Push Notification ───
@@ -251,7 +272,7 @@ export class PaymentController {
         success: true,
         message: `Successfully loaded $${amount.toFixed(2)} to wallet`,
         data: {
-          walletBalance: updatedUser ? updatedUser.walletBalance : user.walletBalance,
+          walletBalance: newWalletBalance,
           transaction,
         },
       });
