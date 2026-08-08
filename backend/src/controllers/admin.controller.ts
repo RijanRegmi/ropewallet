@@ -5,6 +5,7 @@ import { Admin } from '../models/admin.model.js';
 import { User } from '../models/user.model.js';
 import { Transaction } from '../models/transaction.model.js';
 import { P2PAccount } from '../models/p2p_account.model.js';
+import AuditLog from '../models/audit_log.model.js';
 import { CustomError } from '../middlewares/error.middleware.js';
 import crypto from 'crypto';
 import bcryptjs from 'bcryptjs';
@@ -698,6 +699,18 @@ export class AdminController {
       txn.status = 'completed';
       await txn.save();
 
+      // Log Super Admin Activity
+      const adminId = (req as any).admin?.id || (req as any).user?.id;
+      if (adminId) {
+        await AdminController.logAudit(
+          adminId,
+          'APPROVE_CASHOUT',
+          `Approved cashout payout of \$${txn.amount.toFixed(2)} for Host ${user.fullName} (${user.userTag})`,
+          user._id.toString(),
+          txn._id.toString()
+        );
+      }
+
       res.json({
         success: true,
         message: 'Payout request approved successfully.',
@@ -737,6 +750,18 @@ export class AdminController {
       txn.status = 'declined';
       txn.declinedReason = reason || 'Declined by Super Admin';
       await txn.save();
+
+      // Log Super Admin Activity
+      const adminId = (req as any).admin?.id || (req as any).user?.id;
+      if (adminId) {
+        await AdminController.logAudit(
+          adminId,
+          'DECLINE_CASHOUT',
+          `Declined cashout payout of \$${txn.amount.toFixed(2)} for Host ${user.fullName} (${user.userTag}). Reason: ${txn.declinedReason}`,
+          user._id.toString(),
+          txn._id.toString()
+        );
+      }
 
       res.json({
         success: true,
@@ -860,6 +885,117 @@ export class AdminController {
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename=ropewallet_transactions_${Date.now()}.csv`);
       res.send(headers + rows);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ─── Super Admin Helper: Log Audit Activity ────────────────────
+  static async logAudit(adminId: string, action: string, details: string, targetUser?: string, targetTransaction?: string, ipAddress?: string): Promise<void> {
+    try {
+      await AuditLog.create({
+        admin: adminId,
+        action,
+        details,
+        targetUser: targetUser || undefined,
+        targetTransaction: targetTransaction || undefined,
+        ipAddress: ipAddress || '',
+      });
+    } catch (err) {
+      console.error('Failed to log audit activity:', err);
+    }
+  }
+
+  // ─── Super Admin Section 1: All Transaction Records & Platform Revenue ───
+  static async getAllTransactions(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const type = (req.query.type as string) || '';
+      const status = (req.query.status as string) || '';
+
+      const filter: any = {};
+      if (type) filter.type = type;
+      if (status) filter.status = status;
+
+      const [transactions, total, summaryAgg] = await Promise.all([
+        Transaction.find(filter)
+          .sort({ createdAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .populate('sender', 'fullName email userTag role')
+          .populate('receiver', 'fullName email userTag role'),
+        Transaction.countDocuments(filter),
+        Transaction.aggregate([
+          { $match: filter.status ? { status: filter.status } : { status: 'completed' } },
+          {
+            $group: {
+              _id: null,
+              totalVolume: { $sum: '$amount' },
+              totalPlatformFee: { $sum: '$platformFee' },
+              totalStripeFee: { $sum: '$stripeFee' },
+              totalNetProfit: { $sum: '$netProfit' },
+              totalFees: { $sum: '$fee' },
+            },
+          },
+        ]),
+      ]);
+
+      const summary = summaryAgg[0] || {
+        totalVolume: 0,
+        totalPlatformFee: 0,
+        totalStripeFee: 0,
+        totalNetProfit: 0,
+        totalFees: 0,
+      };
+
+      res.json({
+        success: true,
+        data: {
+          transactions,
+          summary,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit) || 1,
+          },
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ─── Super Admin Section 2: Super Admin Activity Audit Logs ────
+  static async getAuditLogs(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+
+      const [logs, total] = await Promise.all([
+        AuditLog.find()
+          .sort({ createdAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .populate('admin', 'fullName email role userTag')
+          .populate('targetUser', 'fullName email userTag role')
+          .populate('targetTransaction', 'amount type status remarks'),
+        AuditLog.countDocuments(),
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          logs,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit) || 1,
+          },
+        },
+      });
     } catch (error) {
       next(error);
     }

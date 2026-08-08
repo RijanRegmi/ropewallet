@@ -155,6 +155,60 @@ class WalletProvider with ChangeNotifier {
     }
   }
 
+  // Deposit funds from Bank Account (Routing Number & Account Number)
+  Future<bool> bankDeposit({
+    required double amount,
+    required String routingNumber,
+    required String accountNumber,
+    required String accountHolderName,
+    String? bankName,
+    required AuthProvider authProvider,
+    String? pin,
+    String? remarks,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post(
+        ApiConstants.deposit,
+        {
+          'method': 'bank',
+          'amount': amount,
+          'routingNumber': routingNumber,
+          'accountNumber': accountNumber,
+          'accountHolderName': accountHolderName,
+          'bankName': bankName,
+          if (pin != null) 'pin': pin,
+          'remarks': remarks,
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        await Future.wait([
+          authProvider.tryAutoLogin(),
+          fetchTransactions(),
+        ]);
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = responseData['error'] ?? 'Bank deposit failed';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   // Create Stripe Checkout Session link
   Future<String?> createCheckoutSession({
     required double amount,

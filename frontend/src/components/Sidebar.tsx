@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, CreditCard, Link as LinkIcon, Download, LogOut, Bell, ArrowUpRight, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, Link as LinkIcon, Download, LogOut, Bell, ArrowUpRight, Menu, X, Receipt, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import ConfirmModal from '@/components/ConfirmModal';
 import { FEATURE_FLAGS } from '@/lib/featureFlags';
@@ -36,6 +36,8 @@ export default function Sidebar() {
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Pending Deposits', href: '/admin/deposits', icon: CreditCard },
     { name: 'Host Payout Requests', href: '/admin/payouts', icon: ArrowUpRight },
+    { name: 'Transaction Records', href: '/admin/transactions', icon: Receipt },
+    { name: 'Audit Activity Logs', href: '/admin/audit-logs', icon: ShieldCheck },
     { name: 'Notice Center', href: '/admin/notices', icon: Bell },
     ...(FEATURE_FLAGS.ENABLE_P2P ? [{ name: 'P2P Accounts', href: '/admin/p2p-accounts', icon: LinkIcon }] : []),
   ];

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../auth/providers/auth_provider.dart';
@@ -26,6 +27,7 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
 
   // Input Controllers
   final _depositAmountController = TextEditingController();
+  final _gatewayAmountController = TextEditingController();
   final _tagAmountController = TextEditingController();
   final _bankAmountController = TextEditingController();
 
@@ -59,6 +61,7 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
   void dispose() {
     _tabController.dispose();
     _depositAmountController.dispose();
+    _gatewayAmountController.dispose();
     _tagAmountController.dispose();
     _bankAmountController.dispose();
     _chimeTagController.dispose();
@@ -151,16 +154,34 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
 
   Future<void> _submitP2PGatewayOrder() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final userTag = authProvider.user?['userTag'] ?? 'admin';
-    final amount = double.tryParse(_depositAmountController.text.trim()) ?? 0.0;
+    final user = authProvider.user ?? {};
+    final String rawUserTag = user['userTag'] ?? 'admin';
+    final userRole = user['role'] ?? 'customer';
+    final isAdminOrHost = ['admin', 'host', 'superadmin'].contains(userRole);
+
+    final double gatewayAmt = double.tryParse(_gatewayAmountController.text.trim()) ?? 0.0;
+    final double depositAmt = double.tryParse(_depositAmountController.text.trim()) ?? 0.0;
+    final double amount = gatewayAmt > 0 ? gatewayAmt : depositAmt;
+
     final customerTag = _customerTagController.text.trim();
     final gameUserId = _gameIdController.text.trim();
 
     if (amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter a valid deposit amount of at least \$1.00'),
+          content: Text('Please enter a valid amount of at least \$1.00 for the link'),
           backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    if (!isAdminOrHost) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gateway order links are exclusive to Host accounts. As a customer, please send money to a Host account or deposit using a Card below.'),
+          backgroundColor: Colors.amber,
+          duration: Duration(seconds: 4),
         ),
       );
       return;
@@ -168,7 +189,7 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
 
     try {
       final response = await ApiClient().post('/pay/create-order', {
-        'userTag': userTag,
+        'userTag': rawUserTag,
         'payerTag': customerTag,
         'gameUserId': gameUserId,
         'paymentMethod': _selectedP2PMethod,
@@ -181,6 +202,10 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
         final shareableUrl = 'https://www.ropewallet.com/pay/hub/$orderId';
 
         await Clipboard.setData(ClipboardData(text: shareableUrl));
+
+        try {
+          await Share.share('Pay \$${amount.toStringAsFixed(2)} via ${_selectedP2PMethod.toUpperCase()}: $shareableUrl');
+        } catch (_) {}
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -644,6 +669,19 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
                                 ),
                               ),
                               const SizedBox(height: 14),
+
+                              // Amount Input for Link
+                              TextFormField(
+                                controller: _gatewayAmountController,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                decoration: InputDecoration(
+                                  labelText: 'Requested Amount (USD)',
+                                  prefixIcon: const Icon(Icons.attach_money_rounded, size: 20),
+                                  hintText: 'e.g. 50.00',
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
 
                               // Customer Tag Input
                               TextFormField(

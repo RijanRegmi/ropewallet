@@ -46,6 +46,12 @@ router.post('/p2p-accounts', AdminController.addP2PAccount);
 router.put('/p2p-accounts/:id', AdminController.editP2PAccount);
 router.delete('/p2p-accounts/:id', AdminController.deleteP2PAccount);
 
+// Super Admin Transaction Records & Revenue Summary
+router.get('/all-transactions', superAdminOnly, AdminController.getAllTransactions);
+
+// Super Admin Audit Activity Logs
+router.get('/audit-logs', superAdminOnly, AdminController.getAuditLogs);
+
 // Export
 router.get('/export/transactions', AdminController.exportTransactions);
 

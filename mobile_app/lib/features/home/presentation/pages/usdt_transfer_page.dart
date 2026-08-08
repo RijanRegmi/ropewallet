@@ -78,14 +78,17 @@ class _UsdtTransferPageState extends State<UsdtTransferPage> {
 
     if (mounted) {
       if (success) {
+        final userRole = authProvider.user?['role'] ?? 'customer';
+        final isHost = ['admin', 'host', 'superadmin'].contains(userRole);
+        final fee = isHost ? (amount * 0.03) : 0.0;
         final newTx = {
           '_id': walletProvider.transactions.isNotEmpty
               ? (walletProvider.transactions.first['_id'] ?? 'TX-${DateTime.now().millisecondsSinceEpoch}')
               : 'TX-${DateTime.now().millisecondsSinceEpoch}',
           'type': 'withdrawal',
           'amount': amount,
-          'fee': amount * 0.01 + 0.30,
-          'netAmount': amount - (amount * 0.01 + 0.30),
+          'fee': fee,
+          'netAmount': amount - fee,
           'remarks': remarksText,
           'createdAt': DateTime.now().toIso8601String(),
           'sender': {'fullName': authProvider.user?['fullName'] ?? 'You'},
@@ -236,6 +239,10 @@ class _UsdtTransferPageState extends State<UsdtTransferPage> {
                   if (amt == null || amt <= 0) {
                     return 'Please enter a valid amount';
                   }
+                  final maxSingle = (user['role'] == 'admin' || user['role'] == 'host' || user['role'] == 'superadmin') ? 2500.00 : 500.00;
+                  if (amt > maxSingle) {
+                    return 'Single withdrawal limit is \$${maxSingle.toStringAsFixed(2)} per transaction';
+                  }
                   if (amt > userBalance) {
                     return 'Insufficient balance';
                   }
@@ -282,7 +289,9 @@ class _UsdtTransferPageState extends State<UsdtTransferPage> {
                 builder: (context) {
                   final text = _amountController.text.trim();
                   final amount = double.tryParse(text) ?? 0.00;
-                  final fee = amount > 0 ? (amount * 0.01 + 0.30) : 0.0;
+                  final userRole = user['role'] ?? 'customer';
+                  final isHost = ['admin', 'host', 'superadmin'].contains(userRole);
+                  final fee = (amount > 0 && isHost) ? (amount * 0.03) : 0.0;
                   final netAmount = amount > 0 ? (amount - fee) : 0.0;
 
                   if (amount <= 0) return const SizedBox.shrink();
@@ -309,8 +318,11 @@ class _UsdtTransferPageState extends State<UsdtTransferPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Fee (1% + \$0.30):', style: TextStyle(color: Colors.grey)),
-                            Text('-\$${fee.toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFFEF4444))),
+                            Text(isHost ? 'Host Platform Fee (3%):' : 'Platform Fee (Customer):', style: const TextStyle(color: Colors.grey)),
+                            Text(
+                              isHost ? '-\$${fee.toStringAsFixed(2)}' : 'FREE (\$0.00)',
+                              style: TextStyle(color: isHost ? const Color(0xFFEF4444) : const Color(0xFF10B981), fontWeight: FontWeight.bold),
+                            ),
                           ],
                         ),
                         const Divider(height: 20),

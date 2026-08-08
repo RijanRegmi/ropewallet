@@ -29,8 +29,9 @@ export class PaymentController {
         return;
       }
 
-      if (!paymentMethodId && !useSavedCard) {
-        res.status(400).json({ success: false, error: 'Please provide a valid payment method ID or use a saved card' });
+      const isBankDeposit = req.body.method === 'bank' || (req.body.routingNumber && req.body.accountNumber);
+      if (!paymentMethodId && !useSavedCard && !isBankDeposit) {
+        res.status(400).json({ success: false, error: 'Please provide a valid payment method ID, bank routing details, or use a saved card' });
         return;
       }
 
@@ -53,11 +54,15 @@ export class PaymentController {
         }
       }
 
+      const userRole = user.role || 'customer';
+      const isAdminOrHost = ['admin', 'host', 'superadmin'].includes(userRole);
+
       // ─── ANTI-FRAUD RISK CONTROL 1: Card Deposit Limits (Single, Daily & Monthly) ───
-      if (amount > 500.00) {
+      const maxSingleDeposit = isAdminOrHost ? 2500.00 : 500.00;
+      if (amount > maxSingleDeposit) {
         res.status(400).json({
           success: false,
-          error: 'Maximum single deposit limit is $500.00 per transaction to protect against fraud.'
+          error: `Maximum single deposit limit is $${maxSingleDeposit.toFixed(2)} per transaction.`
         });
         return;
       }
@@ -69,10 +74,11 @@ export class PaymentController {
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]);
       const currentDailySum = todayDeposits[0]?.total || 0;
-      if (currentDailySum + amount > 1000.00) {
+      const maxDailyDeposit = isAdminOrHost ? 5000.00 : 1000.00;
+      if (currentDailySum + amount > maxDailyDeposit) {
         res.status(400).json({
           success: false,
-          error: `Daily card deposit limit reached ($1,000.00 max). Your current daily total is $${currentDailySum.toFixed(2)}.`,
+          error: `Daily card deposit limit reached ($${maxDailyDeposit.toFixed(2)} max). Your current daily total is $${currentDailySum.toFixed(2)}.`,
         });
         return;
       }
@@ -85,15 +91,75 @@ export class PaymentController {
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]);
       const currentMonthlySum = monthDeposits[0]?.total || 0;
-      if (currentMonthlySum + amount > 3000.00) {
+      const maxMonthlyDeposit = isAdminOrHost ? 10000.00 : 3000.00;
+      if (currentMonthlySum + amount > maxMonthlyDeposit) {
         res.status(400).json({
           success: false,
-          error: `Monthly card deposit limit reached ($3,000.00 max). Your current monthly total is $${currentMonthlySum.toFixed(2)}.`,
+          error: `Monthly card deposit limit reached ($${maxMonthlyDeposit.toFixed(2)} max). Your current monthly total is $${currentMonthlySum.toFixed(2)}.`,
         });
         return;
       }
 
-      // ─── 1. Process Stripe charge with 3DS & Fingerprint Check ───
+      // ─── 1. Bank Account Deposit (Routing & Account Number Tokenization) ───
+      if (isBankDeposit) {
+        const { routingNumber, accountNumber, accountHolderName, bankName } = req.body;
+        if (!routingNumber || !accountNumber || !accountHolderName) {
+          res.status(400).json({ success: false, error: 'Please provide routing number, account number, and account holder name' });
+          return;
+        }
+
+        try {
+          await stripe.tokens.create({
+            bank_account: {
+              country: 'US',
+              currency: 'usd',
+              routing_number: routingNumber.trim(),
+              account_number: accountNumber.trim(),
+              account_holder_name: accountHolderName.trim(),
+              account_holder_type: 'individual',
+            },
+          });
+        } catch (tokenErr: any) {
+          res.status(400).json({ success: false, error: `Bank Verification Failed: ${tokenErr.message}` });
+          return;
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+          userId,
+          { $inc: { walletBalance: amount } },
+          { new: true }
+        );
+
+        if (!updatedUser) {
+          res.status(404).json({ success: false, error: 'User not found' });
+          return;
+        }
+
+        const last4 = accountNumber.trim().slice(-4);
+        const remarksText = remarks || `Bank Deposit of $${amount.toFixed(2)} from ${bankName || 'US Bank'} Account (...${last4})`;
+
+        const transaction = await Transaction.create({
+          receiver: userId,
+          type: 'deposit',
+          amount: amount,
+          fee: 0,
+          netAmount: amount,
+          status: 'completed',
+          remarks: remarksText,
+        });
+
+        res.status(200).json({
+          success: true,
+          message: `Successfully deposited $${amount.toFixed(2)} from bank account`,
+          data: {
+            walletBalance: updatedUser.walletBalance,
+            transaction,
+          },
+        });
+        return;
+      }
+
+      // ─── 2. Process Stripe Card charge with 3DS & Fingerprint Check ───
       let paymentIntent;
       try {
         let finalPaymentMethodId = paymentMethodId;
@@ -604,34 +670,33 @@ export class PaymentController {
         return;
       }
 
-      // Enforce $1,000 daily withdrawal limit for standard users
-      if (!isAdminOrHost) {
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
+      // Enforce daily withdrawal limit ($1,000.00 for customers, $10,000.00 for hosts/admin)
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
 
-        const todayWithdrawals = await Transaction.aggregate([
-          {
-            $match: {
-              sender: user._id,
-              type: 'withdrawal',
-              status: { $ne: 'declined' },
-              createdAt: { $gte: startOfDay },
-            },
+      const todayWithdrawals = await Transaction.aggregate([
+        {
+          $match: {
+            sender: user._id,
+            type: 'withdrawal',
+            status: { $ne: 'declined' },
+            createdAt: { $gte: startOfDay },
           },
-          { $group: { _id: null, total: { $sum: '$amount' } } },
-        ]);
+        },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]);
 
-        const currentDailyWithdrawalSum = todayWithdrawals[0]?.total || 0;
-        if (currentDailyWithdrawalSum + amount > 1000.00) {
-          res.status(400).json({
-            success: false,
-            error: `Daily withdrawal limit reached ($1,000.00 max). Your current daily total is $${currentDailyWithdrawalSum.toFixed(2)}.`,
-          });
-          return;
-        }
+      const currentDailyWithdrawalSum = todayWithdrawals[0]?.total || 0;
+      const maxDailyWithdrawal = isAdminOrHost ? 5000.00 : 1000.00;
+      if (currentDailyWithdrawalSum + amount > maxDailyWithdrawal) {
+        res.status(400).json({
+          success: false,
+          error: `Daily withdrawal limit reached ($${maxDailyWithdrawal.toFixed(2)} max). Your current daily total is $${currentDailyWithdrawalSum.toFixed(2)}.`,
+        });
+        return;
       }
 
-      // Enforce Monthly withdrawal limit ($3,000 for standard users, $15,000 for admin/host)
+      // Enforce Monthly withdrawal limit ($3,000 for standard users, $10,000 for admin/host)
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
@@ -649,7 +714,7 @@ export class PaymentController {
       ]);
 
       const currentMonthlyWithdrawalSum = monthWithdrawals[0]?.total || 0;
-      const maxMonthlyWithdrawal = isAdminOrHost ? 15000.00 : 3000.00;
+      const maxMonthlyWithdrawal = isAdminOrHost ? 10000.00 : 3000.00;
       if (currentMonthlyWithdrawalSum + amount > maxMonthlyWithdrawal) {
         res.status(400).json({
           success: false,
@@ -676,14 +741,14 @@ export class PaymentController {
         return;
       }
 
-      // ─── Role-Based Withdrawal Fee ─────────────────────────────────
-      let fee: number;
+      // ─── Role-Based Platform Charge (3% for Host/Admin, 0% for Customer) ───
       const isHostCashout = isAdminOrHost;
+      let fee = 0;
       if (isHostCashout) {
-        // Host / Admin Cashout: 3% platform revenue fee
+        // Host / Admin cashout: 3% platform revenue charge
         fee = Number((amount * 0.03).toFixed(2));
       } else {
-        // Customer / User Cashout: 0% fee
+        // Customer / Standard User: FREE (0% platform charge)
         fee = 0;
       }
       const netAmount = Number((amount - fee).toFixed(2));

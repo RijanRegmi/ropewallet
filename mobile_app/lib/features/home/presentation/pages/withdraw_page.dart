@@ -186,14 +186,17 @@ class _WithdrawPageState extends State<WithdrawPage> {
 
     if (mounted) {
       if (success) {
+        final userRole = authProvider.user?['role'] ?? 'customer';
+        final isHost = ['admin', 'host', 'superadmin'].contains(userRole);
+        final fee = isHost ? (amount * 0.03) : 0.0;
         final newTx = {
           '_id': walletProvider.transactions.isNotEmpty
               ? (walletProvider.transactions.first['_id'] ?? 'TX-${DateTime.now().millisecondsSinceEpoch}')
               : 'TX-${DateTime.now().millisecondsSinceEpoch}',
           'type': 'withdrawal',
           'amount': amount,
-          'fee': amount * 0.01 + 0.30,
-          'netAmount': amount - (amount * 0.01 + 0.30),
+          'fee': fee,
+          'netAmount': amount - fee,
           'remarks': remarksText,
           'createdAt': DateTime.now().toIso8601String(),
           'sender': {'fullName': authProvider.user?['fullName'] ?? 'You'},
@@ -298,6 +301,10 @@ class _WithdrawPageState extends State<WithdrawPage> {
                 if (amt == null || amt <= 0) {
                   return 'Please enter a valid amount';
                 }
+                final maxSingle = (user['role'] == 'admin' || user['role'] == 'host' || user['role'] == 'superadmin') ? 2500.00 : 500.00;
+                if (amt > maxSingle) {
+                  return 'Single withdrawal limit is \$${maxSingle.toStringAsFixed(2)} per transaction';
+                }
                 if (amt > userBalance) {
                   return 'Insufficient balance';
                 }
@@ -312,9 +319,10 @@ class _WithdrawPageState extends State<WithdrawPage> {
               builder: (context, _) {
                 final text = _amountController.text.trim();
                 final amount = double.tryParse(text) ?? 0.00;
-                final userRole = authProvider.role;
-                final fee = userRole == 'user' ? (amount * 0.01 + 0.30) : (amount * 0.04);
-                final feeLabel = userRole == 'user' ? '(1% + \$0.30 fee)' : '(4% fee)';
+                final userRole = user['role'] ?? 'customer';
+                final isHost = ['admin', 'host', 'superadmin'].contains(userRole);
+                final fee = (amount > 0 && isHost) ? (amount * 0.03) : 0.0;
+                final feeLabel = isHost ? '(3% host fee)' : '(FREE for customer)';
                 final netAmount = amount - fee;
                 
                 if (amount <= 0) return const SizedBox.shrink();
@@ -348,13 +356,13 @@ class _WithdrawPageState extends State<WithdrawPage> {
                           Row(
                             children: [
                               const Text('Platform Fee ', style: TextStyle(color: Colors.grey)),
-                              Text(feeLabel, style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 12)),
+                              Text(feeLabel, style: TextStyle(color: isHost ? const Color(0xFFEF4444) : const Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 12)),
                               const Text(':', style: TextStyle(color: Colors.grey)),
                             ],
                           ),
                           Text(
-                            '-\$${fee.toStringAsFixed(2)}',
-                            style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
+                            isHost ? '-\$${fee.toStringAsFixed(2)}' : 'FREE (\$0.00)',
+                            style: TextStyle(color: isHost ? const Color(0xFFEF4444) : const Color(0xFF10B981), fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),

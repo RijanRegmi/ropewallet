@@ -650,114 +650,26 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 32),
 
-              // Services & External Wallets Hub
+              // Extra Services Hub (USDT TRC-20 Payout)
               const Text(
-                'Services & External Wallets',
+                'Extra Services',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 16),
-              Builder(
-                builder: (context) {
-                  if (!ApiConstants.enableP2P) {
-                    return const SizedBox.shrink();
-                  }
-                  final hasChime = _activeP2pAccounts.any((a) => a['platform'] == 'chime');
-                  final hasCashApp = _activeP2pAccounts.any((a) => a['platform'] == 'cashapp');
-                  final hasVenmo = _activeP2pAccounts.any((a) => a['platform'] == 'venmo');
-
-                  List<Widget> services = [];
-                  if (hasChime) {
-                    services.add(
-                      _buildServiceCard(
-                        title: 'Chime',
-                        subtitle: 'Deposit / Payout',
-                        logoUrl: 'https://img.icons8.com/color/96/chime.png',
-                        accentColor: const Color(0xFF25C974),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const ChimeTransferPage()),
-                          );
-                        },
-                      ),
-                    );
-                  }
-                  if (hasCashApp) {
-                    services.add(
-                      _buildServiceCard(
-                        title: 'Cash App',
-                        subtitle: 'Send / Payout',
-                        logoUrl: 'https://img.icons8.com/color/96/cash-app.png',
-                        accentColor: const Color(0xFF00D632),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const CashAppTransferPage()),
-                          );
-                        },
-                      ),
-                    );
-                  }
-                  if (hasVenmo) {
-                    services.add(
-                      _buildServiceCard(
-                        title: 'Venmo',
-                        subtitle: 'Send / Payout',
-                        logoUrl: 'https://img.icons8.com/ios-filled/100/008CFF/venmo.png',
-                        accentColor: const Color(0xFF008CFF),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const VenmoTransferPage()),
-                          );
-                        },
-                      ),
-                    );
-                  }
-                  
-                  // Bank Account and USDT Tether are always available
-                  services.add(
-                    _buildServiceCard(
-                      title: 'Bank Account',
-                      subtitle: 'Direct Deposit',
-                      logoUrl: 'https://img.icons8.com/color/96/bank.png',
-                      accentColor: const Color(0xFF475569),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const BankTransferPage()),
-                        );
-                      },
-                    ),
+              _buildServiceCard(
+                title: 'USDT Tether',
+                subtitle: 'TRC-20 Payout',
+                logoUrl: 'https://img.icons8.com/color/96/tether.png',
+                accentColor: const Color(0xFF26A17B),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const UsdtTransferPage()),
                   );
-                  services.add(
-                    _buildServiceCard(
-                      title: 'USDT Tether',
-                      subtitle: 'TRC-20 Payout',
-                      logoUrl: 'https://img.icons8.com/color/96/tether.png',
-                      accentColor: const Color(0xFF26A17B),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const UsdtTransferPage()),
-                        );
-                      },
-                    ),
-                  );
-
-                  return GridView.count(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    childAspectRatio: 1.45,
-                    children: services,
-                  );
-                }
+                },
               ),
               const SizedBox(height: 32),
 
