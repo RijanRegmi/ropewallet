@@ -25,6 +25,19 @@ class ApiClient {
     return headers;
   }
 
+  Future<http.Response> _intercept(http.Response response) async {
+    if (response.statusCode == 403) {
+      try {
+        final body = jsonDecode(response.body);
+        if (body['error'] != null && body['error'].toString().toLowerCase().contains('frozen')) {
+          await _secureStorage.delete(key: 'auth_token');
+          await _secureStorage.delete(key: 'cached_user_profile');
+        }
+      } catch (_) {}
+    }
+    return response;
+  }
+
   Future<http.Response> post(String endpoint, Map<String, dynamic> body) async {
     final url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
     final headers = await _getHeaders();
@@ -35,7 +48,7 @@ class ApiClient {
         headers: headers,
         body: jsonEncode(body),
       );
-      return response;
+      return _intercept(response);
     } catch (e) {
       throw Exception('Connection failed: Check if server is running ($e)');
     }
@@ -50,7 +63,7 @@ class ApiClient {
         url,
         headers: headers,
       );
-      return response;
+      return _intercept(response);
     } catch (e) {
       throw Exception('Connection failed: Check if server is running ($e)');
     }
@@ -65,7 +78,7 @@ class ApiClient {
         url,
         headers: headers,
       );
-      return response;
+      return _intercept(response);
     } catch (e) {
       throw Exception('Connection failed: Check if server is running ($e)');
     }
@@ -81,7 +94,7 @@ class ApiClient {
         headers: headers,
         body: body != null ? jsonEncode(body) : null,
       );
-      return response;
+      return _intercept(response);
     } catch (e) {
       throw Exception('Connection failed: Check if server is running ($e)');
     }

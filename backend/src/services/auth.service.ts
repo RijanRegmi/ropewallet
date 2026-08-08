@@ -143,19 +143,32 @@ export class AuthService {
   }
 
   static async login(data: LoginDTO): Promise<AuthResponse> {
-    const user = await User.findOne({ email: data.email.toLowerCase().trim() }).select('+password +transactionPin');
+    const input = data.email.toLowerCase().trim();
+    const cleanTag = input.replace(/^[\s$_]+/, '');
+
+    const user = await User.findOne({
+      $or: [
+        { email: input },
+        { userTag: input },
+        { userTag: `$${cleanTag}` },
+        { userTag: `_${cleanTag}` },
+        { userTag: cleanTag },
+        { phoneNumber: input },
+      ]
+    }).select('+password +transactionPin');
+
     if (!user) {
-      throw new CustomError('Invalid email or password', 401);
+      throw new CustomError('Invalid credentials. Please check your email/tag and password.', 401);
     }
 
     const isMatch = await user.comparePassword(data.password);
     if (!isMatch) {
-      throw new CustomError('Invalid email or password', 401);
+      throw new CustomError('Invalid credentials. Please check your email/tag and password.', 401);
     }
 
     if (user.isFrozen) {
-      const reasonMsg = user.freezeReason ? ` Reason: ${user.freezeReason}` : '';
-      throw new CustomError(`Your account has been frozen by Admin.${reasonMsg}`, 403);
+      const reasonText = user.freezeReason ? `\n\nReason: ${user.freezeReason}` : '';
+      throw new CustomError(`Your account has been frozen by Administrator.${reasonText}\n\nPlease contact Support for assistance.`, 403);
     }
 
     const token = generateToken(user._id.toString());

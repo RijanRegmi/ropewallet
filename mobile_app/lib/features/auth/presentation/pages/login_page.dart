@@ -29,52 +29,99 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+  bool _isSubmitting = false;
 
+  void _submit() async {
+    if (!_formKey.currentState!.validate() || _isSubmitting) return;
+
+    setState(() => _isSubmitting = true);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
 
-    final success = await authProvider.login(
-      _emailController.text.trim(),
-      _passwordController.text,
-      walletProvider: walletProvider,
-    );
+    try {
+      final success = await authProvider.login(
+        _emailController.text.trim(),
+        _passwordController.text,
+        walletProvider: walletProvider,
+      );
 
-    if (success) {
-      // Save credentials for potential biometric login
-      const storage = FlutterSecureStorage();
-      await storage.write(key: 'saved_email', value: _emailController.text.trim());
-      await storage.write(key: 'saved_password', value: _passwordController.text);
+      if (success) {
+        const storage = FlutterSecureStorage();
+        await storage.write(key: 'saved_email', value: _emailController.text.trim());
+        await storage.write(key: 'saved_password', value: _passwordController.text);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Welcome back, ${authProvider.user?["fullName"] ?? "User"}!'),
-            backgroundColor: const Color(0xFF10B981),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Welcome back, ${authProvider.user?["fullName"] ?? "User"}!'),
+              backgroundColor: const Color(0xFF10B981),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
 
-        final hasPin = authProvider.user?['hasPin'] == true;
-        final targetPage = hasPin ? const HomePage() : const SetPinPage();
+          final hasPin = authProvider.user?['hasPin'] == true;
+          final targetPage = hasPin ? const HomePage() : const SetPinPage();
 
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => targetPage),
-          (route) => false,
-        );
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => targetPage),
+            (route) => false,
+          );
+        }
+      } else {
+        if (mounted) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final err = authProvider.errorMessage ?? 'Authentication failed';
+          if (err.toLowerCase().contains('frozen') || err.toLowerCase().contains('freeze') || err.toLowerCase().contains('suspended')) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                title: const Row(
+                  children: [
+                    Icon(Icons.lock_rounded, color: Color(0xFFEF4444), size: 28),
+                    SizedBox(width: 10),
+                    Text('Account Frozen', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFEF4444))),
+                  ],
+                ),
+                content: Text(
+                  err,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.4,
+                    color: isDark ? Colors.white70 : Colors.black87,
+                  ),
+                ),
+                actions: [
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEF4444),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Understand', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(err),
+                backgroundColor: const Color(0xFFEF4444),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            );
+          }
+        }
       }
-    } else {
+    } finally {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authProvider.errorMessage ?? 'Authentication failed'),
-            backgroundColor: const Color(0xFFEF4444),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
+        setState(() => _isSubmitting = false);
       }
     }
   }
@@ -319,7 +366,7 @@ class _LoginPageState extends State<LoginPage> {
                           width: double.infinity,
                           height: 56,
                           child: ElevatedButton(
-                            onPressed: authProvider.isLoading ? null : _submit,
+                            onPressed: (_isSubmitting || authProvider.isLoading) ? null : _submit,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: theme.primaryColor,
                               foregroundColor: Colors.white,
@@ -329,7 +376,7 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                               elevation: 0,
                             ),
-                            child: authProvider.isLoading
+                            child: (_isSubmitting || authProvider.isLoading)
                                 ? const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
