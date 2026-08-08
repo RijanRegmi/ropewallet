@@ -64,6 +64,67 @@ class _SavedCardPageState extends State<SavedCardPage> {
     super.dispose();
   }
 
+  Widget _buildVisaLogo({bool active = true}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: active ? const Color(0xFF1A1F71) : Colors.grey.shade400,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: const Text(
+        'VISA',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w900,
+          fontStyle: FontStyle.italic,
+          fontSize: 10,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMastercardLogo({bool active = true}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+      decoration: BoxDecoration(
+        color: active ? const Color(0xFF0F172A) : Colors.grey.shade400,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: SizedBox(
+        width: 24,
+        height: 14,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Positioned(
+              left: 1,
+              child: Container(
+                width: 13,
+                height: 13,
+                decoration: BoxDecoration(
+                  color: active ? const Color(0xFFEB001B) : Colors.grey.shade600,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Positioned(
+              right: 1,
+              child: Container(
+                width: 13,
+                height: 13,
+                decoration: BoxDecoration(
+                  color: active ? const Color(0xFFFF5F00).withOpacity(0.9) : Colors.grey.shade500,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   bool _isValidLuhn(String cardNumber) {
     final cleanNumber = cardNumber.replaceAll(' ', '');
     if (cleanNumber.isEmpty) return false;
@@ -561,21 +622,27 @@ class _SavedCardPageState extends State<SavedCardPage> {
                         prefixIcon: const Icon(Icons.credit_card_rounded),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                        suffixIcon: Container(
-                          width: 130,
-                          padding: const EdgeInsets.only(right: 12.0),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text('VISA', style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 11)),
-                              SizedBox(width: 6),
-                              Text('MC', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 11)),
-                              SizedBox(width: 6),
-                              Text('AMEX', style: TextStyle(color: Colors.teal, fontWeight: FontWeight.bold, fontSize: 11)),
-                              SizedBox(width: 6),
-                              Text('DISC', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 11)),
-                            ],
-                          ),
+                        suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: _cardNumberController,
+                          builder: (context, value, _) {
+                            final text = value.text.replaceAll(' ', '');
+                            final isVisa = text.startsWith('4');
+                            final isMastercard = text.startsWith('5') || (text.length >= 2 && (int.tryParse(text.substring(0, 2)) ?? 0) >= 51 && (int.tryParse(text.substring(0, 2)) ?? 0) <= 55);
+                            final hasInput = text.isNotEmpty;
+
+                            return Container(
+                              padding: const EdgeInsets.only(right: 12.0),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  _buildVisaLogo(active: !hasInput || isVisa),
+                                  const SizedBox(width: 6),
+                                  _buildMastercardLogo(active: !hasInput || isMastercard),
+                                ],
+                              ),
+                            );
+                          },
                         ),
                       ),
                       autovalidateMode: AutovalidateMode.onUserInteraction,

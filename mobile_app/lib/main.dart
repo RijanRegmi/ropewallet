@@ -106,11 +106,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
       _syncFcmToken();
     }
 
-    // While authenticating, show a plain scaffold matching native splash background
-    // so the transition from native splash → Flutter is invisible (no flash)
-    if (authProvider.isLoading && authProvider.user == null) {
+    // Show smooth splash loader ONLY while reading local storage during startup auto-login
+    if (authProvider.isAutoLoggingIn) {
       return Scaffold(
-        backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFFFFFFF),
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFFFFFFF),
         body: const Center(
           child: CircularProgressIndicator(color: Color(0xFF10B981)),
         ),

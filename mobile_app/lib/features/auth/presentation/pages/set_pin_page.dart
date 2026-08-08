@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:ropewallet/core/network/api_client.dart';
 import 'package:ropewallet/features/auth/providers/auth_provider.dart';
+import 'package:ropewallet/features/auth/providers/security_provider.dart';
 import 'package:ropewallet/features/home/presentation/pages/home_page.dart';
 
 class SetPinPage extends StatefulWidget {
@@ -63,6 +64,14 @@ class _SetPinPageState extends State<SetPinPage> {
         });
 
         if (response.statusCode == 200 && data['success'] == true) {
+          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+          authProvider.markPinAsSet();
+
+          // Save PIN locally for security verification
+          try {
+            await Provider.of<SecurityProvider>(context, listen: false).setTransactionPinLocally(pin);
+          } catch (_) {}
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Transaction PIN set successfully!'),
@@ -70,9 +79,13 @@ class _SetPinPageState extends State<SetPinPage> {
             ),
           );
 
-          final authProvider = Provider.of<AuthProvider>(context, listen: false);
-          authProvider.markPinAsSet();
-          await authProvider.tryAutoLogin();
+          // Redirect directly to Home Dashboard
+          if (mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const HomePage()),
+              (route) => false,
+            );
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

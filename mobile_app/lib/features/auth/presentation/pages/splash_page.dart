@@ -121,10 +121,10 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
                         'from',
                         style: TextStyle(
                           fontSize: 13,
-                          fontWeight: FontWeight.w400,
+                          fontWeight: FontWeight.w600,
                           color: isDark
-                              ? const Color(0x99FFFFFF)
-                              : const Color(0x88000000),
+                              ? const Color(0xE6FFFFFF)
+                              : const Color(0xFF0F172A),
                           letterSpacing: 0.5,
                         ),
                       ),

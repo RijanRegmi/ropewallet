@@ -88,8 +88,8 @@ class WalletProvider with ChangeNotifier {
           return false;
         }
         cleanCard = cardNumber.replaceAll(' ', '');
-        // 1. Create PaymentMethod directly via Stripe's REST API using live key
-        final stripeUrl = Uri.parse('https://api.stripe.com/v1/payment_methods');
+        // 1. Create Token directly via Stripe's REST API using Publishable key
+        final stripeUrl = Uri.parse('https://api.stripe.com/v1/tokens');
         final stripeResponse = await http.post(
           stripeUrl,
           headers: {
@@ -97,7 +97,6 @@ class WalletProvider with ChangeNotifier {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
           body: {
-            'type': 'card',
             'card[number]': cleanCard,
             'card[exp_month]': expMonth,
             'card[exp_year]': expYear,

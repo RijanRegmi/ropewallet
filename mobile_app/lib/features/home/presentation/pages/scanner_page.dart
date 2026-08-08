@@ -22,19 +22,18 @@ class ScannerPage extends StatefulWidget {
   State<ScannerPage> createState() => _ScannerPageState();
 }
 
-class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin {
+class _ScannerPageState extends State<ScannerPage> with SingleTickerProviderStateMixin {
   late AnimationController _laserController;
-  late AnimationController _sheetController;
-  late Animation<double> _sheetAnimation;
+  final DraggableScrollableController _sheetController = DraggableScrollableController();
   final MobileScannerController _cameraController = MobileScannerController();
   final _manualInputController = TextEditingController();
   final GlobalKey _qrBoundaryKey = GlobalKey();
+  final ValueNotifier<double> _sheetExtent = ValueNotifier<double>(0.12);
   
   bool _isSavingQr = false;
   bool _hasScanned = false;
   bool _isTorchOn = false;
   bool _isShowingInvalidMessage = false;
-  bool _isSheetExpanded = false;
 
   bool _isValidQrData(String qrCodeData) {
     if (qrCodeData.trim() == 'admin-qr') return true;
@@ -53,16 +52,6 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
-
-    // Hardware-accelerated smooth bottom sheet animation controller
-    _sheetController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-    _sheetAnimation = CurvedAnimation(
-      parent: _sheetController,
-      curve: Curves.fastOutSlowIn,
-    );
   }
 
   @override
@@ -71,18 +60,26 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
     _sheetController.dispose();
     _cameraController.dispose();
     _manualInputController.dispose();
+    _sheetExtent.dispose();
     super.dispose();
   }
 
   void _toggleSheet() {
-    setState(() {
-      _isSheetExpanded = !_isSheetExpanded;
-      if (_isSheetExpanded) {
-        _sheetController.forward();
+    if (_sheetController.isAttached) {
+      if (_sheetExtent.value > 0.4) {
+        _sheetController.animateTo(
+          0.12,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.fastOutSlowIn,
+        );
       } else {
-        _sheetController.reverse();
+        _sheetController.animateTo(
+          0.78,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.fastOutSlowIn,
+        );
       }
-    });
+    }
   }
 
   Future<void> _handleQrDetected(String qrCodeData) async {
@@ -433,36 +430,19 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
             ),
           ),
 
-          // 2. CAMERA VIEWFINDER WITH ROUNDED EMERALD CORNER BRACKETS
+          // 2. CAMERA VIEWFINDER WITH ROUNDED EMERALD CORNER BRACKETS ONLY
           Center(
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Curved Glass Box Frame
-                Container(
-                  width: 270,
-                  height: 270,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(36),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.6),
-                        blurRadius: 40,
-                        spreadRadius: 10,
-                      ),
-                    ],
+            child: SizedBox(
+              width: 270,
+              height: 270,
+              child: Stack(
+                children: [
+                  // Smooth Curved Corner Painter Brackets Only
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: ScannerCornersPainter(color: const Color(0xFF10B981)),
+                    ),
                   ),
-                ),
-
-                // Smooth Curved Corner Painter Brackets
-                SizedBox(
-                  width: 270,
-                  height: 270,
-                  child: CustomPaint(
-                    painter: ScannerCornersPainter(color: const Color(0xFF10B981)),
-                  ),
-                ),
 
                 // Laser scan animation line
                 AnimatedBuilder(
@@ -492,6 +472,7 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
               ],
             ),
           ),
+        ),
 
           // 3. TOP GLASS APP BAR
           Positioned(
@@ -572,7 +553,7 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
 
           // 4. FLOATING GLASS ACTION BAR (UPLOAD IMAGE)
           Positioned(
-            bottom: 110,
+            bottom: 160,
             left: 24,
             right: 24,
             child: Row(
@@ -622,39 +603,52 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
             ),
           ),
 
-          // 5. HARDWARE-ACCELERATED ULTRA-SMOOTH BOTTOM SLIDER (MY QR CODE)
-          AnimatedBuilder(
-            animation: _sheetAnimation,
-            builder: (context, child) {
-              final double value = _sheetAnimation.value;
-              final double collapsedHeight = 85.0;
-              final double expandedHeight = size.height * 0.78;
-              final double currentHeight = collapsedHeight + (expandedHeight - collapsedHeight) * value;
+          // 5. NATIVE ENGINE-LEVEL DRAGGABLE BOTTOM SHEET (MY QR CODE)
+          NotificationListener<DraggableScrollableNotification>(
+            onNotification: (notification) {
+              _sheetExtent.value = notification.extent;
+              return true;
+            },
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Dark backdrop overlay when sheet is pulled up (Rebuilds smoothly without setState)
+                ValueListenableBuilder<double>(
+                  valueListenable: _sheetExtent,
+                  builder: (context, extent, child) {
+                    if (extent <= 0.15) return const SizedBox.shrink();
+                    return Positioned.fill(
+                      child: GestureDetector(
+                        onTap: () {
+                          if (_sheetController.isAttached) {
+                            _sheetController.animateTo(
+                              0.12,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.fastOutSlowIn,
+                            );
+                          }
+                        },
+                        child: Container(
+                          color: Colors.black.withValues(
+                            alpha: (0.55 * ((extent - 0.12) / 0.66)).clamp(0.0, 0.55),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
 
-              return Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: currentHeight,
-                child: RepaintBoundary(
-                  child: GestureDetector(
-                    onVerticalDragUpdate: (details) {
-                      if (details.primaryDelta! < -3) {
-                        if (!_isSheetExpanded) _toggleSheet();
-                      } else if (details.primaryDelta! > 3) {
-                        if (_isSheetExpanded) _toggleSheet();
-                      }
-                    },
-                    onVerticalDragEnd: (details) {
-                      if (details.primaryVelocity != null) {
-                        if (details.primaryVelocity! > 150 && _isSheetExpanded) {
-                          _toggleSheet();
-                        } else if (details.primaryVelocity! < -150 && !_isSheetExpanded) {
-                          _toggleSheet();
-                        }
-                      }
-                    },
-                    child: Container(
+                // Native Draggable Sheet
+                DraggableScrollableSheet(
+                  controller: _sheetController,
+                  initialChildSize: 0.12,
+                  minChildSize: 0.12,
+                  maxChildSize: 0.78,
+                  snap: true,
+                  snapAnimationDuration: const Duration(milliseconds: 250),
+                  snapSizes: const [0.12, 0.78],
+                  builder: (context, scrollController) {
+                    return Container(
                       decoration: BoxDecoration(
                         color: isDark ? const Color(0xFF0F172A) : const Color(0xFFFFFFFF),
                         borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
@@ -667,45 +661,56 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
                         ],
                       ),
                       child: SingleChildScrollView(
-                        physics: value > 0.8 ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics(),
+                        controller: scrollController,
+                        physics: const BouncingScrollPhysics(),
                         padding: const EdgeInsets.all(24),
                         child: Column(
                           children: [
-                            // Tap/Drag Bar Header
+                            // Tap Bar Header
                             GestureDetector(
                               onTap: _toggleSheet,
                               behavior: HitTestBehavior.opaque,
-                              child: Column(
-                                children: [
-                                  Container(
-                                    width: 48,
-                                    height: 5,
-                                    decoration: BoxDecoration(
-                                      color: isDark ? Colors.white.withValues(alpha: 0.25) : Colors.grey.shade300,
-                                      borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                width: double.infinity,
+                                color: Colors.transparent,
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      width: 48,
+                                      height: 5,
+                                      decoration: BoxDecoration(
+                                        color: isDark ? Colors.white.withValues(alpha: 0.25) : Colors.grey.shade300,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        _isSheetExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_up_rounded,
-                                        color: const Color(0xFF10B981),
-                                        size: 26,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        _isSheetExpanded ? 'Tap to close My QR Code' : 'Slide up for My QR Code',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.bold,
-                                          color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                                    const SizedBox(height: 12),
+                                    ValueListenableBuilder<double>(
+                                      valueListenable: _sheetExtent,
+                                      builder: (context, extent, child) {
+                                        final isExpanded = extent > 0.45;
+                                        return Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_up_rounded,
+                                              color: const Color(0xFF10B981),
+                                              size: 26,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              isExpanded ? 'Slide down or tap to close My QR Code' : 'Slide up for My QR Code',
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                                color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                             const SizedBox(height: 28),
@@ -926,15 +931,15 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
                         ],
                       ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
-            );
-            },
+            ],
           ),
-        ],
-      ),
-    );
+        ),
+      ],
+    ),
+  );
   }
 }
 

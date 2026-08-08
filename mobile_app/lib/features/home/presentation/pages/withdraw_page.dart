@@ -110,19 +110,19 @@ class _WithdrawPageState extends State<WithdrawPage> {
 
     // Prompt for Biometric / Security PIN authorization on cash out
     final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
-    final authorized = await securityProvider.authorizeSecurity(
+    final String? userPin = await securityProvider.authorizeSecurityWithPin(
       context,
       actionName: 'Authorize Cash Out',
       amount: amount,
     );
 
-    if (!authorized) {
+    if (userPin == null || userPin.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cash Out authorization canceled')),
       );
       return;
     }
-    const pin = '1234';
+    final String pin = userPin;
 
     bool success = false;
     final String customRemarks = _remarksController.text.trim();
@@ -270,7 +270,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
                   ],
                 ),
                 Text(
-                  walletProvider.isBalanceHidden ? '\$ ••••••' : '\$${userBalance.toStringAsFixed(2)}',
+                  walletProvider.isBalanceHidden ? '\$xxxx.xx' : '\$${userBalance.toStringAsFixed(2)}',
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],

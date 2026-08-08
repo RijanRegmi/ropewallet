@@ -186,18 +186,33 @@ class _UsdtTransferPageState extends State<UsdtTransferPage> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    const Text(
-                      'AVAILABLE BALANCE',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 1.0,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'AVAILABLE BALANCE',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            walletProvider.toggleBalanceVisibility();
+                          },
+                          child: Icon(
+                            walletProvider.isBalanceHidden ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                            color: Colors.white70,
+                            size: 20,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '\$${userBalance.toStringAsFixed(2)}',
+                      walletProvider.isBalanceHidden ? '\$xxxx.xx' : '\$${userBalance.toStringAsFixed(2)}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 32,

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../home/providers/wallet_provider.dart';
+import '../presentation/pages/login_page.dart';
 
 class AuthProvider with ChangeNotifier {
   final ApiClient _apiClient = ApiClient();
@@ -14,10 +15,12 @@ class AuthProvider with ChangeNotifier {
   String? _token;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _isAutoLoggingIn = true;
 
   Map<String, dynamic>? get user => _user;
   String? get token => _token;
   bool get isLoading => _isLoading;
+  bool get isAutoLoggingIn => _isAutoLoggingIn;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _token != null;
   String get role => _user?['role'] ?? 'customer';
@@ -38,32 +41,36 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Load saved token and user on startup
+  // Load saved token and user on startup with instant local cache render
   Future<void> tryAutoLogin() async {
+    _isAutoLoggingIn = true;
     _isLoading = true;
-    notifyListeners();
 
     try {
       final token = await _secureStorage.read(key: 'auth_token');
-      if (token == null) {
+      if (token != null && token.isNotEmpty) {
+        _token = token;
+        try {
+          final cachedStr = await _secureStorage.read(key: 'cached_user_profile');
+          if (cachedStr != null && cachedStr.isNotEmpty) {
+            _user = jsonDecode(cachedStr);
+          }
+        } catch (_) {}
+      } else {
         _token = null;
         _user = null;
-        _isLoading = false;
-        notifyListeners();
-        return;
       }
+    } catch (_) {
+      _token = null;
+      _user = null;
+    } finally {
+      _isAutoLoggingIn = false;
+      _isLoading = false;
+      notifyListeners();
+    }
 
-      _token = token;
-      
-      // Immediately restore cached profile for instant screen render
-      try {
-        final cachedStr = await _secureStorage.read(key: 'cached_user_profile');
-        if (cachedStr != null && cachedStr.isNotEmpty) {
-          _user = jsonDecode(cachedStr);
-        }
-      } catch (_) {}
-
-      // Fetch fresh profile from backend with 3s timeout
+    // Refresh user profile asynchronously in background if authenticated
+    if (_token != null) {
       try {
         final response = await _apiClient.get(ApiConstants.profile).timeout(
           const Duration(seconds: 3),
@@ -72,20 +79,15 @@ class AuthProvider with ChangeNotifier {
           final responseData = jsonDecode(response.body);
           _user = responseData['data'];
           await _secureStorage.write(key: 'cached_user_profile', value: jsonEncode(_user));
+          notifyListeners();
         } else if (response.statusCode == 401 || response.statusCode == 403) {
-          // Token is explicitly rejected/expired by server
           _token = null;
           _user = null;
           await _secureStorage.delete(key: 'auth_token');
           await _secureStorage.delete(key: 'cached_user_profile');
+          notifyListeners();
         }
-      } catch (_) {
-        // Working offline or network timed out — preserve token & cached user
-        _errorMessage = 'Working offline';
-      }
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+      } catch (_) {}
     }
   }
 
@@ -661,20 +663,53 @@ class AuthProvider with ChangeNotifier {
             style: TextStyle(fontSize: 14),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFEF4444),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('Log Out', style: TextStyle(fontWeight: FontWeight.bold)),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        side: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                      ),
+                      onPressed: () => Navigator.of(dialogContext).pop(false),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFEF4444),
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.zero,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: () => Navigator.of(dialogContext).pop(true),
+                      child: const Text(
+                        'Log Out',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
+          actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         );
       },
     );
@@ -683,11 +718,16 @@ class AuthProvider with ChangeNotifier {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final walletProvider = Provider.of<WalletProvider>(context, listen: false);
 
-      // Pop all dialogs and sub-routes back to root first
-      Navigator.of(context).popUntil((route) => route.isFirst);
-
-      // Perform logout & reset state (AuthWrapper will cleanly render LoginPage)
+      // Perform logout & reset state
       await authProvider.logout(walletProvider: walletProvider);
+
+      // Redirect cleanly to LoginPage and clear all navigation stack
+      if (context.mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+          (route) => false,
+        );
+      }
     }
   }
 }

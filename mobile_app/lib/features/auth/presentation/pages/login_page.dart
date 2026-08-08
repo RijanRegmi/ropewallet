@@ -95,16 +95,36 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 actions: [
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFEF4444),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  Container(
+                    width: double.infinity,
+                    height: 52,
+                    margin: const EdgeInsets.only(top: 8),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFEF4444),
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.zero,
+                        alignment: Alignment.center,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: const Center(
+                        child: Text(
+                          'I Understand',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: Colors.white,
+                            height: 1.1,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                     ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Understand', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ],
+                actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
               ),
             );
           } else {

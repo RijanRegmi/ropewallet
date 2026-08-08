@@ -145,19 +145,19 @@ class _DepositPageState extends State<DepositPage> {
 
     // Prompt for Biometric / Security PIN authorization on deposit
     final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
-    final authorized = await securityProvider.authorizeSecurity(
+    final String? userPin = await securityProvider.authorizeSecurityWithPin(
       context,
       actionName: 'Authorize Deposit',
       amount: amount,
     );
 
-    if (!authorized) {
+    if (userPin == null || userPin.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Deposit authorization canceled')),
       );
       return;
     }
-    const pin = '1234';
+    final String pin = userPin;
 
     // Step 1: Save card if needed
     if (needsSaveCard) {

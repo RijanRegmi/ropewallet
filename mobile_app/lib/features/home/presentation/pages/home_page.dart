@@ -206,12 +206,15 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
+    if (!authProvider.isAuthenticated || authProvider.user == null) {
+      return const SizedBox.shrink();
+    }
     final walletProvider = Provider.of<WalletProvider>(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final user = authProvider.user ?? {};
-    final fullName = user['fullName'] ?? 'Wallet User';
+    final user = authProvider.user!;
+    final fullName = user['fullName'] ?? 'User';
     final double availableBalance = user['walletBalance'] is num 
         ? (user['walletBalance'] as num).toDouble() 
         : (double.tryParse(user['walletBalance']?.toString() ?? '0') ?? 0.00);

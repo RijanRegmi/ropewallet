@@ -147,8 +147,12 @@ class SecurityProvider with ChangeNotifier {
     }
   }
 
-  // Unified Security Authorization via Biometrics or PIN
-  Future<bool> authorizeSecurity(
+  Future<void> setTransactionPinLocally(String pin) async {
+    await _secureStorage.write(key: 'transaction_pin', value: pin);
+  }
+
+  // Unified Security Authorization returning authorized 6-digit PIN
+  Future<String?> authorizeSecurityWithPin(
     BuildContext context, {
     required String actionName,
     double amount = 0.0,
@@ -156,15 +160,18 @@ class SecurityProvider with ChangeNotifier {
     // 1. Try Biometrics if enabled
     if (_useBiometrics && _isBiometricSupported) {
       final bioSuccess = await authenticateBiometrically();
-      if (bioSuccess) return true;
+      if (bioSuccess) {
+        final savedPin = await getSavedPin();
+        return savedPin ?? 'biometric_authenticated';
+      }
     }
 
-    // 2. Fallback to Security PIN Authorization Sheet
+    // 2. Security PIN Authorization Modal Sheet
     final pinController = TextEditingController();
     bool isAuthenticating = false;
     String? pinError;
 
-    final authResult = await showModalBottomSheet<bool>(
+    final String? enteredPin = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -210,7 +217,7 @@ class SecurityProvider with ChangeNotifier {
                       ),
                       IconButton(
                         icon: const Icon(Icons.close_rounded),
-                        onPressed: () => Navigator.pop(ctx, false),
+                        onPressed: () => Navigator.pop(ctx, null),
                       ),
                     ],
                   ),
@@ -253,21 +260,11 @@ class SecurityProvider with ChangeNotifier {
                                 pinError = null;
                               });
 
-                              final savedPin = await getSavedPin();
-                              bool valid = false;
-                              if (savedPin != null && savedPin.isNotEmpty) {
-                                valid = (savedPin == pin);
-                              } else {
-                                valid = await verifyTransactionPin(pin);
-                                if (!valid && pin.isNotEmpty) {
-                                  // Fallback for first time PIN creation/demo
-                                  valid = true;
-                                  await _secureStorage.write(key: 'transaction_pin', value: pin);
-                                }
-                              }
+                              final valid = await verifyTransactionPin(pin);
 
                               if (valid) {
-                                Navigator.pop(ctx, true);
+                                await _secureStorage.write(key: 'transaction_pin', value: pin);
+                                Navigator.pop(ctx, pin);
                               } else {
                                 setSheetState(() {
                                   isAuthenticating = false;
@@ -293,6 +290,16 @@ class SecurityProvider with ChangeNotifier {
       },
     );
 
-    return authResult ?? false;
+    return enteredPin;
+  }
+
+  // Unified Security Authorization returning boolean for legacy callers
+  Future<bool> authorizeSecurity(
+    BuildContext context, {
+    required String actionName,
+    double amount = 0.0,
+  }) async {
+    final pin = await authorizeSecurityWithPin(context, actionName: actionName, amount: amount);
+    return pin != null && pin.isNotEmpty;
   }
 }
