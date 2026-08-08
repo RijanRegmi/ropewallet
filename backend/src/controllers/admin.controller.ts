@@ -6,6 +6,7 @@ import { User } from '../models/user.model.js';
 import { Transaction } from '../models/transaction.model.js';
 import { P2PAccount } from '../models/p2p_account.model.js';
 import AuditLog from '../models/audit_log.model.js';
+import { sendPushNotification } from '../services/push_notification.service.js';
 import { CustomError } from '../middlewares/error.middleware.js';
 import crypto from 'crypto';
 import bcryptjs from 'bcryptjs';
@@ -446,8 +447,14 @@ export class AdminController {
 
   static async freezeUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const adminId = (req as any).admin.id;
-      const creatorRole = (req as any).admin.role;
+      const adminId = (req as any).admin?.id || (req as any).user?.id;
+      const creatorRole = (req as any).admin?.role || (req as any).user?.role;
+      const { reason } = req.body;
+
+      if (!reason || !reason.trim()) {
+        res.status(400).json({ success: false, error: 'A specific reason for freezing the account is required' });
+        return;
+      }
 
       const user = await User.findById(req.params.id);
       if (!user) {
@@ -461,11 +468,36 @@ export class AdminController {
       }
 
       user.isFrozen = true;
+      user.freezeReason = reason.trim();
       user.frozenAt = new Date();
       user.frozenBy = adminId;
       await user.save({ validateBeforeSave: false });
 
-      res.json({ success: true, message: `Account for ${user.fullName} has been frozen` });
+      // Immediate Push Notification to target user
+      if (user.fcmToken) {
+        try {
+          await sendPushNotification(
+            user.fcmToken,
+            'Account Frozen',
+            `Your RopeWallet account has been frozen by Admin. Reason: ${reason.trim()}`,
+            { type: 'account_frozen', reason: reason.trim() }
+          );
+        } catch (pushErr) {
+          console.error('[AdminController] Push notification error on freeze:', pushErr);
+        }
+      }
+
+      // Log Audit Activity
+      if (adminId) {
+        await AdminController.logAudit(
+          adminId,
+          'FREEZE_USER',
+          `Froze account for ${user.fullName} (${user.userTag}). Reason: ${reason.trim()}`,
+          user._id.toString()
+        );
+      }
+
+      res.json({ success: true, message: `Account for ${user.fullName} has been frozen. Reason: ${reason.trim()}` });
     } catch (error) {
       next(error);
     }
@@ -488,9 +520,34 @@ export class AdminController {
       }
 
       user.isFrozen = false;
+      user.freezeReason = '';
       user.frozenAt = undefined;
       user.frozenBy = undefined;
       await user.save({ validateBeforeSave: false });
+
+      // Immediate Push Notification to target user
+      if (user.fcmToken) {
+        try {
+          await sendPushNotification(
+            user.fcmToken,
+            'Account Unfrozen',
+            'Your RopeWallet account has been reactivated. You can now log in and perform transactions.',
+            { type: 'account_unfrozen' }
+          );
+        } catch (pushErr) {
+          console.error('[AdminController] Push notification error on unfreeze:', pushErr);
+        }
+      }
+
+      // Log Audit Activity
+      if (adminId) {
+        await AdminController.logAudit(
+          adminId,
+          'UNFREEZE_USER',
+          `Unfroze account for ${user.fullName} (${user.userTag})`,
+          user._id.toString()
+        );
+      }
 
       res.json({ success: true, message: `Account for ${user.fullName} has been unfrozen` });
     } catch (error) {

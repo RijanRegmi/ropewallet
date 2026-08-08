@@ -4,7 +4,7 @@ export interface INotice extends Document {
   title: string;
   content: string;
   category: 'info' | 'alert' | 'urgent' | 'promo';
-  targetType: 'all' | 'specific';
+  targetType: 'all' | 'customers' | 'hosts' | 'specific';
   targetUsers?: Types.ObjectId[];
   createdBy?: Types.ObjectId;
   readBy: Types.ObjectId[];
@@ -30,7 +30,7 @@ const noticeSchema = new Schema<INotice>(
     },
     targetType: {
       type: String,
-      enum: ['all', 'specific'],
+      enum: ['all', 'customers', 'hosts', 'specific'],
       default: 'all',
     },
     targetUsers: [

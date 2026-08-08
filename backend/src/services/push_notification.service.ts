@@ -57,6 +57,27 @@ export const sendPushNotification = async (
       token: fcmToken,
       notification: { title, body },
       data: data || {},
+      android: {
+        priority: 'high',
+        notification: {
+          channelId: 'default_notification_channel',
+          sound: 'default',
+          defaultSound: true,
+          priority: 'high',
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            alert: { title, body },
+            sound: 'default',
+            contentAvailable: true,
+          },
+        },
+        headers: {
+          'apns-priority': '10',
+        },
+      },
     });
     console.log(`[PushNotification] Sent push to token: ${fcmToken.substring(0, 15)}... Title: "${title}"`);
     return true;

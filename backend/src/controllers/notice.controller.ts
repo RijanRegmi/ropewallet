@@ -18,7 +18,7 @@ export class NoticeController {
         title: title.trim(),
         content: content.trim(),
         category: category || 'info',
-        targetType: targetType === 'specific' ? 'specific' : 'all',
+        targetType: ['all', 'customers', 'hosts', 'specific'].includes(targetType) ? targetType : 'all',
         targetUsers: targetType === 'specific' && Array.isArray(targetUserIds) ? targetUserIds : [],
         createdBy: (req as any).admin?.id || (req as any).admin?._id || (req as any).user?.id || (req as any).user?._id,
         readBy: [],
@@ -27,9 +27,14 @@ export class NoticeController {
       // Async FCM Push Dispatch
       (async () => {
         try {
-          const query = targetType === 'specific' && Array.isArray(targetUserIds) && targetUserIds.length > 0
-            ? { _id: { $in: targetUserIds }, fcmToken: { $exists: true, $ne: '' } }
-            : { fcmToken: { $exists: true, $ne: '' } };
+          let query: any = { fcmToken: { $exists: true, $ne: '' } };
+          if (targetType === 'specific' && Array.isArray(targetUserIds) && targetUserIds.length > 0) {
+            query._id = { $in: targetUserIds };
+          } else if (targetType === 'customers') {
+            query.role = 'customer';
+          } else if (targetType === 'hosts') {
+            query.role = { $in: ['host', 'admin', 'superadmin'] };
+          }
 
           const recipients = await User.find(query).select('fcmToken');
           for (const u of recipients) {
@@ -60,7 +65,7 @@ export class NoticeController {
   static async getAdminNotices(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const notices = await Notice.find()
-        .populate('targetUsers', 'fullName userTag email')
+        .populate('targetUsers', 'fullName userTag email role')
         .sort({ createdAt: -1 });
 
       res.status(200).json({
@@ -96,15 +101,20 @@ export class NoticeController {
   static async getUserNotices(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = (req as any).user?.id || (req as any).user?._id;
+      const userRole = (req as any).user?.role || 'customer';
+
       if (!userId) {
         res.status(401).json({ success: false, error: 'Unauthorized' });
         return;
       }
 
-      // Match notices where targetType is 'all' OR targetUsers contains current userId
+      const roleTarget = ['host', 'admin', 'superadmin'].includes(userRole) ? 'hosts' : 'customers';
+
+      // Match notices where targetType is 'all' OR targetType matches role OR targetUsers contains current userId
       const notices = await Notice.find({
         $or: [
           { targetType: 'all' },
+          { targetType: roleTarget },
           { targetUsers: userId },
         ],
       }).sort({ createdAt: -1 });

@@ -24,7 +24,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
 
-    const user = await User.findById(decoded.id).select('isFrozen');
+    const user = await User.findById(decoded.id).select('isFrozen freezeReason');
     if (!user) {
       next(new CustomError('User belonging to this token no longer exists', 401));
       return;
@@ -32,7 +32,8 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
 
     // Block frozen accounts from all API operations
     if (user.isFrozen) {
-      next(new CustomError('Your account has been frozen. Please contact support.', 403));
+      const reasonMsg = (user as any).freezeReason ? ` Reason: ${(user as any).freezeReason}` : '';
+      next(new CustomError(`Your account has been frozen.${reasonMsg}`, 403));
       return;
     }
 

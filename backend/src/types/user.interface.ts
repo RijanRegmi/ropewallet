@@ -15,6 +15,7 @@ export interface IUser extends Document {
   pendingCashoutBalance?: number;
   qrCodeData: string;
   isFrozen: boolean;
+  freezeReason?: string;
   frozenAt?: Date;
   frozenBy?: string;  // admin ID who froze the account
   createdBy?: string; // admin ID who created this account

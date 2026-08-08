@@ -107,29 +107,59 @@ export default function UsersPage() {
     setTimeout(() => setToastMsg({ text: '', type: 'success' }), 4000);
   };
 
+  // Freeze Reason Modal State
+  const [freezeModal, setFreezeModal] = useState<{ isOpen: boolean; user: UserModel | null; reason: string; loading: boolean }>({
+    isOpen: false,
+    user: null,
+    reason: '',
+    loading: false,
+  });
+
   // UI Confirmation trigger for Freeze / Unfreeze
   const promptToggleFreeze = (u: UserModel, freeze: boolean) => {
-    const action = freeze ? 'freeze' : 'unfreeze';
-    setConfirmState({
-      isOpen: true,
-      title: `${freeze ? 'Freeze' : 'Unfreeze'} User Account`,
-      message: `Are you sure you want to ${action} the account for "${u.fullName || u.email}"? ${freeze ? 'The user will be blocked from accessing their account and submitting transactions.' : 'Access will be restored immediately.'
-        }`,
-      confirmText: freeze ? 'Freeze Account' : 'Unfreeze Account',
-      type: freeze ? 'warning' : 'info' as any,
-      loading: false,
-      onConfirm: async () => {
-        setConfirmState((prev) => ({ ...prev, loading: true }));
-        const res = await apiRequest(`/admin/users/${u._id}/${action}`, 'PUT');
-        setConfirmState((prev) => ({ ...prev, isOpen: false, loading: false }));
-        if (res.success) {
-          showToast(`Account ${action}d successfully`);
-          fetchUsers(page, searchQuery);
-        } else {
-          showToast(res.error || 'Operation failed', 'error');
-        }
-      },
+    if (freeze) {
+      setFreezeModal({ isOpen: true, user: u, reason: '', loading: false });
+    } else {
+      setConfirmState({
+        isOpen: true,
+        title: 'Unfreeze User Account',
+        message: `Are you sure you want to unfreeze the account for "${u.fullName || u.email}"? Access and transaction capabilities will be restored immediately.`,
+        confirmText: 'Unfreeze Account',
+        type: 'info' as any,
+        loading: false,
+        onConfirm: async () => {
+          setConfirmState((prev) => ({ ...prev, loading: true }));
+          const res = await apiRequest(`/admin/users/${u._id}/unfreeze`, 'PUT');
+          setConfirmState((prev) => ({ ...prev, isOpen: false, loading: false }));
+          if (res.success) {
+            showToast('Account unfrozen successfully');
+            fetchUsers(page, searchQuery);
+          } else {
+            showToast(res.error || 'Operation failed', 'error');
+          }
+        },
+      });
+    }
+  };
+
+  const handleConfirmFreeze = async () => {
+    if (!freezeModal.user || !freezeModal.reason.trim()) {
+      showToast('Please provide a specific reason for freezing the account', 'error');
+      return;
+    }
+
+    setFreezeModal((prev) => ({ ...prev, loading: true }));
+    const res = await apiRequest(`/admin/users/${freezeModal.user._id}/freeze`, 'PUT', {
+      reason: freezeModal.reason.trim(),
     });
+    setFreezeModal({ isOpen: false, user: null, reason: '', loading: false });
+
+    if (res.success) {
+      showToast(`Account frozen and user alerted. Reason: ${freezeModal.reason.trim()}`);
+      fetchUsers(page, searchQuery);
+    } else {
+      showToast(res.error || 'Failed to freeze account', 'error');
+    }
   };
 
   // UI Confirmation trigger for User Deletion
@@ -437,6 +467,61 @@ export default function UsersPage() {
         onConfirm={confirmState.onConfirm}
         onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
       />
+
+      {/* Account Freeze Reason Modal */}
+      {freezeModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-5">
+            <div className="flex items-center gap-3 text-amber-400">
+              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <Lock className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Freeze Account Access</h3>
+                <p className="text-xs text-gray-400">
+                  User: {freezeModal.user?.fullName || freezeModal.user?.email} ({freezeModal.user?.userTag})
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                Mandatory Freeze Reason *
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Specify exact reason (e.g., Suspicious login velocity, Chargeback risk, Verification required)..."
+                value={freezeModal.reason}
+                onChange={(e) => setFreezeModal((prev) => ({ ...prev, reason: e.target.value }))}
+                className="w-full rounded-xl px-4 py-3 text-sm bg-slate-800 border border-slate-700 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 transition-all resize-none"
+                required
+              />
+              <span className="text-[11px] text-gray-400 mt-1 block">
+                This reason will be sent as an instant push notification to the user's phone and shown if they attempt to log in.
+              </span>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setFreezeModal({ isOpen: false, user: null, reason: '', loading: false })}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white bg-slate-800 hover:bg-slate-700 transition-all"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                disabled={freezeModal.loading || !freezeModal.reason.trim()}
+                onClick={handleConfirmFreeze}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 transition-all shadow-lg active:scale-95 disabled:opacity-50 flex items-center gap-2"
+              >
+                {freezeModal.loading ? 'Freezing & Alerting...' : 'Freeze & Alert User'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

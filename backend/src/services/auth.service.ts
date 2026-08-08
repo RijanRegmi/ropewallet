@@ -153,6 +153,11 @@ export class AuthService {
       throw new CustomError('Invalid email or password', 401);
     }
 
+    if (user.isFrozen) {
+      const reasonMsg = user.freezeReason ? ` Reason: ${user.freezeReason}` : '';
+      throw new CustomError(`Your account has been frozen by Admin.${reasonMsg}`, 403);
+    }
+
     const token = generateToken(user._id.toString());
 
     return {

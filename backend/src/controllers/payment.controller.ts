@@ -267,6 +267,15 @@ export class PaymentController {
         remarks: remarks ? remarks.trim() : `Deposit from ${cardBrand} ending in ${last4}`,
       });
 
+      if (user.fcmToken) {
+        sendPushNotification(
+          user.fcmToken,
+          'Deposit Successful 💳',
+          `Your wallet has been credited with $${amount.toFixed(2)}.`,
+          { type: 'deposit_success', amount: amount.toString(), transactionId: transaction._id.toString() }
+        ).catch((err) => console.error('[PushNotification] Deposit push error:', err));
+      }
+
       res.status(200).json({
         success: true,
         message: 'Funds deposited successfully',

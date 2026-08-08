@@ -4,15 +4,31 @@ import { useState, useEffect } from 'react';
 import { apiRequest } from '@/lib/api';
 import Toast from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
-import { Bell, Send, Trash2, Users, User, Info, AlertCircle, Sparkles, Search, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { 
+  Bell, 
+  Send, 
+  Trash2, 
+  Users, 
+  UserCheck, 
+  Info, 
+  AlertCircle, 
+  Sparkles, 
+  Search, 
+  CheckCircle2, 
+  ShieldAlert, 
+  Filter, 
+  Building2, 
+  X, 
+  Check 
+} from 'lucide-react';
 
 interface NoticeItem {
   _id: string;
   title: string;
   content: string;
   category: 'info' | 'alert' | 'urgent' | 'promo';
-  targetType: 'all' | 'specific';
-  targetUsers?: Array<{ _id: string; fullName?: string; userTag?: string; email?: string }>;
+  targetType: 'all' | 'customers' | 'hosts' | 'specific';
+  targetUsers?: Array<{ _id: string; fullName?: string; userTag?: string; email?: string; role?: string }>;
   createdAt: string;
 }
 
@@ -24,12 +40,6 @@ interface UserOption {
   role: string;
 }
 
-const glassInput = {
-  background: 'rgba(31, 73, 89, 0.30)',
-  border: '1px solid rgba(92, 124, 137, 0.30)',
-  color: '#ffffff',
-};
-
 export default function NoticeAdminPage() {
   const [notices, setNotices] = useState<NoticeItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,20 +48,22 @@ export default function NoticeAdminPage() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState<'info' | 'alert' | 'urgent' | 'promo'>('info');
-  const [targetType, setTargetType] = useState<'all' | 'specific'>('all');
-  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [targetType, setTargetType] = useState<'all' | 'customers' | 'hosts' | 'specific'>('all');
+  
+  // Specific Users Picker State
   const [selectedUserObjects, setSelectedUserObjects] = useState<UserOption[]>([]);
-
-  const [isUserPickerOpen, setIsUserPickerOpen] = useState(false);
   const [userSearch, setUserSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
   const [userList, setUserList] = useState<UserOption[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const [toastMsg, setToastMsg] = useState({ text: '', type: 'success' as 'success' | 'error' });
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null }>({ isOpen: false, id: null });
 
   useEffect(() => {
     fetchNotices();
+    fetchUsers('');
   }, []);
 
   const fetchNotices = async () => {
@@ -63,48 +75,62 @@ export default function NoticeAdminPage() {
 
   const fetchUsers = async (search: string) => {
     setLoadingUsers(true);
-    const res = await apiRequest<{ users: UserOption[] }>(`/admin/users?limit=30&search=${encodeURIComponent(search)}`);
-    if (res.success && res.data) setUserList(res.data.users || []);
+    const res = await apiRequest<{ users: UserOption[]; admins?: UserOption[] }>(`/admin/users?limit=100&search=${encodeURIComponent(search)}`);
+    if (res.success && res.data) {
+      const all = [...(res.data.users || []), ...(res.data.admins || [])];
+      setUserList(all);
+    }
     setLoadingUsers(false);
   };
 
-  const handleOpenUserPicker = () => {
-    setIsUserPickerOpen(true);
-    fetchUsers(userSearch);
+  const handleSearchChange = (val: string) => {
+    setUserSearch(val);
+    fetchUsers(val);
   };
 
   const toggleSelectUser = (u: UserOption) => {
-    if (selectedUserIds.includes(u._id)) {
-      setSelectedUserIds((prev) => prev.filter((id) => id !== u._id));
+    const exists = selectedUserObjects.some((item) => item._id === u._id);
+    if (exists) {
       setSelectedUserObjects((prev) => prev.filter((item) => item._id !== u._id));
     } else {
-      setSelectedUserIds((prev) => [...prev, u._id]);
       setSelectedUserObjects((prev) => [...prev, u]);
     }
+  };
+
+  const removeUser = (userId: string) => {
+    setSelectedUserObjects((prev) => prev.filter((u) => u._id !== userId));
   };
 
   const handleSubmitNotice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) {
-      setToastMsg({ text: 'Please fill in both title and message content', type: 'error' });
+      setToastMsg({ text: 'Please fill in title and message content', type: 'error' });
       return;
     }
-
-    if (targetType === 'specific' && selectedUserIds.length === 0) {
-      setToastMsg({ text: 'Please select at least one target user for specific notice', type: 'error' });
+    if (targetType === 'specific' && selectedUserObjects.length === 0) {
+      setToastMsg({ text: 'Please select at least one target user', type: 'error' });
       return;
     }
 
     setSubmitting(true);
-    const res = await apiRequest('/admin/notices', 'POST', {
-      title, content, category, targetType, targetUserIds: selectedUserIds,
+    const selectedUserIds = selectedUserObjects.map((u) => u._id);
+
+    const res = await apiRequest<any>('/admin/notices', 'POST', {
+      title,
+      content,
+      category,
+      targetType,
+      targetUserIds: selectedUserIds,
     });
     setSubmitting(false);
 
     if (res.success) {
-      setToastMsg({ text: 'Notice published successfully!', type: 'success' });
-      setTitle(''); setContent(''); setCategory('info'); setTargetType('all');
-      setSelectedUserIds([]); setSelectedUserObjects([]);
+      setToastMsg({ text: 'Push Notice broadcasted successfully!', type: 'success' });
+      setTitle('');
+      setContent('');
+      setCategory('info');
+      setTargetType('all');
+      setSelectedUserObjects([]);
       fetchNotices();
     } else {
       setToastMsg({ text: res.error || 'Failed to publish notice', type: 'error' });
@@ -136,205 +162,343 @@ export default function NoticeAdminPage() {
     }
   };
 
+  const getTargetBadge = (type: string, users?: any[]) => {
+    switch (type) {
+      case 'customers':
+        return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 font-semibold border border-indigo-500/20">👥 Customers Only</span>;
+      case 'hosts':
+        return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-amber-500/10 text-amber-300 font-semibold border border-amber-500/20">🏢 Hosts & Admins Only</span>;
+      case 'specific':
+        return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-emerald-500/10 text-emerald-300 font-semibold border border-emerald-500/20">🎯 {users?.length || 0} Targeted User(s)</span>;
+      default:
+        return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-blue-500/10 text-blue-300 font-semibold border border-blue-500/20">🌐 All Users (Broadcast)</span>;
+    }
+  };
+
+  const filteredUserList = userList.filter((u) => {
+    if (roleFilter === 'customers' && (u.role === 'host' || u.role === 'admin' || u.role === 'superadmin')) return false;
+    if (roleFilter === 'hosts' && u.role !== 'host' && u.role !== 'admin' && u.role !== 'superadmin') return false;
+    return true;
+  });
+
   return (
-    <div className="space-y-8 max-w-6xl animate-fade-in">
+    <div className="space-y-6 w-full min-h-screen">
       {toastMsg.text && (
         <Toast message={toastMsg.text} type={toastMsg.type} onClose={() => setToastMsg({ text: '', type: 'success' })} />
       )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Page Title */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-            <Bell className="w-7 h-7" style={{ color: '#7ba5b5' }} /> Notice & Notification Center
-          </h2>
-          <p className="text-sm mt-1" style={{ color: '#5C7C89' }}>
-            Broadcast announcement alerts or target specific users directly with custom push notices.
+          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            <Bell className="w-7 h-7 text-[#5C7C89]" />
+            Notice & Push Notification Broadcast Center
+          </h1>
+          <p className="text-sm text-gray-400">
+            Send real-time high-priority push notifications directly to user status bars and in-app notice centers.
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Create Form */}
-        <div
-          className="lg:col-span-1 rounded-2xl p-6 space-y-6 shadow-xl"
-          style={{ background: 'rgba(13,32,48,0.70)', backdropFilter: 'blur(20px)', border: '1px solid rgba(92,124,137,0.20)' }}
-        >
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <Send className="w-5 h-5" style={{ color: '#7ba5b5' }} /> Create New Notice
-          </h3>
+      {/* Full Page 2-Column Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
+        {/* Left Column: Create Form (5 cols) */}
+        <div className="lg:col-span-5 bg-slate-900/60 border border-slate-800 rounded-2xl p-6 shadow-2xl backdrop-blur-md space-y-6 self-start">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-4">
+            <Send className="w-5 h-5 text-indigo-400" />
+            Create & Broadcast Push Notice
+          </h2>
 
           <form onSubmit={handleSubmitNotice} className="space-y-5">
+            {/* Title */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(168,196,204,0.80)' }}>Notice Title</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                Notice Title
+              </label>
               <input
                 type="text"
-                placeholder="e.g. System Maintenance Notice"
+                placeholder="e.g. System Upgrade & Scheduled Maintenance"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-[#5C7C89] focus:outline-none transition-colors"
-                style={glassInput}
+                className="w-full rounded-xl px-4 py-3 text-sm bg-slate-800/80 border border-slate-700/80 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-all"
                 required
               />
             </div>
 
+            {/* Category */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(168,196,204,0.80)' }}>Category Type</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                Notification Type / Color Category
+              </label>
               <select
                 value={category}
-                onChange={(e: any) => setCategory(e.target.value)}
-                className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition-colors cursor-pointer"
-                style={glassInput}
+                onChange={(e) => setCategory(e.target.value as any)}
+                className="w-full rounded-xl px-4 py-3 text-sm bg-slate-800/80 border border-slate-700/80 text-white focus:outline-none focus:border-indigo-500 transition-all cursor-pointer"
               >
-                <option value="info">General Info (Steel Blue)</option>
-                <option value="alert">Security Alert (Coral)</option>
-                <option value="urgent">Urgent Announcement (Red)</option>
-                <option value="promo">Promotional Offer (Violet)</option>
+                <option value="info">General Info (Blue)</option>
+                <option value="alert">Security Alert (Amber)</option>
+                <option value="urgent">Urgent System Notice (Red)</option>
+                <option value="promo">Promotional / Special (Purple)</option>
               </select>
             </div>
 
+            {/* Target Audience Tabs */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(168,196,204,0.80)' }}>Target Audience</label>
-              <div className="grid grid-cols-2 gap-3">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                Target Audience Filter
+              </label>
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => { setTargetType('all'); setSelectedUserIds([]); setSelectedUserObjects([]); }}
-                  className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all"
-                  style={targetType === 'all'
-                    ? { background: 'linear-gradient(135deg, #1F4959, #5C7C89)', color: '#fff', border: '1px solid rgba(92,124,137,0.50)' }
-                    : { background: 'rgba(31,73,89,0.20)', color: 'rgba(168,196,204,0.60)', border: '1px solid rgba(92,124,137,0.20)' }}
+                  onClick={() => setTargetType('all')}
+                  className={`px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
+                    targetType === 'all'
+                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-md'
+                      : 'bg-slate-800/60 text-gray-400 border-slate-700/60 hover:text-white'
+                  }`}
                 >
-                  <Users className="w-4 h-4" /> All Users
+                  <Users className="w-3.5 h-3.5" /> All Users
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTargetType('customers')}
+                  className={`px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
+                    targetType === 'customers'
+                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-md'
+                      : 'bg-slate-800/60 text-gray-400 border-slate-700/60 hover:text-white'
+                  }`}
+                >
+                  👥 Customers
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTargetType('hosts')}
+                  className={`px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
+                    targetType === 'hosts'
+                      ? 'bg-amber-600 text-white border-amber-500 shadow-md'
+                      : 'bg-slate-800/60 text-gray-400 border-slate-700/60 hover:text-white'
+                  }`}
+                >
+                  🏢 Hosts Only
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setTargetType('specific')}
-                  className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all"
-                  style={targetType === 'specific'
-                    ? { background: 'linear-gradient(135deg, #1F4959, #5C7C89)', color: '#fff', border: '1px solid rgba(92,124,137,0.50)' }
-                    : { background: 'rgba(31,73,89,0.20)', color: 'rgba(168,196,204,0.60)', border: '1px solid rgba(92,124,137,0.20)' }}
+                  className={`px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
+                    targetType === 'specific'
+                      ? 'bg-emerald-600 text-white border-emerald-500 shadow-md'
+                      : 'bg-slate-800/60 text-gray-400 border-slate-700/60 hover:text-white'
+                  }`}
                 >
-                  <User className="w-4 h-4" /> Specific Users
+                  🎯 Specific Users
                 </button>
               </div>
             </div>
 
+            {/* Specific Users Multiselect Dropdown + Search */}
             {targetType === 'specific' && (
-              <div className="space-y-3">
-                <button
-                  type="button"
-                  onClick={handleOpenUserPicker}
-                  className="w-full flex items-center justify-between rounded-xl px-4 py-3 text-xs font-semibold transition-all cursor-pointer"
-                  style={{ background: 'rgba(31,73,89,0.25)', border: '1px dashed rgba(92,124,137,0.50)', color: '#a8c4cc' }}
-                >
-                  <span>Select Target Users ({selectedUserIds.length} selected)</span>
-                  <Search className="w-4 h-4" />
-                </button>
+              <div className="space-y-3 p-4 rounded-xl bg-slate-800/40 border border-slate-700/60">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-300">
+                    Select Target Users ({selectedUserObjects.length} selected)
+                  </span>
+                  {selectedUserObjects.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedUserObjects([])}
+                      className="text-xs text-red-400 hover:underline"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                </div>
 
+                {/* Selected User Pills */}
                 {selectedUserObjects.length > 0 && (
-                  <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 rounded-xl" style={{ background: 'rgba(1,20,37,0.50)', border: '1px solid rgba(92,124,137,0.20)' }}>
+                  <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-2 bg-slate-900/80 rounded-xl border border-slate-800">
                     {selectedUserObjects.map((u) => (
-                      <span key={u._id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium" style={{ background: 'rgba(92,124,137,0.20)', border: '1px solid rgba(92,124,137,0.30)', color: '#a8c4cc' }}>
-                        @{u.userTag || u.fullName}
-                        <button type="button" onClick={() => toggleSelectUser(u)} className="hover:text-red-400 ml-1 font-bold">×</button>
+                      <span
+                        key={u._id}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-indigo-500/20 text-indigo-200 border border-indigo-500/30"
+                      >
+                        {u.fullName || u.userTag} ({u.role || 'user'})
+                        <X
+                          className="w-3 h-3 cursor-pointer text-indigo-400 hover:text-white"
+                          onClick={() => removeUser(u._id)}
+                        />
                       </span>
                     ))}
                   </div>
                 )}
+
+                {/* Filter + Search Bar for User Selection */}
+                <div className="space-y-2 relative">
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={roleFilter}
+                      onChange={(e) => setRoleFilter(e.target.value)}
+                      className="px-2.5 py-2 rounded-xl text-xs bg-slate-800 border border-slate-700 text-white focus:outline-none"
+                    >
+                      <option value="all">All Roles</option>
+                      <option value="customers">Customers Only</option>
+                      <option value="hosts">Hosts Only</option>
+                    </select>
+
+                    <div className="relative flex-1">
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search user tag or email..."
+                        value={userSearch}
+                        onFocus={() => setIsDropdownOpen(true)}
+                        onChange={(e) => handleSearchChange(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 rounded-xl text-xs bg-slate-800 border border-slate-700 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Dropdown Menu */}
+                  {isDropdownOpen && (
+                    <div className="absolute left-0 right-0 top-full mt-1 z-30 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
+                      <div className="p-2 border-b border-slate-700/60 flex justify-between items-center text-xs text-gray-400">
+                        <span>Click to toggle recipient selection</span>
+                        <button
+                          type="button"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="text-gray-400 hover:text-white"
+                        >
+                          Done
+                        </button>
+                      </div>
+                      {loadingUsers ? (
+                        <div className="p-4 text-center text-xs text-gray-400">Searching users...</div>
+                      ) : filteredUserList.length === 0 ? (
+                        <div className="p-4 text-center text-xs text-gray-400">No users found.</div>
+                      ) : (
+                        filteredUserList.map((u) => {
+                          const isSelected = selectedUserObjects.some((item) => item._id === u._id);
+                          return (
+                            <div
+                              key={u._id}
+                              onClick={() => toggleSelectUser(u)}
+                              className={`p-2.5 flex items-center justify-between text-xs cursor-pointer hover:bg-slate-700/60 transition-colors ${
+                                isSelected ? 'bg-indigo-600/20 text-indigo-200' : 'text-gray-200'
+                              }`}
+                            >
+                              <div>
+                                <p className="font-semibold text-white">{u.fullName}</p>
+                                <p className="text-[11px] text-gray-400">{u.userTag} • {u.email}</p>
+                              </div>
+                              <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${
+                                u.role === 'host' || u.role === 'admin' ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-700 text-gray-300'
+                              }`}>
+                                {isSelected ? <Check className="w-3 h-3 inline text-emerald-400" /> : u.role}
+                              </span>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
+            {/* Message Content */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(168,196,204,0.80)' }}>Message Content</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                Push Message Body
+              </label>
               <textarea
                 rows={4}
-                placeholder="Write the notification message here..."
+                placeholder="Write the push notification message body here..."
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-[#5C7C89] focus:outline-none transition-colors resize-none"
-                style={glassInput}
+                className="w-full rounded-xl px-4 py-3 text-sm bg-slate-800/80 border border-slate-700/80 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-all resize-none"
                 required
               />
             </div>
 
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3.5 px-4 font-black rounded-xl text-white shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, #1F4959, #5C7C89)', border: '1px solid rgba(92,124,137,0.45)', boxShadow: '0 4px 16px rgba(31,73,89,0.40)' }}
+              className="w-full py-3.5 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              <Send className="w-4 h-4 text-white stroke-[2.5]" />
-              {submitting ? 'Publishing...' : 'Post Notice'}
+              <Send className="w-4 h-4" />
+              {submitting ? 'Broadcasting Notice...' : 'Broadcast Push Notice'}
             </button>
           </form>
         </div>
 
-        {/* Existing Notices List */}
-        <div className="lg:col-span-2 space-y-4">
-          <h3 className="text-lg font-bold text-white flex items-center justify-between">
-            <span>Posted System Notices</span>
-            <span className="text-xs font-semibold" style={{ color: '#5C7C89' }}>{notices.length} total</span>
-          </h3>
+        {/* Right Column: Feed of Posted Notices (7 cols) */}
+        <div className="lg:col-span-7 bg-slate-900/60 border border-slate-800 rounded-2xl p-6 shadow-2xl backdrop-blur-md space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <Bell className="w-5 h-5 text-indigo-400" />
+              Published Notice Stream ({notices.length})
+            </h2>
+            <button
+              onClick={fetchNotices}
+              className="text-xs text-indigo-400 hover:underline font-semibold"
+            >
+              Refresh Feed
+            </button>
+          </div>
 
           {loading ? (
-            <div className="rounded-2xl p-12 text-center text-gray-400 animate-pulse" style={{ background: 'rgba(13,32,48,0.70)', border: '1px solid rgba(92,124,137,0.20)' }}>
-              Loading notices...
-            </div>
+            <div className="py-16 text-center text-gray-400">Loading published notice history...</div>
           ) : notices.length === 0 ? (
-            <div className="rounded-2xl p-12 text-center text-gray-400" style={{ background: 'rgba(13,32,48,0.70)', border: '1px solid rgba(92,124,137,0.20)' }}>
-              <Bell className="w-10 h-10 mx-auto mb-3" style={{ color: '#5C7C89' }} />
-              No notices published yet. Create your first announcement above.
+            <div className="py-16 text-center text-gray-400 space-y-3">
+              <Bell className="w-12 h-12 text-slate-700 mx-auto" />
+              <p className="text-base font-semibold">No notices published yet.</p>
+              <p className="text-xs text-gray-500">Create your first broadcast using the form on the left.</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {notices.map((n) => (
+            <div className="space-y-4 max-h-[750px] overflow-y-auto pr-2">
+              {notices.map((notice) => (
                 <div
-                  key={n._id}
-                  className="rounded-2xl p-6 space-y-4 transition-all"
-                  style={{ background: 'rgba(13,32,48,0.70)', backdropFilter: 'blur(20px)', border: '1px solid rgba(92,124,137,0.20)', boxShadow: '0 8px 32px rgba(1,20,37,0.50)' }}
+                  key={notice._id}
+                  className="p-5 rounded-2xl bg-slate-800/50 border border-slate-700/60 hover:border-slate-600 transition-all space-y-3"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        {getCategoryBadge(n.category)}
-                        <span className="text-xs font-mono" style={{ color: '#5C7C89' }}>
-                          {new Date(n.createdAt).toLocaleString()}
+                        {getCategoryBadge(notice.category)}
+                        {getTargetBadge(notice.targetType, notice.targetUsers)}
+                        <span className="text-xs text-gray-400">
+                          {new Date(notice.createdAt).toLocaleString()}
                         </span>
                       </div>
-                      <h4 className="text-base font-bold text-white">{n.title}</h4>
+                      <h3 className="text-base font-bold text-white mt-1">{notice.title}</h3>
                     </div>
 
                     <button
-                      onClick={() => setDeleteModal({ isOpen: true, id: n._id })}
-                      className="p-2 rounded-xl transition-all cursor-pointer"
-                      style={{ color: '#5C7C89' }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#f87171'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.12)'; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#5C7C89'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+                      onClick={() => setDeleteModal({ isOpen: true, id: notice._id })}
+                      className="p-2 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                       title="Delete Notice"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
 
-                  <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: 'rgba(208,232,239,0.80)' }}>{n.content}</p>
+                  <p className="text-sm text-gray-300 whitespace-pre-wrap">{notice.content}</p>
 
-                  <div className="pt-3 flex items-center justify-between text-xs" style={{ borderTop: '1px solid rgba(92,124,137,0.15)', color: '#5C7C89' }}>
-                    <span className="flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5" style={{ color: '#5C7C89' }} />
-                      Target:{' '}
-                      <strong className="text-gray-200">
-                        {n.targetType === 'all'
-                          ? 'All Users (Broadcast)'
-                          : `${n.targetUsers?.length || 0} Specific User(s)`}
-                      </strong>
-                    </span>
-
-                    {n.targetType === 'specific' && n.targetUsers && n.targetUsers.length > 0 && (
-                      <div className="flex items-center gap-1 truncate max-w-xs" style={{ color: '#5C7C89' }}>
-                        {n.targetUsers.map((u) => `@${u.userTag || u.fullName}`).join(', ')}
+                  {notice.targetType === 'specific' && notice.targetUsers && notice.targetUsers.length > 0 && (
+                    <div className="pt-2 border-t border-slate-700/40">
+                      <span className="text-xs font-semibold text-gray-400 block mb-1">Targeted Recipients:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {notice.targetUsers.map((u) => (
+                          <span key={u._id} className="text-[11px] px-2 py-0.5 rounded bg-slate-700/80 text-gray-300">
+                            {u.fullName || u.userTag} ({u.role || 'user'})
+                          </span>
+                        ))}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -342,79 +506,14 @@ export default function NoticeAdminPage() {
         </div>
       </div>
 
-      {/* User Search Picker Modal */}
-      {isUserPickerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
-          <div
-            className="w-full max-w-lg rounded-2xl shadow-2xl p-6 space-y-5"
-            style={{ background: 'rgba(10,26,40,0.95)', border: '1px solid rgba(92,124,137,0.28)', backdropFilter: 'blur(32px)' }}
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Users className="w-5 h-5" style={{ color: '#7ba5b5' }} /> Select Target Users
-              </h3>
-              <button onClick={() => setIsUserPickerOpen(false)} className="text-gray-400 hover:text-white font-bold cursor-pointer">✕</button>
-            </div>
-
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3.5 top-3.5" style={{ color: '#5C7C89' }} />
-              <input
-                type="text"
-                placeholder="Search user by name, tag, or email..."
-                value={userSearch}
-                onChange={(e) => { setUserSearch(e.target.value); fetchUsers(e.target.value); }}
-                className="w-full rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-[#5C7C89] focus:outline-none"
-                style={glassInput}
-              />
-            </div>
-
-            <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
-              {loadingUsers ? (
-                <div className="p-6 text-center text-sm text-gray-400">Searching users...</div>
-              ) : userList.length === 0 ? (
-                <div className="p-6 text-center text-sm text-gray-500">No users found.</div>
-              ) : (
-                userList.map((u) => {
-                  const isSelected = selectedUserIds.includes(u._id);
-                  return (
-                    <div
-                      key={u._id}
-                      onClick={() => toggleSelectUser(u)}
-                      className="flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer"
-                      style={isSelected
-                        ? { background: 'rgba(92,124,137,0.25)', borderColor: 'rgba(92,124,137,0.50)', color: '#fff' }
-                        : { background: 'rgba(31,73,89,0.18)', borderColor: 'rgba(92,124,137,0.18)', color: 'rgba(208,232,239,0.70)' }}
-                    >
-                      <div>
-                        <p className="text-sm font-semibold text-white">{u.fullName || u.userTag}</p>
-                        <p className="text-xs" style={{ color: '#5C7C89' }}>@{u.userTag} • {u.email}</p>
-                      </div>
-                      {isSelected && <CheckCircle2 className="w-5 h-5" style={{ color: '#7ba5b5' }} />}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            <div className="pt-3 flex justify-end" style={{ borderTop: '1px solid rgba(92,124,137,0.18)' }}>
-              <button
-                type="button"
-                onClick={() => setIsUserPickerOpen(false)}
-                className="py-2.5 px-6 font-black text-sm text-white rounded-xl transition-all cursor-pointer shadow-md"
-                style={{ background: 'linear-gradient(135deg, #1F4959, #5C7C89)', border: '1px solid rgba(92,124,137,0.45)' }}
-              >
-                Done ({selectedUserIds.length} selected)
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* Delete Notice Modal */}
       <ConfirmModal
         isOpen={deleteModal.isOpen}
+        type="danger"
         title="Delete Notice"
-        message="Are you sure you want to delete this notice? It will no longer be visible to users."
-        confirmText="Delete"
+        message="Are you sure you want to delete this notice broadcast? It will be removed from all user feeds."
+        confirmText="Delete Notice"
+        cancelText="Cancel"
         onConfirm={handleDeleteNotice}
         onClose={() => setDeleteModal({ isOpen: false, id: null })}
       />
