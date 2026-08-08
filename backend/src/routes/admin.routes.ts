@@ -52,6 +52,13 @@ router.get('/all-transactions', superAdminOnly, AdminController.getAllTransactio
 // Super Admin Audit Activity Logs
 router.get('/audit-logs', superAdminOnly, AdminController.getAuditLogs);
 
+import { NoticeController } from '../controllers/notice.controller.js';
+
+// Notice Center Management
+router.get('/notices', NoticeController.getAdminNotices);
+router.post('/notices', NoticeController.createNotice);
+router.delete('/notices/:id', NoticeController.deleteNotice);
+
 // Export
 router.get('/export/transactions', AdminController.exportTransactions);
 
