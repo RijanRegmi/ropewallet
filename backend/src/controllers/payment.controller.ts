@@ -159,7 +159,7 @@ export class PaymentController {
         return;
       }
 
-      // ─── 2. Process Stripe Card charge with 3DS & Fingerprint Check ───
+      // ─── 2. Process Live Stripe Card Charge ───
       let cardLast4 = '7895';
       let cardBrandName = 'Visa';
       let stripeChargeId = '';
@@ -174,64 +174,75 @@ export class PaymentController {
         }
       }
 
-      try {
-        let tokenToCharge = paymentMethodId;
+      let tokenToCharge = paymentMethodId;
 
-        // If using saved card, tokenization on backend
-        if (useSavedCard && user.savedCard && user.savedCard.cardNumber) {
-          const saved = user.savedCard;
-          try {
-            const cardToken = await stripe.tokens.create({
-              card: {
-                number: saved.cardNumber,
-                exp_month: saved.expMonth,
-                exp_year: saved.expYear,
-                cvc: saved.cvc || '123',
-                name: saved.cardholderName || user.fullName,
+      // If using saved card, create Stripe token from saved card details
+      if (useSavedCard && user.savedCard && user.savedCard.cardNumber) {
+        const saved = user.savedCard;
+        try {
+          const cardToken = await stripe.tokens.create({
+            card: {
+              number: saved.cardNumber,
+              exp_month: saved.expMonth,
+              exp_year: saved.expYear,
+              cvc: saved.cvc || '123',
+              name: saved.cardholderName || user.fullName,
+            },
+          });
+          tokenToCharge = cardToken.id;
+        } catch (tokErr: any) {
+          res.status(400).json({
+            success: false,
+            error: `Stripe Card Error: ${tokErr?.message || 'Invalid card details'}`,
+          });
+          return;
+        }
+      }
+
+      // Execute live Stripe charge
+      if (tokenToCharge && tokenToCharge.length > 0) {
+        try {
+          if (tokenToCharge.startsWith('tok_')) {
+            const charge = await stripe.charges.create({
+              amount: Math.round(amount * 100),
+              currency: 'usd',
+              source: tokenToCharge,
+              description: `RopeWallet Deposit ($${amount.toFixed(2)}) for ${user.fullName || user.email}`,
+              metadata: {
+                userId: user._id.toString(),
+                userEmail: user.email,
+                userTag: user.userTag,
               },
             });
-            tokenToCharge = cardToken.id;
-          } catch (tErr: any) {
-            console.log('Stripe token creation note:', tErr?.message || tErr);
+            stripeChargeId = charge.id;
+          } else {
+            const paymentIntent = await stripe.paymentIntents.create({
+              amount: Math.round(amount * 100),
+              currency: 'usd',
+              payment_method: tokenToCharge,
+              confirm: true,
+              return_url: `${process.env.FRONTEND_URL || 'https://ropewallet.com'}/pay/confirm`,
+              automatic_payment_methods: {
+                enabled: true,
+                allow_redirects: 'never',
+              },
+              description: `RopeWallet Deposit ($${amount.toFixed(2)}) for ${user.fullName || user.email}`,
+              metadata: {
+                userId: user._id.toString(),
+                userEmail: user.email,
+                userTag: user.userTag,
+              },
+            });
+            stripeChargeId = paymentIntent.id;
           }
+        } catch (stripeError: any) {
+          console.error('Stripe Live Charge Failed:', stripeError);
+          res.status(400).json({
+            success: false,
+            error: `Stripe Payment Failed: ${stripeError?.message || 'Card charge error'}`,
+          });
+          return;
         }
-
-        // Process charge directly with Stripe API
-        if (tokenToCharge && tokenToCharge.length > 0) {
-          try {
-            if (tokenToCharge.startsWith('tok_')) {
-              const charge = await stripe.charges.create({
-                amount: Math.round(amount * 100),
-                currency: 'usd',
-                source: tokenToCharge,
-                description: `RopeWallet Deposit from ${cardBrandName} ending in ${cardLast4}`,
-                metadata: {
-                  userId: user._id.toString(),
-                  userEmail: user.email,
-                  userTag: user.userTag,
-                },
-              });
-              stripeChargeId = charge.id;
-            } else if (tokenToCharge.startsWith('pm_')) {
-              const paymentIntent = await stripe.paymentIntents.create({
-                amount: Math.round(amount * 100),
-                currency: 'usd',
-                payment_method: tokenToCharge,
-                confirm: true,
-                return_url: `${process.env.FRONTEND_URL || 'https://ropewallet.com'}/pay/confirm`,
-                automatic_payment_methods: {
-                  enabled: true,
-                  allow_redirects: 'never',
-                },
-              });
-              stripeChargeId = paymentIntent.id;
-            }
-          } catch (chargeErr: any) {
-            console.log('Stripe charge note (proceeding with balance deposit):', chargeErr?.message || chargeErr);
-          }
-        }
-      } catch (stripeError: any) {
-        console.warn('Stripe gateway note (proceeding with deposit load):', stripeError?.message || stripeError);
       }
 
       // ─── 3. Atomically update user's wallet balance in MongoDB ───
