@@ -10,6 +10,7 @@ router.use(protect);
 router.post('/deposit', PaymentController.deposit);
 router.post('/checkout', PaymentController.createCheckoutSession);
 router.post('/transfer', PaymentController.transfer);
+router.post('/validate-recipient', PaymentController.validateRecipient);
 router.post('/withdraw', PaymentController.withdraw);
 router.get('/transactions', PaymentController.getTransactions);
 

@@ -331,10 +331,23 @@ export class P2PController {
           { userTag: tag },
           { qrCodeData: tag }
         ]
-      }).select('fullName userTag profileImage');
+      }).select('fullName userTag profileImage role');
       
       if (!user) {
         res.status(404).json({ success: false, error: 'Recipient not found' });
+        return;
+      }
+
+      let userRole = user.role || 'customer';
+      if (userRole === ('user' as any)) userRole = 'customer';
+      if (userRole === ('admin' as any)) userRole = 'host';
+
+      const isHost = ['host', 'superadmin'].includes(userRole);
+      if (!isHost) {
+        res.status(400).json({
+          success: false,
+          error: 'Customer to customer payments are not allowed. You can only send money to Host accounts.',
+        });
         return;
       }
 
@@ -400,6 +413,16 @@ export class P2PController {
         
         if (!user) {
           res.status(404).send(P2PController.errorPageHTML('Recipient Not Found', `No user found matching "${to}"`));
+          return;
+        }
+
+        let userRole = user.role || 'customer';
+        if (userRole === ('user' as any)) userRole = 'customer';
+        if (userRole === ('admin' as any)) userRole = 'host';
+
+        const isHost = ['host', 'superadmin'].includes(userRole);
+        if (!isHost) {
+          res.status(400).send(P2PController.errorPageHTML('Payment Not Allowed', 'Customer to customer payments are not allowed. You can only send money to Host accounts.'));
           return;
         }
 

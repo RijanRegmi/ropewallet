@@ -54,6 +54,22 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
     final String receiverQr = _recipientController.text.trim();
     final String remarks = _remarksController.text.trim();
 
+    // Pre-validate recipient (customer-to-customer restriction)
+    final validationResult = await walletProvider.validateRecipient(receiverQrData: receiverQr);
+    if (validationResult['success'] != true) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: Text(validationResult['error'] ?? 'Customer to customer payments are not allowed. You can only send money to Host accounts.'),
+          ),
+        );
+      }
+      return;
+    }
+
     final String? pin = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,

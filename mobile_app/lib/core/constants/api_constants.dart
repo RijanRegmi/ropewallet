@@ -57,6 +57,7 @@ class ApiConstants {
   static const String deposit = '/payments/deposit';
   static const String checkout = '/payments/checkout';
   static const String transfer = '/payments/transfer';
+  static const String validateRecipient = '/payments/validate-recipient';
   static const String withdraw = '/payments/withdraw';
   static const String transactions = '/payments/transactions';
 

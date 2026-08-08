@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:gal/gal.dart';
 import '../../../auth/providers/auth_provider.dart';
+import '../../providers/wallet_provider.dart';
 import 'send_money_page.dart';
 import 'external_transfer_page.dart';
 
@@ -84,7 +85,7 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
     });
   }
 
-  void _navigateToTransfer(String qrCodeData) {
+  Future<void> _handleQrDetected(String qrCodeData) async {
     bool isExternal = false;
     String provider = '';
     String recipientName = '';
@@ -105,6 +106,7 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
     }
 
     if (isExternal) {
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => ExternalTransferPage(
@@ -113,12 +115,77 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
           ),
         ),
       );
-    } else {
+      return;
+    }
+
+    // Validate RopeWallet recipient with backend (customer-to-customer restriction)
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    
+    // Show quick progress dialog during verification
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0F172A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        content: const Row(
+          children: [
+            CircularProgressIndicator(color: Color(0xFF10B981)),
+            SizedBox(width: 20),
+            Expanded(
+              child: Text(
+                'Verifying recipient account...',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final result = await walletProvider.validateRecipient(receiverQrData: qrCodeData);
+
+    if (mounted) {
+      Navigator.of(context).pop(); // Close loading dialog
+    }
+
+    if (result['success'] == true) {
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => SendMoneyPage(recipientQrData: qrCodeData),
         ),
       );
+    } else {
+      if (mounted) {
+        setState(() {
+          _hasScanned = false; // Allow rescanning
+        });
+        try {
+          _cameraController.start();
+        } catch (_) {}
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: Row(
+              children: [
+                const Icon(Icons.block_rounded, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    result['error'] ?? 'Customer to customer payments are not allowed. You can only send money to a Host account.',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -162,7 +229,7 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
               _hasScanned = true;
             });
           }
-          _navigateToTransfer(detectedCode);
+          _handleQrDetected(detectedCode);
           return;
         }
       }
@@ -342,7 +409,7 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
                         _hasScanned = true;
                       });
                       _cameraController.stop();
-                      _navigateToTransfer(code);
+                      _handleQrDetected(code);
                     } else {
                       if (!_isShowingInvalidMessage) {
                         _isShowingInvalidMessage = true;
@@ -832,7 +899,7 @@ class _ScannerPageState extends State<ScannerPage> with TickerProviderStateMixin
                                       setState(() {
                                         _hasScanned = true;
                                       });
-                                      _navigateToTransfer(qr);
+                                      _handleQrDetected(qr);
                                     } else {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(

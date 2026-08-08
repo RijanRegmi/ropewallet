@@ -333,7 +333,11 @@ export class PaymentController {
 
       // Customers CANNOT send money to another Customer. Customers CAN ONLY send money to a Host account.
       if (senderRole === 'customer' && !isReceiverHost) {
-        res.status(403).json({ success: false, error: 'Customers can only send money to a Host account.' });
+        res.status(403).json({
+          success: false,
+          isCustomerToCustomer: true,
+          error: 'Customer to customer payments are not allowed. You can only send money to a Host account.',
+        });
         return;
       }
 
@@ -412,6 +416,79 @@ export class PaymentController {
         data: {
           walletBalance: sender.walletBalance,
           transaction,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async validateRecipient(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { receiverQrData } = req.body;
+      const senderId = (req as any).user?.id;
+
+      if (!receiverQrData || !receiverQrData.trim()) {
+        res.status(400).json({ success: false, error: 'Please provide a valid recipient QR or user tag' });
+        return;
+      }
+
+      const sender = await User.findById(senderId);
+      if (!sender) {
+        res.status(404).json({ success: false, error: 'Sender not found' });
+        return;
+      }
+
+      let senderRole = sender.role || 'customer';
+      if (senderRole === ('user' as any)) senderRole = 'customer';
+      if (senderRole === ('admin' as any)) senderRole = 'host';
+
+      let receiver = await User.findOne({ qrCodeData: receiverQrData });
+      if (!receiver) {
+        const cleanInput = receiverQrData.trim().toLowerCase();
+        const tagWithDollar = cleanInput.startsWith('$') ? cleanInput : `$${cleanInput}`;
+        const tagWithoutDollar = cleanInput.startsWith('$') ? cleanInput.substring(1) : cleanInput;
+        receiver = await User.findOne({
+          $or: [
+            { userTag: tagWithDollar },
+            { userTag: tagWithoutDollar },
+            { email: cleanInput }
+          ]
+        });
+      }
+
+      if (!receiver) {
+        res.status(404).json({ success: false, error: 'Recipient wallet, email, or tag not found' });
+        return;
+      }
+
+      if (sender._id.toString() === receiver._id.toString()) {
+        res.status(400).json({ success: false, error: 'You cannot transfer money to yourself' });
+        return;
+      }
+
+      let receiverRole = receiver.role || 'customer';
+      if (receiverRole === ('user' as any)) receiverRole = 'customer';
+      if (receiverRole === ('admin' as any)) receiverRole = 'host';
+
+      const isReceiverHost = ['host', 'superadmin'].includes(receiverRole);
+
+      if (senderRole === 'customer' && !isReceiverHost) {
+        res.status(403).json({
+          success: false,
+          isCustomerToCustomer: true,
+          error: 'Customer to customer payments are not allowed. You can only send money to a Host account.',
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          id: receiver._id,
+          fullName: receiver.fullName || `${receiver.firstName} ${receiver.lastName}`,
+          userTag: receiver.userTag,
+          role: receiverRole,
         },
       });
     } catch (error) {

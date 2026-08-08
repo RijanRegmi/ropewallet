@@ -308,4 +308,29 @@ class WalletProvider with ChangeNotifier {
       return false;
     }
   }
+
+  // Validate recipient QR code or user tag prior to opening send page or transferring
+  Future<Map<String, dynamic>> validateRecipient({required String receiverQrData}) async {
+    try {
+      final response = await _apiClient.post(
+        ApiConstants.validateRecipient,
+        {'receiverQrData': receiverQrData},
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        return {'success': true, 'data': responseData['data']};
+      } else {
+        final errorMsg = responseData['error'] ?? 'Customer to customer payments are not allowed. You can only send money to a Host account.';
+        return {
+          'success': false,
+          'isCustomerToCustomer': responseData['isCustomerToCustomer'] == true,
+          'error': errorMsg,
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'error': e.toString().replaceAll('Exception: ', '')};
+    }
+  }
 }

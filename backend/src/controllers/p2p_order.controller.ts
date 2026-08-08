@@ -29,6 +29,19 @@ export class P2POrderController {
         return;
       }
 
+      let hostRole = host.role || 'customer';
+      if (hostRole === ('user' as any)) hostRole = 'customer';
+      if (hostRole === ('admin' as any)) hostRole = 'host';
+
+      const isHost = ['host', 'superadmin'].includes(hostRole);
+      if (!isHost) {
+        res.status(400).json({
+          success: false,
+          error: 'Customer to customer payments are not allowed. You can only send money to Host accounts.',
+        });
+        return;
+      }
+
       // Fetch active P2P payment methods/accounts configured in system
       const activeAccounts = await P2PAccount.find({ isActive: true }).select('platform handle displayName directPayUrl');
       const activePlatforms = Array.from(new Set(activeAccounts.map(a => a.platform.toLowerCase())));
@@ -77,6 +90,19 @@ export class P2POrderController {
 
       if (!host) {
         res.status(404).json({ success: false, error: 'Host user not found' });
+        return;
+      }
+
+      let hostRole = host.role || 'customer';
+      if (hostRole === ('user' as any)) hostRole = 'customer';
+      if (hostRole === ('admin' as any)) hostRole = 'host';
+
+      const isHost = ['host', 'superadmin'].includes(hostRole);
+      if (!isHost) {
+        res.status(403).json({
+          success: false,
+          error: 'Customer to customer payments are not allowed. Customers can only send money to Host accounts.',
+        });
         return;
       }
 

@@ -99,7 +99,9 @@ export default function HostPayPage() {
           <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center mx-auto">
             <AlertCircle className="w-7 h-7" />
           </div>
-          <h2 className="text-xl font-bold">Payment Portal Unavailable</h2>
+          <h2 className="text-xl font-bold">
+            {hostError.toLowerCase().includes('customer') ? 'Payment Not Allowed' : 'Payment Portal Unavailable'}
+          </h2>
           <p className="text-sm text-gray-400">{hostError}</p>
         </div>
       </div>
