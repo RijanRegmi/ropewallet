@@ -9,6 +9,15 @@ import { sendPushNotification } from '../services/push_notification.service.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy_key_for_initialization_12345');
 
+const cleanUserTagString = (input: string): string => {
+  if (!input) return '';
+  let decoded = input;
+  try {
+    decoded = decodeURIComponent(input);
+  } catch (_) {}
+  return decoded.trim().replace(/^[_%$24\s]+/, '').replace(/^\$/, '').toLowerCase();
+};
+
 export class PaymentController {
   static async deposit(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -302,14 +311,14 @@ export class PaymentController {
 
       let receiver = await User.findOne({ qrCodeData: receiverQrData });
       if (!receiver) {
-        const cleanInput = receiverQrData.trim().toLowerCase();
-        const tagWithDollar = cleanInput.startsWith('$') ? cleanInput : `$${cleanInput}`;
-        const tagWithoutDollar = cleanInput.startsWith('$') ? cleanInput.substring(1) : cleanInput;
+        const cleanTag = cleanUserTagString(receiverQrData);
         receiver = await User.findOne({
           $or: [
-            { userTag: tagWithDollar },
-            { userTag: tagWithoutDollar },
-            { email: cleanInput }
+            { userTag: cleanTag },
+            { userTag: `$${cleanTag}` },
+            { userTag: `_${cleanTag}` },
+            { email: cleanTag },
+            { qrCodeData: cleanTag }
           ]
         });
       }
@@ -329,7 +338,7 @@ export class PaymentController {
       if (receiverRole === ('user' as any)) receiverRole = 'customer';
       if (receiverRole === ('admin' as any)) receiverRole = 'host';
 
-      const isReceiverHost = ['host', 'superadmin'].includes(receiverRole);
+      const isReceiverHost = ['host', 'admin', 'superadmin'].includes(receiverRole);
 
       // Customers CANNOT send money to another Customer. Customers CAN ONLY send money to a Host account.
       if (senderRole === 'customer' && !isReceiverHost) {
@@ -445,14 +454,14 @@ export class PaymentController {
 
       let receiver = await User.findOne({ qrCodeData: receiverQrData });
       if (!receiver) {
-        const cleanInput = receiverQrData.trim().toLowerCase();
-        const tagWithDollar = cleanInput.startsWith('$') ? cleanInput : `$${cleanInput}`;
-        const tagWithoutDollar = cleanInput.startsWith('$') ? cleanInput.substring(1) : cleanInput;
+        const cleanTag = cleanUserTagString(receiverQrData);
         receiver = await User.findOne({
           $or: [
-            { userTag: tagWithDollar },
-            { userTag: tagWithoutDollar },
-            { email: cleanInput }
+            { userTag: cleanTag },
+            { userTag: `$${cleanTag}` },
+            { userTag: `_${cleanTag}` },
+            { email: cleanTag },
+            { qrCodeData: cleanTag }
           ]
         });
       }
@@ -471,7 +480,7 @@ export class PaymentController {
       if (receiverRole === ('user' as any)) receiverRole = 'customer';
       if (receiverRole === ('admin' as any)) receiverRole = 'host';
 
-      const isReceiverHost = ['host', 'superadmin'].includes(receiverRole);
+      const isReceiverHost = ['host', 'admin', 'superadmin'].includes(receiverRole);
 
       if (senderRole === 'customer' && !isReceiverHost) {
         res.status(403).json({

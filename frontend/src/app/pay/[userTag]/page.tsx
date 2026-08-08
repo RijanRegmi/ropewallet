@@ -41,7 +41,11 @@ export default function HostPayPage() {
   const fetchHostInfo = async (tag: string) => {
     setLoadingHost(true);
     setHostError('');
-    const res = await apiRequest<any>(`/pay/host/${tag}`);
+    let cleanTag = tag;
+    try {
+      cleanTag = decodeURIComponent(tag).trim();
+    } catch (_) {}
+    const res = await apiRequest<any>(`/pay/host/${encodeURIComponent(cleanTag)}`);
     setLoadingHost(false);
 
     if (res.success && res.data) {
@@ -64,9 +68,14 @@ export default function HostPayPage() {
       return;
     }
 
+    let cleanTag = userTag;
+    try {
+      cleanTag = decodeURIComponent(userTag).trim();
+    } catch (_) {}
+
     setCreatingOrder(true);
     const res = await apiRequest<any>('/pay/create-order', 'POST', {
-      userTag,
+      userTag: cleanTag,
       gameUserId,
       payerTag,
       paymentMethod,

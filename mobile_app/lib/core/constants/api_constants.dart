@@ -18,7 +18,7 @@ class ApiConstants {
   
   // ================= FEATURE FLAGS =================
   // Toggle enableP2P to true/false to enable or disable all P2P features app-wide.
-  static const bool enableP2P = false;
+  static const bool enableP2P = true;
   // =================================================
   // ====================================================================
 

@@ -6,6 +6,15 @@ import { Transaction } from '../models/transaction.model.js';
 import { HostRequest } from '../models/host_request.model.js';
 import crypto from 'crypto';
 
+const cleanUserTagString = (input: string): string => {
+  if (!input) return '';
+  let decoded = input;
+  try {
+    decoded = decodeURIComponent(input);
+  } catch (_) {}
+  return decoded.trim().replace(/^[_%$24\s]+/, '').replace(/^\$/, '').toLowerCase();
+};
+
 export class P2POrderController {
   /**
    * Get host public info for payment page header (/pay/[userTag])
@@ -14,12 +23,13 @@ export class P2POrderController {
     try {
       const { userTag } = req.params;
       const tagStr = Array.isArray(userTag) ? userTag[0] : (userTag || '');
-      const cleanTag = tagStr.replace(/^\$/, '').toLowerCase();
+      const cleanTag = cleanUserTagString(tagStr);
 
       const host = await User.findOne({
         $or: [
           { userTag: cleanTag },
           { userTag: `$${cleanTag}` },
+          { userTag: `_${cleanTag}` },
           { email: cleanTag },
         ],
       }).select('firstName lastName fullName userTag email role');
@@ -33,7 +43,7 @@ export class P2POrderController {
       if (hostRole === ('user' as any)) hostRole = 'customer';
       if (hostRole === ('admin' as any)) hostRole = 'host';
 
-      const isHost = ['host', 'superadmin'].includes(hostRole);
+      const isHost = ['host', 'admin', 'superadmin'].includes(hostRole);
       if (!isHost) {
         res.status(400).json({
           success: false,
@@ -79,11 +89,12 @@ export class P2POrderController {
         return;
       }
 
-      const cleanTag = userTag.replace(/^\$/, '').toLowerCase();
+      const cleanTag = cleanUserTagString(userTag);
       const host = await User.findOne({
         $or: [
           { userTag: cleanTag },
           { userTag: `$${cleanTag}` },
+          { userTag: `_${cleanTag}` },
           { email: cleanTag },
         ],
       });
@@ -97,7 +108,7 @@ export class P2POrderController {
       if (hostRole === ('user' as any)) hostRole = 'customer';
       if (hostRole === ('admin' as any)) hostRole = 'host';
 
-      const isHost = ['host', 'superadmin'].includes(hostRole);
+      const isHost = ['host', 'admin', 'superadmin'].includes(hostRole);
       if (!isHost) {
         res.status(403).json({
           success: false,
