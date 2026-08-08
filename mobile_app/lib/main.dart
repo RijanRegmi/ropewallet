@@ -12,6 +12,8 @@ import 'features/home/presentation/pages/home_page.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
+import 'core/constants/api_constants.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -28,6 +30,14 @@ void main() async {
     await messaging.requestPermission(alert: true, badge: true, sound: true);
   } catch (e) {
     debugPrint('Firebase init error: $e');
+  }
+
+  // Initialize Stripe SDK (requires Theme.MaterialComponents in Android styles)
+  try {
+    Stripe.publishableKey = ApiConstants.stripePublishableKey;
+    await Stripe.instance.applySettings();
+  } catch (e) {
+    debugPrint('Stripe init error: $e');
   }
 
   runApp(

@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -77,7 +76,6 @@ class WalletProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      String paymentMethodId = '';
       String cleanCard = '';
 
       if (!useSavedCard) {
@@ -88,41 +86,20 @@ class WalletProvider with ChangeNotifier {
           return false;
         }
         cleanCard = cardNumber.replaceAll(' ', '');
-        // 1. Create Token directly via Stripe's REST API using Publishable key
-        final stripeUrl = Uri.parse('https://api.stripe.com/v1/tokens');
-        final stripeResponse = await http.post(
-          stripeUrl,
-          headers: {
-            'Authorization': 'Bearer ${ApiConstants.stripePublishableKey}',
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: {
-            'card[number]': cleanCard,
-            'card[exp_month]': expMonth,
-            'card[exp_year]': expYear,
-            'card[cvc]': cvc,
-          },
-        );
-
-        final stripeData = jsonDecode(stripeResponse.body);
-        if (stripeResponse.statusCode != 200) {
-          final errorMsg = stripeData['error']?['message'] ?? 'Stripe tokenization failed';
-          _errorMessage = errorMsg;
-          _isLoading = false;
-          notifyListeners();
-          return false;
-        }
-
-        paymentMethodId = stripeData['id'];
+        // Card tokenization is handled server-side by the backend.
+        // We never send raw card data to the Stripe API from the client.
       }
 
-      // 2. Send the PaymentMethod ID or saved card flag to the backend
+      // Send card details (or saved card flag) to our backend.
+      // The backend handles Stripe tokenization using the secret key.
       final response = await _apiClient.post(
         ApiConstants.deposit,
         {
           'amount': amount,
-          if (!useSavedCard) 'paymentMethodId': paymentMethodId,
           if (!useSavedCard) 'cardNumber': cleanCard,
+          if (!useSavedCard) 'expMonth': expMonth,
+          if (!useSavedCard) 'expYear': expYear,
+          if (!useSavedCard) 'cvc': cvc,
           'useSavedCard': useSavedCard,
           'remarks': remarks,
           if (pin != null) 'pin': pin,

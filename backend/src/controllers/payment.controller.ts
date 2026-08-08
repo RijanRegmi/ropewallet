@@ -22,6 +22,10 @@ export class PaymentController {
   static async deposit(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { amount, paymentMethodId, remarks, useSavedCard } = req.body;
+      const cardNumber = req.body.cardNumber as string | undefined;
+      const expMonth = req.body.expMonth as string | undefined;
+      const expYear = req.body.expYear as string | undefined;
+      const cvc = req.body.cvc as string | undefined;
       const userId = (req as any).user?.id;
 
       if (!amount || amount <= 0) {
@@ -30,7 +34,8 @@ export class PaymentController {
       }
 
       const isBankDeposit = req.body.method === 'bank' || (req.body.routingNumber && req.body.accountNumber);
-      if (!paymentMethodId && !useSavedCard && !isBankDeposit) {
+      const hasDirectCard = !!(cardNumber && expMonth && expYear && cvc);
+      if (!paymentMethodId && !useSavedCard && !isBankDeposit && !hasDirectCard) {
         res.status(400).json({ success: false, error: 'Please provide a valid payment method ID, bank routing details, or use a saved card' });
         return;
       }
@@ -174,9 +179,25 @@ export class PaymentController {
         }
       }
 
-      let tokenToCharge = paymentMethodId;
+      let tokenToCharge = paymentMethodId || '';
 
-      // If using saved card, create Stripe token from saved card details
+      // Path A: Direct card fields submitted (client never calls Stripe API)
+      if (!useSavedCard && !tokenToCharge && cardNumber && expMonth && expYear && cvc) {
+        const cleanNum = cardNumber.replace(/\s+/g, '');
+        const cardToken = await stripe.tokens.create({
+          card: {
+            number: cleanNum,
+            exp_month: parseInt(expMonth),
+            exp_year: parseInt(expYear),
+            cvc,
+            name: user.fullName || user.email,
+          },
+        });
+        tokenToCharge = cardToken.id;
+        cardLast4 = cleanNum.slice(-4);
+      }
+
+      // Path B: Saved card tokenization
       if (useSavedCard && user.savedCard && user.savedCard.cardNumber) {
         const saved = user.savedCard;
         // This will throw if tokenization fails — do NOT swallow the error
@@ -197,6 +218,7 @@ export class PaymentController {
         res.status(400).json({ success: false, error: 'No valid payment token provided. Please re-enter your card details.' });
         return;
       }
+
 
       if (tokenToCharge.startsWith('tok_')) {
         // Token-based charge (from Stripe /v1/tokens REST API)
