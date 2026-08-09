@@ -40,3 +40,14 @@ Thumbs.db
 google-services.json
 GoogleService-Info.plist
 
+# ─── SECURITY: Never commit one-off diagnostic/admin scripts ──────────────────
+# These often contain hardcoded DB URIs, API keys, or credentials for quick fixes.
+backend/src/scripts/
+**/src/scripts/*.ts
+**/src/scripts/*.js
+
+# Stripe & payment keys that may appear in test scripts
+*stripe_test*
+*adjust_balance*
+*inspect_*.ts
+*inspect_*.js
