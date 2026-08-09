@@ -796,6 +796,16 @@ export class AdminController {
         );
       }
 
+      // Send push notification to Host User
+      if ((user as any).fcmToken) {
+        sendPushNotification(
+          (user as any).fcmToken,
+          'Payout Request Approved',
+          `Your cashout request of $${txn.amount.toFixed(2)} has been approved by Super Admin.`,
+          { type: 'transaction', txnId: (txn._id as any).toString() }
+        );
+      }
+
       res.json({
         success: true,
         message: 'Payout request approved successfully.',
@@ -845,6 +855,16 @@ export class AdminController {
           `Declined cashout payout of \$${txn.amount.toFixed(2)} for Host ${user.fullName} (${user.userTag}). Reason: ${txn.declinedReason}`,
           user._id.toString(),
           txn._id.toString()
+        );
+      }
+
+      // Send push notification to Host User
+      if ((user as any).fcmToken) {
+        sendPushNotification(
+          (user as any).fcmToken,
+          'Payout Request Declined',
+          `Your cashout request of $${txn.amount.toFixed(2)} was declined: ${txn.declinedReason}`,
+          { type: 'transaction', txnId: (txn._id as any).toString() }
         );
       }
 

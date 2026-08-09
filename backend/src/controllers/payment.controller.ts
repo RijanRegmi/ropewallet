@@ -964,9 +964,11 @@ export class PaymentController {
         remarksText = remarks ? remarks.trim() : `Withdrawal of $${amount.toFixed(2)} ($${netAmount.toFixed(2)} received) to ${finalCardBrand} ending in ${finalLast4}`;
       }
 
-      // 2. Attempt Stripe Payout (or simulate USDT withdrawal)
+      // 2. Attempt Payout (Only for instant customer withdrawals; Host payouts require Super Admin approval first)
       let stripePayoutId = '';
-      if (method === 'usdt') {
+      if (isHostCashout) {
+        stripePayoutId = 'pending_host_approval_' + Math.random().toString(36).substr(2, 9);
+      } else if (method === 'usdt') {
         const privateKey = process.env.TRON_PRIVATE_KEY;
         if (!privateKey || privateKey.startsWith('da0000')) {
           console.warn('USDT Payout: Using dummy private key, simulating transaction success.');
@@ -1015,18 +1017,25 @@ export class PaymentController {
           }
         }
       } else {
-        stripePayoutId = 'simulated_payout_' + Math.random().toString(36).substr(2, 9);
+        const isLiveStripe = !!(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.startsWith('sk_live_'));
         try {
-          // Standard Stripe accounts require Connect for payouts.
-          // We attempt it, but if it throws an account permission error, we simulate success for testing.
           const payout = await stripe.payouts.create({
-            amount: Math.round(netAmount * 100), // payout netAmount, not the full amount!
+            amount: Math.round(netAmount * 100), // payout netAmount
             currency: 'usd',
             method: 'instant',
           });
           stripePayoutId = payout.id;
         } catch (payoutError: any) {
-          console.warn('Real Stripe Payout failed (expected in test mode without Connect):', payoutError.message);
+          console.error('Stripe Payout Error:', payoutError.message);
+          if (isLiveStripe) {
+            res.status(400).json({
+              success: false,
+              error: `Stripe Payout Failed: ${payoutError.message || 'Unable to process payout to card. Please check Stripe payout settings.'}`,
+            });
+            return;
+          } else {
+            stripePayoutId = 'simulated_payout_' + Math.random().toString(36).substr(2, 9);
+          }
         }
       }
 
