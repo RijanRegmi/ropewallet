@@ -21,6 +21,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint("Handling background notification: ${message.messageId}");
 }
 
+final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -31,11 +33,15 @@ void main() async {
     await Firebase.initializeApp();
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
     final messaging = FirebaseMessaging.instance;
-    await messaging.requestPermission(alert: true, badge: true, sound: true);
+    await messaging.requestPermission(alert: true, badge: true, sound: true, provisional: false);
+    await messaging.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
   } catch (e) {
     debugPrint('Firebase init error: $e');
   }
-
 
   runApp(
     MultiProvider(
@@ -59,10 +65,68 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   @override
+  void initState() {
+    super.initState();
+    _setupFcmForegroundListener();
+  }
+
+  void _setupFcmForegroundListener() {
+    // Listen for foreground FCM push messages and display floating banner
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      final notification = message.notification;
+      if (notification != null) {
+        rootScaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFF0F172A),
+            elevation: 8,
+            duration: const Duration(seconds: 4),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            margin: const EdgeInsets.all(16),
+            content: Row(
+              children: [
+                const Icon(Icons.notifications_active_rounded, color: Color(0xFF10B981), size: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        notification.title ?? 'Notification',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      if (notification.body != null)
+                        Text(
+                          notification.body!,
+                          style: const TextStyle(color: Colors.white70, fontSize: 12),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    });
+
+    // Listen for token refresh and sync to backend
+    FirebaseMessaging.instance.onTokenRefresh.listen((token) {
+      if (token.isNotEmpty) {
+        ApiClient().post('/auth/fcm-token', {'fcmToken': token});
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
+      scaffoldMessengerKey: rootScaffoldMessengerKey,
       title: 'RopeWallet',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,

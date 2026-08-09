@@ -641,6 +641,32 @@ export class PaymentController {
         remarks: remarks || undefined,
       });
 
+      // ─── Push Notifications for Transfer (Sender & Receiver) ───
+      try {
+        const senderName = `${sender.firstName || ''} ${sender.lastName || ''}`.trim() || 'A user';
+        const receiverName = `${receiver.firstName || ''} ${receiver.lastName || ''}`.trim() || 'A user';
+
+        if (sender.fcmToken) {
+          sendPushNotification(
+            sender.fcmToken,
+            '💸 Transfer Sent',
+            `You sent $${amount.toFixed(2)} to ${receiverName}.`,
+            { type: 'transfer_sent', amount: amount.toString(), transactionId: transaction._id.toString() }
+          );
+        }
+
+        if (receiver.fcmToken) {
+          sendPushNotification(
+            receiver.fcmToken,
+            '💰 Money Received',
+            `You received +$${creditToReceiver.toFixed(2)} from ${senderName}.`,
+            { type: 'transfer_received', amount: creditToReceiver.toString(), transactionId: transaction._id.toString() }
+          );
+        }
+      } catch (pushErr) {
+        console.error('[PaymentController] Push notification error on transfer:', pushErr);
+      }
+
       // Don't expose fee details to customer senders
       const message = senderRole === 'customer'
         ? `Successfully sent $${amount.toFixed(2)}`

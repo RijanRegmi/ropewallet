@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:ropewallet/core/network/api_client.dart';
+import '../../../auth/providers/auth_provider.dart';
 
 class NotificationCenterPage extends StatefulWidget {
   const NotificationCenterPage({super.key});
@@ -196,12 +198,83 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> with Si
                         padding: const EdgeInsets.all(16),
                         itemCount: _transactions.length,
                         itemBuilder: (context, index) {
+                          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                          final user = authProvider.user ?? {};
+                          final userId = user['id'] ?? '';
+
                           final txn = _transactions[index];
-                          final isDeposit = txn['type'] == 'deposit' || txn['type'] == 'p2p_deposit';
-                          final amount = (txn['amount'] as num?)?.toDouble() ?? 0.0;
+                          final String type = txn['type'] ?? 'transfer';
+                          final double amount = (txn['amount'] as num?)?.toDouble() ?? 0.0;
+                          final double netAmount = (txn['netAmount'] as num?)?.toDouble() ?? amount;
+                          final double fee = (txn['fee'] as num?)?.toDouble() ?? 0.0;
+                          final String status = txn['status'] ?? 'completed';
                           final dateStr = txn['createdAt'] != null
                               ? DateTime.tryParse(txn['createdAt'])?.toLocal().toString().substring(0, 16) ?? ''
                               : '';
+
+                          bool isSender = false;
+                          if (type == 'transfer') {
+                            final senderObj = txn['sender'];
+                            final String senderId = senderObj is Map ? (senderObj['_id'] ?? '') : (senderObj ?? '');
+                            isSender = (senderId == userId);
+                          }
+
+                          String title;
+                          String subtitle = txn['remarks'] ?? '';
+                          String amountText;
+                          Color amountColor;
+                          IconData iconData;
+                          Color iconColor;
+
+                          if (type == 'deposit' || type == 'p2p_deposit') {
+                            title = 'Deposit Received';
+                            amountText = '+\$${amount.toStringAsFixed(2)}';
+                            amountColor = const Color(0xFF10B981);
+                            iconData = Icons.south_west_rounded;
+                            iconColor = const Color(0xFF10B981);
+                            if (subtitle.isEmpty) subtitle = 'Wallet Deposit';
+                          } else if (type == 'withdrawal') {
+                            if (status == 'declined') {
+                              title = 'Withdrawal Refunded';
+                              amountText = '+\$${amount.toStringAsFixed(2)}';
+                              amountColor = const Color(0xFF10B981);
+                              iconData = Icons.cancel_outlined;
+                              iconColor = const Color(0xFFEF4444);
+                              subtitle = 'Refunded to wallet balance';
+                            } else if (status == 'pending') {
+                              title = 'Withdrawal (Pending)';
+                              amountText = '-\$${amount.toStringAsFixed(2)}';
+                              amountColor = const Color(0xFFF59E0B);
+                              iconData = Icons.access_time_rounded;
+                              iconColor = const Color(0xFFF59E0B);
+                              subtitle = 'Pending Admin Approval';
+                            } else {
+                              title = 'Withdrawal Payout';
+                              amountText = '-\$${amount.toStringAsFixed(2)}';
+                              amountColor = const Color(0xFFEF4444);
+                              iconData = Icons.north_east_rounded;
+                              iconColor = const Color(0xFFEF4444);
+                              if (subtitle.isEmpty) subtitle = 'Fee \$${fee.toStringAsFixed(2)}';
+                            }
+                          } else if (isSender) {
+                            final receiverObj = txn['receiver'];
+                            final String receiverName = receiverObj is Map ? (receiverObj['fullName'] ?? 'User') : 'User';
+                            title = 'Transfer Sent';
+                            amountText = '-\$${amount.toStringAsFixed(2)}';
+                            amountColor = const Color(0xFFEF4444);
+                            iconData = Icons.north_east_rounded;
+                            iconColor = const Color(0xFFEF4444);
+                            if (subtitle.isEmpty) subtitle = 'Sent to $receiverName';
+                          } else {
+                            final senderObj = txn['sender'];
+                            final String senderName = senderObj is Map ? (senderObj['fullName'] ?? 'User') : 'User';
+                            title = 'Money Received';
+                            amountText = '+\$${netAmount.toStringAsFixed(2)}';
+                            amountColor = const Color(0xFF10B981);
+                            iconData = Icons.south_west_rounded;
+                            iconColor = const Color(0xFF10B981);
+                            if (subtitle.isEmpty) subtitle = 'Received from $senderName';
+                          }
 
                           return Container(
                             margin: const EdgeInsets.only(bottom: 12),
@@ -226,14 +299,12 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> with Si
                                   width: 44,
                                   height: 44,
                                   decoration: BoxDecoration(
-                                    color: isDeposit
-                                        ? const Color(0xFF10B981).withOpacity(0.12)
-                                        : const Color(0xFFEF4444).withOpacity(0.12),
+                                    color: iconColor.withOpacity(0.12),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
-                                    isDeposit ? Icons.south_west_rounded : Icons.north_east_rounded,
-                                    color: isDeposit ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                                    iconData,
+                                    color: iconColor,
                                     size: 22,
                                   ),
                                 ),
@@ -243,12 +314,12 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> with Si
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        isDeposit ? 'Deposit Received' : 'Transfer Sent',
+                                        title,
                                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                                       ),
                                       const SizedBox(height: 3),
                                       Text(
-                                        txn['remarks'] ?? (isDeposit ? 'Wallet Deposit' : 'Peer Transfer'),
+                                        subtitle,
                                         style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600], fontSize: 12),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
@@ -265,30 +336,30 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> with Si
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      '${isDeposit ? '+' : '-'}\$${amount.toStringAsFixed(2)}',
+                                      amountText,
                                       style: TextStyle(
                                         fontWeight: FontWeight.w800,
                                         fontSize: 16,
-                                        color: isDeposit ? const Color(0xFF10B981) : (isDark ? Colors.white : Colors.black87),
+                                        color: amountColor,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: (txn['status'] == 'completed')
+                                        color: (status == 'completed')
                                             ? const Color(0xFF10B981).withOpacity(0.1)
-                                            : const Color(0xFFF59E0B).withOpacity(0.1),
+                                            : (status == 'declined' ? const Color(0xFFEF4444).withOpacity(0.1) : const Color(0xFFF59E0B).withOpacity(0.1)),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
-                                        (txn['status'] ?? 'completed').toString().toUpperCase(),
+                                        status.toUpperCase(),
                                         style: TextStyle(
                                           fontSize: 10,
                                           fontWeight: FontWeight.bold,
-                                          color: (txn['status'] == 'completed')
+                                          color: (status == 'completed')
                                               ? const Color(0xFF10B981)
-                                              : const Color(0xFFF59E0B),
+                                              : (status == 'declined' ? const Color(0xFFEF4444) : const Color(0xFFF59E0B)),
                                         ),
                                       ),
                                     ),

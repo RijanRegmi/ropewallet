@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"const fs=require('fs'); if(!fs.existsSync('dist/config')) fs.mkdirSync('dist/config',{recursive:true}); if(fs.existsSync('src/config')) fs.readdirSync('src/config').filter(f=>f.endsWith('.json')).forEach(f=>fs.copyFileSync('src/config/'+f, 'dist/config/'+f));\"",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "security:test": "tsx src/scripts/security_audit.ts"

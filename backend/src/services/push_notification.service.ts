@@ -12,16 +12,38 @@ const initFirebase = async () => {
   if (isFirebaseInitialized) return;
 
   try {
-    const configDir = path.join(__dirname, '../config');
-    if (!fs.existsSync(configDir)) return;
+    const candidateDirs = [
+      path.join(process.cwd(), 'src/config'),
+      path.join(process.cwd(), 'backend/src/config'),
+      path.join(process.cwd(), 'dist/config'),
+      path.join(__dirname, '../config'),
+      path.join(__dirname, '../../src/config'),
+    ];
 
-    const files = fs.readdirSync(configDir);
-    const serviceAccountFile = files.find((f) => f.includes('firebase-adminsdk') || f.includes('firebase-service-account'));
+    let serviceAccount: any = null;
+    let foundFile = '';
 
-    if (serviceAccountFile) {
-      const keyPath = path.join(configDir, serviceAccountFile);
-      const serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+    for (const dir of candidateDirs) {
+      if (fs.existsSync(dir)) {
+        const files = fs.readdirSync(dir);
+        const file = files.find((f) => f.includes('firebase-adminsdk') || f.includes('firebase-service-account'));
+        if (file) {
+          const keyPath = path.join(dir, file);
+          serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+          foundFile = file;
+          break;
+        }
+      }
+    }
 
+    if (!serviceAccount && process.env.FIREBASE_SERVICE_ACCOUNT) {
+      try {
+        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+        foundFile = 'FIREBASE_SERVICE_ACCOUNT env';
+      } catch (e) {}
+    }
+
+    if (serviceAccount) {
       // Dynamic import to prevent build failure on Vercel
       // @ts-ignore
       const adminModule = await (import('firebase-admin') as any);
@@ -33,7 +55,9 @@ const initFirebase = async () => {
         });
       }
       isFirebaseInitialized = true;
-      console.log(`[PushNotification] Firebase Admin SDK initialized with ${serviceAccountFile}`);
+      console.log(`[PushNotification] Firebase Admin SDK initialized with ${foundFile}`);
+    } else {
+      console.warn('[PushNotification] No Firebase service account file found in candidate paths.');
     }
   } catch (error: any) {
     console.error('[PushNotification] Failed to initialize Firebase Admin SDK:', error.message || error);

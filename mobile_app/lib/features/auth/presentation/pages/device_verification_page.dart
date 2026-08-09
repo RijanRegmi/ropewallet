@@ -82,7 +82,11 @@ class _DeviceVerificationPageState extends State<DeviceVerificationPage> {
     }
   }
 
+  bool _isVerifying = false;
+
   Future<void> _submitVerification() async {
+    if (_isVerifying) return;
+
     final code = _otpCode;
     if (code.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -94,6 +98,10 @@ class _DeviceVerificationPageState extends State<DeviceVerificationPage> {
       return;
     }
 
+    setState(() {
+      _isVerifying = true;
+    });
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final success = await authProvider.verifyNewDevice(
       tempToken: widget.tempToken,
@@ -101,6 +109,10 @@ class _DeviceVerificationPageState extends State<DeviceVerificationPage> {
     );
 
     if (mounted) {
+      setState(() {
+        _isVerifying = false;
+      });
+
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

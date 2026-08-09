@@ -61,21 +61,37 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     }
   }
 
-  Future<void> _sendCode() async {
-    if (!_formKeyEmail.currentState!.validate()) return;
+  bool _isVerifying = false;
+
+  Future<void> _sendCode({bool isResend = false}) async {
+    if (!isResend) {
+      if (_formKeyEmail.currentState == null || !_formKeyEmail.currentState!.validate()) return;
+    }
+
+    final email = _emailController.text.trim();
+    if (email.isEmpty) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final success = await authProvider.sendForgotPasswordOtp(_emailController.text.trim());
+    final success = await authProvider.sendForgotPasswordOtp(email);
 
-    if (success) {
-      setState(() {
-        _step = 1;
-      });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _otpFocusNodes[0].requestFocus();
-      });
-    } else {
-      if (mounted) {
+    if (mounted) {
+      if (success) {
+        if (isResend) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Color(0xFF10B981),
+              content: Text('A new 6-digit code has been sent to your email.'),
+            ),
+          );
+        } else {
+          setState(() {
+            _step = 1;
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _otpFocusNodes[0].requestFocus();
+          });
+        }
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFFEF4444),
@@ -87,6 +103,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   }
 
   Future<void> _verifyOtpCode() async {
+    if (_isVerifying) return;
     final otpCode = _otpControllers.map((c) => c.text.trim()).join();
     if (otpCode.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -98,6 +115,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       return;
     }
 
+    setState(() {
+      _isVerifying = true;
+    });
+
     // Verify OTP with backend
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final success = await authProvider.verifyForgotPasswordOtp(
@@ -105,23 +126,22 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       otpCode: otpCode,
     );
 
-    if (success) {
+    if (mounted) {
       setState(() {
-        _step = 2;
+        _isVerifying = false;
       });
-    } else {
-      if (mounted) {
+
+      if (success) {
+        setState(() {
+          _step = 2;
+        });
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFFEF4444),
             content: Text(authProvider.errorMessage ?? 'Invalid verification code'),
           ),
         );
-        // Clear OTP fields on failure
-        for (var c in _otpControllers) {
-          c.clear();
-        }
-        _otpFocusNodes[0].requestFocus();
       }
     }
   }
@@ -583,7 +603,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     const SizedBox(height: 16),
                     Center(
                       child: TextButton(
-                        onPressed: authProvider.isLoading ? null : _sendCode,
+                        onPressed: authProvider.isLoading ? null : () => _sendCode(isResend: true),
                         child: const Text(
                           'Resend Code',
                           style: TextStyle(

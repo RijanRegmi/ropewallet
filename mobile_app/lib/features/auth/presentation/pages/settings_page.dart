@@ -437,7 +437,11 @@ class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerif
     }
   }
 
+  bool _isVerifying = false;
+
   Future<void> _verifyOtp() async {
+    if (_isVerifying) return;
+
     final otpCode = _otpControllers.map((c) => c.text.trim()).join();
     if (otpCode.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -449,10 +453,37 @@ class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerif
       return;
     }
 
-    // Move to next step (actual update logic validates OTP on submit to prevent unauthorized calls)
     setState(() {
-      _step = 1;
+      _isVerifying = true;
     });
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.user ?? {};
+    final email = user['email'] as String? ?? '';
+
+    final success = await authProvider.verifyForgotPasswordOtp(
+      email: email,
+      otpCode: otpCode,
+    );
+
+    if (mounted) {
+      setState(() {
+        _isVerifying = false;
+      });
+
+      if (success) {
+        setState(() {
+          _step = 1;
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            content: Text(authProvider.errorMessage ?? 'Invalid verification code'),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _submitChange() async {
