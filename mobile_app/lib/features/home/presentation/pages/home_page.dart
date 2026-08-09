@@ -222,7 +222,6 @@ class _HomePageState extends State<HomePage> {
         ? (user['pendingCashoutBalance'] as num).toDouble() 
         : (double.tryParse(user['pendingCashoutBalance']?.toString() ?? '0') ?? 0.00);
     final double totalBalance = availableBalance + pendingCashout;
-    final qrData = user['qrCodeData'] ?? 'no-qr-data';
     final profileImage = user['profileImage'] ?? '';
     final transactions = walletProvider.transactions;
     final isBalanceHidden = walletProvider.isBalanceHidden;

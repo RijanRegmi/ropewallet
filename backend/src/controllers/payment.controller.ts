@@ -196,7 +196,7 @@ export class PaymentController {
         res.status(200).json({
           success: true,
           message: 'Deposit already processed.',
-          data: { walletBalance: user?.walletBalance || 0, transaction: existingTx },
+          data: { walletBalance: user?.walletBalance || 0, pendingCashoutBalance: user?.pendingCashoutBalance || 0, transaction: existingTx },
         });
         return;
       }
@@ -278,7 +278,7 @@ export class PaymentController {
       res.status(200).json({
         success: true,
         message: `$${amount.toFixed(2)} successfully added to your wallet.`,
-        data: { walletBalance: newWalletBalance, transaction },
+        data: { walletBalance: newWalletBalance, pendingCashoutBalance: updatedUser?.pendingCashoutBalance || user.pendingCashoutBalance || 0, transaction },
       });
     } catch (error) {
       next(error);
@@ -431,6 +431,7 @@ export class PaymentController {
         message: `Successfully deposited $${amount.toFixed(2)} from bank account`,
         data: {
           walletBalance: updatedUser.walletBalance,
+          pendingCashoutBalance: updatedUser.pendingCashoutBalance || 0,
           transaction,
         },
       });
@@ -650,6 +651,7 @@ export class PaymentController {
         message,
         data: {
           walletBalance: sender.walletBalance,
+          pendingCashoutBalance: sender.pendingCashoutBalance || 0,
           transaction,
         },
       });

@@ -128,8 +128,10 @@ class WalletProvider with ChangeNotifier {
 
       if (response.statusCode == 200 && responseData['success'] == true) {
         final newBalance = (responseData['data']?['walletBalance'] as num?)?.toDouble();
+        final newPending = (responseData['data']?['pendingCashoutBalance'] as num?)?.toDouble();
         final currentBal = (authProvider.user?['walletBalance'] as num?)?.toDouble() ?? 0.0;
-        authProvider.updateWalletBalance(newBalance ?? (currentBal + amount));
+        final currentPending = (authProvider.user?['pendingCashoutBalance'] as num?)?.toDouble() ?? 0.0;
+        authProvider.updateWalletBalance(newBalance ?? (currentBal + amount), newPending ?? currentPending);
         authProvider.tryAutoLogin();
         fetchTransactions();
         _isLoading = false;
@@ -183,8 +185,10 @@ class WalletProvider with ChangeNotifier {
 
       if (response.statusCode == 200 && responseData['success'] == true) {
         final newBalance = (responseData['data']?['walletBalance'] as num?)?.toDouble();
+        final newPending = (responseData['data']?['pendingCashoutBalance'] as num?)?.toDouble();
         final currentBal = (authProvider.user?['walletBalance'] as num?)?.toDouble() ?? 0.0;
-        authProvider.updateWalletBalance(newBalance ?? (currentBal + amount));
+        final currentPending = (authProvider.user?['pendingCashoutBalance'] as num?)?.toDouble() ?? 0.0;
+        authProvider.updateWalletBalance(newBalance ?? (currentBal + amount), newPending ?? currentPending);
         authProvider.tryAutoLogin();
         fetchTransactions();
         _isLoading = false;
@@ -335,8 +339,10 @@ class WalletProvider with ChangeNotifier {
 
       if (response.statusCode == 200 && responseData['success'] == true) {
         final newBalance = (responseData['data']?['senderWalletBalance'] ?? responseData['data']?['walletBalance'] as num?)?.toDouble();
+        final newPending = (responseData['data']?['pendingCashoutBalance'] as num?)?.toDouble();
         final currentBal = (authProvider.user?['walletBalance'] as num?)?.toDouble() ?? 0.0;
-        authProvider.updateWalletBalance(newBalance ?? ((currentBal - amount).clamp(0.0, double.infinity)));
+        final currentPending = (authProvider.user?['pendingCashoutBalance'] as num?)?.toDouble() ?? 0.0;
+        authProvider.updateWalletBalance(newBalance ?? ((currentBal - amount).clamp(0.0, double.infinity)), newPending ?? currentPending);
         authProvider.tryAutoLogin();
         fetchTransactions();
         _isLoading = false;

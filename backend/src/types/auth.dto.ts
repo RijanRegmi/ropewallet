@@ -27,6 +27,7 @@ export interface AuthResponse {
     email: string;
     phoneNumber: string;
     walletBalance: number;
+    pendingCashoutBalance?: number;
     qrCodeData: string;
     role: 'customer' | 'user' | 'host' | 'admin' | 'superadmin';
     createdAt: Date;
