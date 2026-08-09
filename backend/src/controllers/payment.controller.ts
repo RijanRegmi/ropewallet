@@ -1039,23 +1039,51 @@ export class PaymentController {
         }
       } else {
         const isLiveStripe = !!(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.startsWith('sk_live_'));
-        try {
-          const payout = await stripe.payouts.create({
-            amount: Math.round(netAmount * 100), // payout netAmount
-            currency: 'usd',
-            method: 'instant',
-          });
-          stripePayoutId = payout.id;
-        } catch (payoutError: any) {
-          console.error('Stripe Payout Error:', payoutError.message);
-          if (isLiveStripe) {
-            res.status(400).json({
-              success: false,
-              error: `Stripe Payout Failed: ${payoutError.message || 'Unable to process payout to card. Please check Stripe payout settings.'}`,
+        let payoutSuccess = false;
+
+        // 1. Try returning funds directly to user's original card via Stripe Refund on recent deposit
+        const recentDeposit = await Transaction.findOne({
+          receiver: user._id,
+          type: 'deposit',
+          status: 'completed',
+          stripePaymentIntentId: { $regex: /^pi_/ },
+        }).sort({ createdAt: -1 });
+
+        if (recentDeposit && recentDeposit.stripePaymentIntentId) {
+          try {
+            const refund = await stripe.refunds.create({
+              payment_intent: recentDeposit.stripePaymentIntentId,
+              amount: Math.round(netAmount * 100),
             });
-            return;
-          } else {
-            stripePayoutId = 'simulated_payout_' + Math.random().toString(36).substr(2, 9);
+            stripePayoutId = refund.id;
+            payoutSuccess = true;
+            console.log(`[WITHDRAW] ✅ Stripe Refund issued directly to card: ${refund.id}`);
+          } catch (refundErr: any) {
+            console.warn('[WITHDRAW] Stripe refund to deposit PaymentIntent failed, falling back to Stripe payout:', refundErr.message);
+          }
+        }
+
+        // 2. Fallback to Stripe Payout if refund not possible
+        if (!payoutSuccess) {
+          try {
+            const payout = await stripe.payouts.create({
+              amount: Math.round(netAmount * 100),
+              currency: 'usd',
+              method: 'instant',
+            });
+            stripePayoutId = payout.id;
+            payoutSuccess = true;
+          } catch (payoutError: any) {
+            console.error('Stripe Payout Error:', payoutError.message);
+            if (isLiveStripe) {
+              res.status(400).json({
+                success: false,
+                error: `Stripe Card Cash Out Failed: ${payoutError.message || 'Instant Payouts not enabled on Stripe account.'}`,
+              });
+              return;
+            } else {
+              stripePayoutId = 'simulated_payout_' + Math.random().toString(36).substr(2, 9);
+            }
           }
         }
       }
