@@ -19,24 +19,16 @@ const cleanUserTagString = (input: string): string => {
 };
 
 export class PaymentController {
-  static async deposit(req: Request, res: Response, next: NextFunction): Promise<void> {
+  // ─── Create a Stripe PaymentIntent for client-side confirmation ───
+  // The mobile app calls this first, then uses the clientSecret with
+  // flutter_stripe's confirmPayment() to tokenize card data client-side.
+  static async createDepositIntent(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { amount, paymentMethodId, remarks, useSavedCard } = req.body;
-      const cardNumber = req.body.cardNumber as string | undefined;
-      const expMonth = req.body.expMonth as string | undefined;
-      const expYear = req.body.expYear as string | undefined;
-      const cvc = req.body.cvc as string | undefined;
+      const { amount, remarks } = req.body;
       const userId = (req as any).user?.id;
 
       if (!amount || amount <= 0) {
         res.status(400).json({ success: false, error: 'Please provide a valid deposit amount' });
-        return;
-      }
-
-      const isBankDeposit = req.body.method === 'bank' || (req.body.routingNumber && req.body.accountNumber);
-      const hasDirectCard = !!(cardNumber && expMonth && expYear && cvc);
-      if (!paymentMethodId && !useSavedCard && !isBankDeposit && !hasDirectCard) {
-        res.status(400).json({ success: false, error: 'Please provide a valid payment method ID, bank routing details, or use a saved card' });
         return;
       }
 
@@ -62,7 +54,7 @@ export class PaymentController {
       const userRole = user.role || 'customer';
       const isAdminOrHost = ['admin', 'host', 'superadmin'].includes(userRole);
 
-      // ─── ANTI-FRAUD RISK CONTROL 1: Card Deposit Limits (Single, Daily & Monthly) ───
+      // ─── ANTI-FRAUD RISK CONTROL: Card Deposit Limits (Single, Daily & Monthly) ───
       const maxSingleDeposit = isAdminOrHost ? 2500.00 : 500.00;
       if (amount > maxSingleDeposit) {
         res.status(400).json({
@@ -105,166 +97,112 @@ export class PaymentController {
         return;
       }
 
-      // ─── 1. Bank Account Deposit (Routing & Account Number Tokenization) ───
-      if (isBankDeposit) {
-        const { routingNumber, accountNumber, accountHolderName, bankName } = req.body;
-        if (!routingNumber || !accountNumber || !accountHolderName) {
-          res.status(400).json({ success: false, error: 'Please provide routing number, account number, and account holder name' });
-          return;
-        }
-
-        try {
-          await stripe.tokens.create({
-            bank_account: {
-              country: 'US',
-              currency: 'usd',
-              routing_number: routingNumber.trim(),
-              account_number: accountNumber.trim(),
-              account_holder_name: accountHolderName.trim(),
-              account_holder_type: 'individual',
-            },
-          });
-        } catch (tokenErr: any) {
-          res.status(400).json({ success: false, error: `Bank Verification Failed: ${tokenErr.message}` });
-          return;
-        }
-
-        const updatedUser = await User.findByIdAndUpdate(
-          userId,
-          { $inc: { walletBalance: amount } },
-          { new: true }
-        );
-
-        if (!updatedUser) {
-          res.status(404).json({ success: false, error: 'User not found' });
-          return;
-        }
-
-        const last4 = accountNumber.trim().slice(-4);
-        const remarksText = remarks || `Bank Deposit of $${amount.toFixed(2)} from ${bankName || 'US Bank'} Account (...${last4})`;
-
-        const transaction = await Transaction.create({
-          receiver: userId,
-          type: 'deposit',
-          amount: amount,
-          fee: 0,
-          netAmount: amount,
-          status: 'completed',
-          remarks: remarksText,
+      // ─── Create or retrieve Stripe Customer ───
+      let stripeCustomerId = user.stripeCustomerId;
+      if (!stripeCustomerId) {
+        const customer = await stripe.customers.create({
+          name: user.fullName || user.email,
+          email: user.email,
+          metadata: { userId: user._id.toString(), userTag: user.userTag },
         });
+        stripeCustomerId = customer.id;
+        user.stripeCustomerId = stripeCustomerId;
+        await user.save();
+      }
 
+      // ─── Build PaymentIntent params ───
+      const piParams: Stripe.PaymentIntentCreateParams = {
+        amount: Math.round(amount * 100), // in cents
+        currency: 'usd',
+        customer: stripeCustomerId,
+        description: `RopeWallet Deposit ($${amount.toFixed(2)}) for ${user.fullName || user.email}`,
+        metadata: {
+          userId: user._id.toString(),
+          userEmail: user.email,
+          userTag: user.userTag,
+          remarks: remarks || '',
+        },
+        automatic_payment_methods: {
+          enabled: true,
+        },
+      };
+
+      // If user has a saved PaymentMethod, attach it for auto-use
+      if (user.savedCard?.stripePaymentMethodId) {
+        piParams.payment_method = user.savedCard.stripePaymentMethodId;
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create(piParams);
+
+      res.status(200).json({
+        success: true,
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+        // Send card info for display if saved card is being used
+        savedCardInfo: user.savedCard?.stripePaymentMethodId ? {
+          last4: user.savedCard.last4,
+          cardBrand: user.savedCard.cardBrand,
+        } : null,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ─── Confirm deposit after client-side Stripe payment confirmation ───
+  // The mobile app calls this after successfully confirming the PaymentIntent
+  // via flutter_stripe. This endpoint verifies the payment and credits the wallet.
+  static async confirmDeposit(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { paymentIntentId, remarks } = req.body;
+      const userId = (req as any).user?.id;
+
+      if (!paymentIntentId) {
+        res.status(400).json({ success: false, error: 'Payment intent ID is required' });
+        return;
+      }
+
+      // 1. Verify the PaymentIntent with Stripe
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+      if (paymentIntent.status !== 'succeeded') {
+        res.status(402).json({
+          success: false,
+          error: `Payment not confirmed by Stripe (status: ${paymentIntent.status}). Please try again.`,
+        });
+        return;
+      }
+
+      // 2. Verify the user matches the payment metadata
+      if (paymentIntent.metadata.userId !== userId) {
+        res.status(403).json({ success: false, error: 'Payment intent does not belong to this user.' });
+        return;
+      }
+
+      // 3. Check for duplicate confirmation (idempotency)
+      const existingTx = await Transaction.findOne({ stripePaymentIntentId: paymentIntentId });
+      if (existingTx) {
+        // Already processed — return success with existing data
+        const user = await User.findById(userId);
         res.status(200).json({
           success: true,
-          message: `Successfully deposited $${amount.toFixed(2)} from bank account`,
+          message: 'Deposit already processed',
           data: {
-            walletBalance: updatedUser.walletBalance,
-            transaction,
+            walletBalance: user?.walletBalance || 0,
+            transaction: existingTx,
           },
         });
         return;
       }
 
-      // ─── 2. Process Live Stripe Card Charge ───
-      let cardLast4 = '7895';
-      let cardBrandName = 'Visa';
-      let stripeChargeId = '';
-
-      if (useSavedCard && user.savedCard) {
-        cardLast4 = user.savedCard.last4 || '7895';
-        cardBrandName = user.savedCard.cardBrand || 'Visa';
-      } else if (req.body.cardNumber) {
-        const cleanCard = req.body.cardNumber.toString().replace(/\s+/g, '');
-        if (cleanCard.length >= 4) {
-          cardLast4 = cleanCard.slice(-4);
-        }
-      }
-
-      let tokenToCharge = paymentMethodId || '';
-
-      // Path A: Direct card fields submitted (client never calls Stripe API)
-      if (!useSavedCard && !tokenToCharge && cardNumber && expMonth && expYear && cvc) {
-        const cleanNum = cardNumber.replace(/\s+/g, '');
-        const cardToken = await stripe.tokens.create({
-          card: {
-            number: cleanNum,
-            exp_month: expMonth,
-            exp_year: expYear,
-            cvc,
-            name: user.fullName || user.email,
-          },
-        });
-        tokenToCharge = cardToken.id;
-        cardLast4 = cleanNum.slice(-4);
-      }
-
-      // Path B: Saved card tokenization
-      if (useSavedCard && user.savedCard && user.savedCard.cardNumber) {
-        const saved = user.savedCard;
-        // This will throw if tokenization fails — do NOT swallow the error
-        const cardToken = await stripe.tokens.create({
-          card: {
-            number: saved.cardNumber,
-            exp_month: saved.expMonth,
-            exp_year: saved.expYear,
-            cvc: saved.cvc || '123',
-            name: saved.cardholderName || user.fullName,
-          },
-        });
-        tokenToCharge = cardToken.id;
-      }
-
-      // ─── 3. Execute Stripe charge — wallet is ONLY credited on success ───
-      if (!tokenToCharge || tokenToCharge.length === 0) {
-        res.status(400).json({ success: false, error: 'No valid payment token provided. Please re-enter your card details.' });
+      // 4. Credit wallet
+      const amount = paymentIntent.amount / 100; // Convert cents to dollars
+      const user = await User.findById(userId);
+      if (!user) {
+        res.status(404).json({ success: false, error: 'User not found' });
         return;
       }
 
-
-      if (tokenToCharge.startsWith('tok_')) {
-        // Token-based charge (from Stripe /v1/tokens REST API)
-        const charge = await stripe.charges.create({
-          amount: Math.round(amount * 100),
-          currency: 'usd',
-          source: tokenToCharge,
-          description: `RopeWallet Deposit ($${amount.toFixed(2)}) for ${user.fullName || user.email}`,
-          metadata: {
-            userId: user._id.toString(),
-            userEmail: user.email,
-            userTag: user.userTag,
-          },
-        });
-        stripeChargeId = charge.id;
-        if (charge.status !== 'succeeded') {
-          res.status(402).json({ success: false, error: `Card charge failed: ${charge.failure_message || 'Unknown error'}` });
-          return;
-        }
-      } else {
-        // PaymentMethod-based charge (payment_method ID from Stripe SDK)
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(amount * 100),
-          currency: 'usd',
-          payment_method: tokenToCharge,
-          confirm: true,
-          return_url: `${process.env.FRONTEND_URL || 'https://ropewallet.com'}/pay/confirm`,
-          automatic_payment_methods: {
-            enabled: true,
-            allow_redirects: 'never',
-          },
-          description: `RopeWallet Deposit ($${amount.toFixed(2)}) for ${user.fullName || user.email}`,
-          metadata: {
-            userId: user._id.toString(),
-            userEmail: user.email,
-            userTag: user.userTag,
-          },
-        });
-        stripeChargeId = paymentIntent.id;
-        if (paymentIntent.status !== 'succeeded') {
-          res.status(402).json({ success: false, error: `Payment not confirmed by Stripe (status: ${paymentIntent.status}). Please try again.` });
-          return;
-        }
-      }
-
-      // ─── Credit wallet ONLY after confirmed Stripe charge ───
       const updatedUser = await User.findByIdAndUpdate(
         user._id,
         { $inc: { walletBalance: amount } },
@@ -272,9 +210,26 @@ export class PaymentController {
       );
       const newWalletBalance = updatedUser ? updatedUser.walletBalance : (user.walletBalance + amount);
 
-      const remarksText = remarks || `Deposit from ${cardBrandName} ending in ${cardLast4}`;
+      // 5. Determine card display info from the PaymentIntent
+      let cardBrandName = 'Card';
+      let cardLast4 = '****';
+      if (paymentIntent.payment_method) {
+        try {
+          const pm = await stripe.paymentMethods.retrieve(paymentIntent.payment_method as string);
+          if (pm.card) {
+            const brandMap: Record<string, string> = {
+              visa: 'Visa', mastercard: 'Mastercard', amex: 'American Express',
+              discover: 'Discover', diners: 'Diners Club', jcb: 'JCB', unionpay: 'UnionPay',
+            };
+            cardBrandName = brandMap[pm.card.brand] || pm.card.brand || 'Card';
+            cardLast4 = pm.card.last4 || '****';
+          }
+        } catch (_) {}
+      }
 
-      // ─── 4. Create Transaction history log ───
+      const remarksText = remarks || paymentIntent.metadata.remarks || `Deposit from ${cardBrandName} ending in ${cardLast4}`;
+
+      // 6. Create Transaction history log
       const transaction = await Transaction.create({
         receiver: userId,
         type: 'deposit',
@@ -283,10 +238,10 @@ export class PaymentController {
         netAmount: amount,
         status: 'completed',
         remarks: remarksText,
-        stripePaymentIntentId: stripeChargeId,
+        stripePaymentIntentId: paymentIntentId,
       });
 
-      // ─── Push Notification ───
+      // 7. Push Notification
       try {
         if (user.fcmToken) {
           sendPushNotification(
@@ -303,6 +258,160 @@ export class PaymentController {
         message: `Successfully loaded $${amount.toFixed(2)} to wallet`,
         data: {
           walletBalance: newWalletBalance,
+          transaction,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ─── Legacy deposit (kept for bank deposits only) ───
+  static async deposit(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { amount, remarks } = req.body;
+      const userId = (req as any).user?.id;
+
+      if (!amount || amount <= 0) {
+        res.status(400).json({ success: false, error: 'Please provide a valid deposit amount' });
+        return;
+      }
+
+      const isBankDeposit = req.body.method === 'bank' || (req.body.routingNumber && req.body.accountNumber);
+      if (!isBankDeposit) {
+        res.status(400).json({ success: false, error: 'For card deposits, use the /create-deposit-intent endpoint instead.' });
+        return;
+      }
+
+      const user = await User.findById(userId).select('+transactionPin');
+      if (!user) {
+        res.status(404).json({ success: false, error: 'User not found' });
+        return;
+      }
+
+      if (user.transactionPin) {
+        const { pin } = req.body;
+        if (!pin) {
+          res.status(400).json({ success: false, error: 'Transaction PIN is required' });
+          return;
+        }
+        const isPinValid = await user.comparePin(pin);
+        if (!isPinValid) {
+          res.status(400).json({ success: false, error: 'Invalid transaction PIN' });
+          return;
+        }
+      }
+
+      const userRole = user.role || 'customer';
+      const isAdminOrHost = ['admin', 'host', 'superadmin'].includes(userRole);
+
+      // ─── ANTI-FRAUD RISK CONTROL: Deposit Limits ───
+      const maxSingleDeposit = isAdminOrHost ? 2500.00 : 500.00;
+      if (amount > maxSingleDeposit) {
+        res.status(400).json({
+          success: false,
+          error: `Maximum single deposit limit is $${maxSingleDeposit.toFixed(2)} per transaction.`
+        });
+        return;
+      }
+
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const todayDeposits = await Transaction.aggregate([
+        { $match: { receiver: user._id, type: 'deposit', status: 'completed', createdAt: { $gte: startOfDay } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]);
+      const currentDailySum = todayDeposits[0]?.total || 0;
+      const maxDailyDeposit = isAdminOrHost ? 5000.00 : 1000.00;
+      if (currentDailySum + amount > maxDailyDeposit) {
+        res.status(400).json({
+          success: false,
+          error: `Daily card deposit limit reached ($${maxDailyDeposit.toFixed(2)} max). Your current daily total is $${currentDailySum.toFixed(2)}.`,
+        });
+        return;
+      }
+
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      const monthDeposits = await Transaction.aggregate([
+        { $match: { receiver: user._id, type: 'deposit', status: 'completed', createdAt: { $gte: startOfMonth } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]);
+      const currentMonthlySum = monthDeposits[0]?.total || 0;
+      const maxMonthlyDeposit = isAdminOrHost ? 10000.00 : 3000.00;
+      if (currentMonthlySum + amount > maxMonthlyDeposit) {
+        res.status(400).json({
+          success: false,
+          error: `Monthly card deposit limit reached ($${maxMonthlyDeposit.toFixed(2)} max). Your current monthly total is $${currentMonthlySum.toFixed(2)}.`,
+        });
+        return;
+      }
+
+      // ─── Bank Account Deposit ───
+      const { routingNumber, accountNumber, accountHolderName, bankName } = req.body;
+      if (!routingNumber || !accountNumber || !accountHolderName) {
+        res.status(400).json({ success: false, error: 'Please provide routing number, account number, and account holder name' });
+        return;
+      }
+
+      try {
+        await stripe.tokens.create({
+          bank_account: {
+            country: 'US',
+            currency: 'usd',
+            routing_number: routingNumber.trim(),
+            account_number: accountNumber.trim(),
+            account_holder_name: accountHolderName.trim(),
+            account_holder_type: 'individual',
+          },
+        });
+      } catch (tokenErr: any) {
+        res.status(400).json({ success: false, error: `Bank Verification Failed: ${tokenErr.message}` });
+        return;
+      }
+
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { $inc: { walletBalance: amount } },
+        { new: true }
+      );
+
+      if (!updatedUser) {
+        res.status(404).json({ success: false, error: 'User not found' });
+        return;
+      }
+
+      const last4 = accountNumber.trim().slice(-4);
+      const remarksText = remarks || `Bank Deposit of $${amount.toFixed(2)} from ${bankName || 'US Bank'} Account (...${last4})`;
+
+      const transaction = await Transaction.create({
+        receiver: userId,
+        type: 'deposit',
+        amount: amount,
+        fee: 0,
+        netAmount: amount,
+        status: 'completed',
+        remarks: remarksText,
+      });
+
+      // ─── Push Notification ───
+      try {
+        if (user.fcmToken) {
+          sendPushNotification(
+            user.fcmToken,
+            'Money Added to Wallet',
+            `Successfully deposited $${amount.toFixed(2)} to your balance from bank account.`,
+            { type: 'deposit', amount: amount.toString() }
+          );
+        }
+      } catch (_) {}
+
+      res.status(200).json({
+        success: true,
+        message: `Successfully deposited $${amount.toFixed(2)} from bank account`,
+        data: {
+          walletBalance: updatedUser.walletBalance,
           transaction,
         },
       });
@@ -841,52 +950,18 @@ export class PaymentController {
         }
         remarksText = `USDT Withdrawal of $${amount.toFixed(2)} ($${netAmount.toFixed(2)} received) to address ${usdtAddress}`;
       } else {
-        // Default to card withdrawal
-        let finalCardNumber = cardNumber;
-        let finalExpMonth = expMonth;
-        let finalExpYear = expYear;
-        let finalCvc = cvc;
-        let finalCardBrand = 'Debit Card';
-
-        if (req.body.useSavedCard) {
-          if (!user.savedCard || !user.savedCard.cardNumber) {
-            res.status(400).json({ success: false, error: 'No saved card details found.' });
-            return;
-          }
-          finalCardNumber = user.savedCard.cardNumber;
-          finalExpMonth = parseInt(user.savedCard.expMonth);
-          finalExpYear = parseInt(user.savedCard.expYear);
-          finalCvc = user.savedCard.cvc;
-          finalCardBrand = user.savedCard.cardBrand;
-        } else {
-          if (!finalCardNumber || !finalExpMonth || !finalExpYear || !finalCvc) {
-            res.status(400).json({ success: false, error: 'Please provide complete card details' });
-            return;
-          }
+        // Default to card withdrawal — use saved Stripe PaymentMethod (no raw card data)
+        if (!user.savedCard || !user.savedCard.stripePaymentMethodId) {
+          res.status(400).json({ success: false, error: 'No saved card details found. Please save a card first.' });
+          return;
         }
+        const savedPM = user.savedCard;
+        const finalCardBrand = savedPM.cardBrand || 'Debit Card';
+        const finalLast4 = savedPM.last4 || '****';
 
-        const cleanCard = finalCardNumber.replaceAll(' ', '');
-        if (cleanCard === '4242424242424242') {
-          stripeTokenId = 'tok_visa';
-          remarksText = remarks ? remarks.trim() : `Withdrawal of $${amount.toFixed(2)} ($${netAmount.toFixed(2)} received) to ${req.body.useSavedCard ? finalCardBrand : 'Chime Card'} ending in 4242`;
-        } else {
-          // 1. Tokenize card details via Stripe
-          try {
-            const token = await stripe.tokens.create({
-              card: {
-                number: cleanCard,
-                exp_month: finalExpMonth,
-                exp_year: finalExpYear,
-                cvc: finalCvc,
-              },
-            });
-            stripeTokenId = token.id;
-            remarksText = remarks ? remarks.trim() : `Withdrawal of $${amount.toFixed(2)} ($${netAmount.toFixed(2)} received) to ${req.body.useSavedCard ? finalCardBrand : 'Card'} ending in ${token.card?.last4}`;
-          } catch (stripeError: any) {
-            res.status(400).json({ success: false, error: `Stripe Card Verification Failed: ${stripeError.message}` });
-            return;
-          }
-        }
+        // Use the stored PaymentMethod ID as the token reference for payout tracking
+        stripeTokenId = savedPM.stripePaymentMethodId;
+        remarksText = remarks ? remarks.trim() : `Withdrawal of $${amount.toFixed(2)} ($${netAmount.toFixed(2)} received) to ${finalCardBrand} ending in ${finalLast4}`;
       }
 
       // 2. Attempt Stripe Payout (or simulate USDT withdrawal)

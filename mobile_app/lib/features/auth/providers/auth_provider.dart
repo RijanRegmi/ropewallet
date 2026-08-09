@@ -551,11 +551,8 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<bool> saveCard({
+    required String paymentMethodId, // pm_xxx from Stripe SDK
     required String cardholderName,
-    required String cardNumber,
-    required String expMonth,
-    required String expYear,
-    required String cvc,
     required String zipCode,
     required String country,
     required String addressLine1,
@@ -571,11 +568,8 @@ class AuthProvider with ChangeNotifier {
       final response = await _apiClient.post(
         ApiConstants.saveCard,
         {
+          'paymentMethodId': paymentMethodId,
           'cardholderName': cardholderName,
-          'cardNumber': cardNumber,
-          'expMonth': expMonth,
-          'expYear': expYear,
-          'cvc': cvc,
           'zipCode': zipCode,
           'country': country,
           'addressLine1': addressLine1,

@@ -1,6 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
+import Stripe from 'stripe';
 import { AuthService } from '../services/auth.service.js';
 import { User } from '../models/user.model.js';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy_key_for_initialization_12345');
 
 export class AuthController {
   static async checkUserTag(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -294,11 +297,8 @@ export class AuthController {
     try {
       const userId = (req as any).user?.id;
       const {
+        paymentMethodId, // pm_xxx from Stripe SDK client-side tokenization
         cardholderName,
-        cardNumber,
-        expMonth,
-        expYear,
-        cvc,
         zipCode,
         country,
         addressLine1,
@@ -312,22 +312,9 @@ export class AuthController {
         return;
       }
 
-      if (!cardholderName || !cardNumber || !expMonth || !expYear || !cvc || !zipCode || !country || !addressLine1) {
-        res.status(400).json({ success: false, error: 'Please provide complete card details, country, and address' });
+      if (!paymentMethodId || !cardholderName || !zipCode || !country || !addressLine1) {
+        res.status(400).json({ success: false, error: 'Please provide payment method ID, cardholder name, country, and address' });
         return;
-      }
-      
-      const cleanCard = cardNumber.replace(/\s+/g, '');
-      const last4 = cleanCard.substring(cleanCard.length - 4);
-      let cardBrand = 'Debit Card';
-      if (cleanCard.startsWith('4')) {
-        cardBrand = 'Visa';
-      } else if (cleanCard.startsWith('5')) {
-        cardBrand = 'Mastercard';
-      } else if (cleanCard.startsWith('34') || cleanCard.startsWith('37')) {
-        cardBrand = 'American Express';
-      } else if (cleanCard.startsWith('6')) {
-        cardBrand = 'Discover';
       }
 
       const user = await User.findById(userId);
@@ -336,12 +323,63 @@ export class AuthController {
         return;
       }
 
+      // 1. Create or retrieve Stripe Customer
+      let stripeCustomerId = user.stripeCustomerId;
+      if (!stripeCustomerId) {
+        const customer = await stripe.customers.create({
+          name: cardholderName,
+          email: user.email,
+          metadata: { userId: user._id.toString(), userTag: user.userTag },
+        });
+        stripeCustomerId = customer.id;
+        user.stripeCustomerId = stripeCustomerId;
+      }
+
+      // 2. Detach old PaymentMethod if one exists
+      if (user.savedCard?.stripePaymentMethodId) {
+        try {
+          await stripe.paymentMethods.detach(user.savedCard.stripePaymentMethodId);
+        } catch (_) {
+          // Ignore if already detached or invalid
+        }
+      }
+
+      // 3. Attach the new PaymentMethod to the Customer
+      await stripe.paymentMethods.attach(paymentMethodId, {
+        customer: stripeCustomerId,
+      });
+
+      // 4. Set as default payment method for the customer
+      await stripe.customers.update(stripeCustomerId, {
+        invoice_settings: { default_payment_method: paymentMethodId },
+      });
+
+      // 5. Retrieve card details from the PaymentMethod for display
+      const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+      const cardDetails = pm.card;
+      const last4 = cardDetails?.last4 || '****';
+      const expMonth = String(cardDetails?.exp_month || '');
+      const expYear = String(cardDetails?.exp_year || '');
+      let cardBrand = 'Debit Card';
+      if (cardDetails?.brand) {
+        const brandMap: Record<string, string> = {
+          visa: 'Visa',
+          mastercard: 'Mastercard',
+          amex: 'American Express',
+          discover: 'Discover',
+          diners: 'Diners Club',
+          jcb: 'JCB',
+          unionpay: 'UnionPay',
+        };
+        cardBrand = brandMap[cardDetails.brand] || cardDetails.brand;
+      }
+
+      // 6. Store only Stripe references + display fields (NO raw card data)
       user.savedCard = {
         cardholderName,
-        cardNumber: cleanCard,
+        stripePaymentMethodId: paymentMethodId,
         expMonth,
         expYear,
-        cvc,
         zipCode,
         country,
         cardBrand,

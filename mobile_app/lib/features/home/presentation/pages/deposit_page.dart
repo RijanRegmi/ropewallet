@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../../auth/providers/security_provider.dart';
 import '../../providers/wallet_provider.dart';
@@ -21,11 +22,9 @@ class _DepositPageState extends State<DepositPage> {
   final _cardFormKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
 
-  // Card Form Fields
-  final _cardNumberController = TextEditingController();
-  final _expiryController = TextEditingController();
-  final _cvcController = TextEditingController();
+  // Stripe CardField collects card data securely — no raw card controllers needed
   final _remarksController = TextEditingController();
+  bool _stripeCardComplete = false; // Tracks if Stripe CardField has valid data
 
   // Additional Billing Fields (Symmetrical to SavedCardPage)
   final _cardholderController = TextEditingController();
@@ -61,9 +60,6 @@ class _DepositPageState extends State<DepositPage> {
   @override
   void dispose() {
     _amountController.dispose();
-    _cardNumberController.dispose();
-    _expiryController.dispose();
-    _cvcController.dispose();
     _remarksController.dispose();
     _cardholderController.dispose();
     _addressController.dispose();
@@ -126,12 +122,18 @@ class _DepositPageState extends State<DepositPage> {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final savedCard = authProvider.user?['savedCard'];
-    final hasSavedCard = savedCard != null && savedCard['cardNumber'] != null && savedCard['cardNumber'].toString().isNotEmpty;
+    final hasSavedCard = savedCard != null && savedCard['stripePaymentMethodId'] != null && savedCard['stripePaymentMethodId'].toString().isNotEmpty;
 
     // Validate form if adding/editing card details
     final bool needsSaveCard = !hasSavedCard || _isInlineEditing;
     if (needsSaveCard) {
       if (!_cardFormKey.currentState!.validate()) return;
+      if (!_stripeCardComplete) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter valid card details')),
+        );
+        return;
+      }
       if (!_agreedToTerms) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please agree to the storage terms to proceed.')),
@@ -159,58 +161,119 @@ class _DepositPageState extends State<DepositPage> {
     }
     final String pin = userPin;
 
-    // Step 1: Save card if needed
+    // Step 1: Save card via Stripe SDK if needed
     if (needsSaveCard) {
       setState(() {
         _isSavingCard = true;
       });
-      
-      final expiryParts = _expiryController.text.split('/');
-      final saveSuccess = await authProvider.saveCard(
-        cardholderName: _cardholderController.text.trim(),
-        cardNumber: _cardNumberController.text.trim(),
-        expMonth: expiryParts[0].trim(),
-        expYear: '20${expiryParts[1].trim()}',
-        cvc: _cvcController.text.trim(),
-        zipCode: _zipController.text.trim(),
-        country: _selectedCountry,
-        addressLine1: _addressController.text.trim(),
-        differentInvoiceName: _differentInvoiceName,
-        invoiceName: _differentInvoiceName ? _invoiceNameController.text.trim() : '',
-        taxId: _taxIdController.text.trim(),
-      );
 
-      setState(() {
-        _isSavingCard = false;
-        if (saveSuccess) {
-          _isInlineEditing = false;
-        }
-      });
-
-      if (!saveSuccess) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFFEF4444),
-            content: Text(authProvider.errorMessage ?? 'Failed to save payment card details'),
+      try {
+        // Create a PaymentMethod using Stripe SDK (card data stays in Stripe's SDK)
+        final paymentMethod = await Stripe.instance.createPaymentMethod(
+          params: const PaymentMethodParams.card(
+            paymentMethodData: PaymentMethodData(),
           ),
         );
+
+        // Send only the pm_xxx ID to our backend
+        final saveSuccess = await authProvider.saveCard(
+          paymentMethodId: paymentMethod.id,
+          cardholderName: _cardholderController.text.trim(),
+          zipCode: _zipController.text.trim(),
+          country: _selectedCountry,
+          addressLine1: _addressController.text.trim(),
+          differentInvoiceName: _differentInvoiceName,
+          invoiceName: _differentInvoiceName ? _invoiceNameController.text.trim() : '',
+          taxId: _taxIdController.text.trim(),
+        );
+
+        setState(() {
+          _isSavingCard = false;
+          if (saveSuccess) {
+            _isInlineEditing = false;
+          }
+        });
+
+        if (!saveSuccess) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: const Color(0xFFEF4444),
+                content: Text(authProvider.errorMessage ?? 'Failed to save payment card details'),
+              ),
+            );
+          }
+          return;
+        }
+      } catch (e) {
+        setState(() {
+          _isSavingCard = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFFEF4444),
+              content: Text('Card error: ${e.toString()}'),
+            ),
+          );
+        }
         return;
       }
     }
 
-    // Step 2: Perform Deposit
-    final updatedSavedCard = authProvider.user?['savedCard'];
-    final cardBrand = updatedSavedCard?['cardBrand'] ?? 'Debit Card';
-    final cardLast4 = updatedSavedCard?['last4'] ?? '4242';
+    // Step 2: Create PaymentIntent on the backend
     final String customRemarks = _remarksController.text.trim();
+    final intentResult = await walletProvider.createDepositIntent(
+      amount: amount,
+      remarks: customRemarks.isNotEmpty ? customRemarks : null,
+      pin: pin,
+    );
+
+    if (intentResult == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            content: Text(walletProvider.errorMessage ?? 'Failed to create payment'),
+          ),
+        );
+      }
+      return;
+    }
+
+    final String clientSecret = intentResult['clientSecret'];
+    final String paymentIntentId = intentResult['paymentIntentId'];
+
+    // Step 3: Confirm payment client-side via Stripe SDK
+    try {
+      await Stripe.instance.confirmPayment(
+        paymentIntentClientSecret: clientSecret,
+        data: const PaymentMethodParams.card(
+          paymentMethodData: PaymentMethodData(),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            content: Text('Payment failed: ${e.toString()}'),
+          ),
+        );
+      }
+      return;
+    }
+
+    // Step 4: Tell backend to verify and credit wallet
+    final updatedSavedCard = authProvider.user?['savedCard'];
+    final cardBrand = updatedSavedCard?['cardBrand'] ?? 'Card';
+    final cardLast4 = updatedSavedCard?['last4'] ?? '****';
     final String finalRemarks = customRemarks.isNotEmpty ? customRemarks : 'Deposit from $cardBrand ending in $cardLast4';
 
-    final success = await walletProvider.deposit(
-      amount: amount,
+    final success = await walletProvider.confirmDeposit(
+      paymentIntentId: paymentIntentId,
       authProvider: authProvider,
       remarks: finalRemarks,
-      useSavedCard: true, // Always use saved card info
-      pin: pin,
     );
 
     if (mounted) {
@@ -393,7 +456,7 @@ class _DepositPageState extends State<DepositPage> {
         : 0.00;
 
     final savedCard = user['savedCard'];
-    final hasSavedCard = savedCard != null && savedCard['cardNumber'] != null && savedCard['cardNumber'].toString().isNotEmpty;
+    final hasSavedCard = savedCard != null && savedCard['stripePaymentMethodId'] != null && savedCard['stripePaymentMethodId'].toString().isNotEmpty;
 
     return DefaultTabController(
       length: 2,
@@ -649,97 +712,24 @@ class _DepositPageState extends State<DepositPage> {
                                 ),
                                 const SizedBox(height: 18),
 
-                                TextFormField(
-                                  controller: _cardNumberController,
-                                  keyboardType: TextInputType.number,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.allow(RegExp(r'[0-9 ]')),
-                                    LengthLimitingTextInputFormatter(19),
-                                    CardNumberFormatter(),
-                                  ],
-                                  decoration: InputDecoration(
-                                    labelText: 'Card Number',
-                                    prefixIcon: const Icon(Icons.credit_card_rounded),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                                    suffixIcon: Container(
-                                      width: 120,
-                                      padding: const EdgeInsets.only(right: 8.0),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.end,
-                                        children: [
-                                          Image.network('https://img.icons8.com/color/48/000000/visa.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('Visa')),
-                                          const SizedBox(width: 3),
-                                          Image.network('https://img.icons8.com/color/48/000000/mastercard.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('MC')),
-                                          const SizedBox(width: 3),
-                                          Image.network('https://img.icons8.com/color/48/000000/amex.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('Amex')),
-                                          const SizedBox(width: 3),
-                                          Image.network('https://img.icons8.com/color/48/000000/discover.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('Disc')),
-                                        ],
-                                      ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                  child: CardField(
+                                    onCardChanged: (card) {
+                                      setState(() {
+                                        _stripeCardComplete = card?.complete ?? false;
+                                      });
+                                    },
+                                    style: TextStyle(
+                                      color: isDark ? Colors.white : Colors.black,
+                                      fontSize: 16,
+                                    ),
+                                    decoration: InputDecoration(
+                                      labelText: 'Card Information',
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                                     ),
                                   ),
-                                  validator: (value) {
-                                    if (hasSavedCard && !_isInlineEditing) return null;
-                                    if (value == null || value.trim().isEmpty) return 'Card number is required';
-                                    if (!_isValidLuhn(value)) return 'Invalid card format';
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 18),
-
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: TextFormField(
-                                        controller: _expiryController,
-                                        keyboardType: TextInputType.number,
-                                        inputFormatters: [
-                                          FilteringTextInputFormatter.allow(RegExp(r'[0-9/]')),
-                                          LengthLimitingTextInputFormatter(5),
-                                          CardExpiryFormatter(),
-                                        ],
-                                        decoration: InputDecoration(
-                                          labelText: 'MM / YY',
-                                          prefixIcon: const Icon(Icons.calendar_today_rounded, size: 20),
-                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                                        ),
-                                        validator: (value) {
-                                          if (hasSavedCard && !_isInlineEditing) return null;
-                                          if (value == null || value.trim().isEmpty) return 'Required';
-                                          final parts = value.split('/');
-                                          if (parts.length != 2) return 'MM/YY';
-                                          final month = int.tryParse(parts[0]);
-                                          if (month == null || month < 1 || month > 12) return '1-12';
-                                          return null;
-                                        },
-                                      ),
-                                    ),
-                                    const SizedBox(width: 14),
-                                    Expanded(
-                                      child: TextFormField(
-                                        controller: _cvcController,
-                                        keyboardType: TextInputType.number,
-                                        obscureText: true,
-                                        inputFormatters: [
-                                          FilteringTextInputFormatter.digitsOnly,
-                                          LengthLimitingTextInputFormatter(4),
-                                        ],
-                                        decoration: InputDecoration(
-                                          labelText: 'CVC',
-                                          prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
-                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                                        ),
-                                        validator: (value) {
-                                          if (hasSavedCard && !_isInlineEditing) return null;
-                                          if (value == null || value.trim().length < 3) return 'Required';
-                                          return null;
-                                        },
-                                      ),
-                                    ),
-                                  ],
                                 ),
                                 const SizedBox(height: 18),
 
@@ -916,19 +906,16 @@ class _DepositPageState extends State<DepositPage> {
                                       TextButton(
                                         onPressed: () {
                                           setState(() {
-                                            _isInlineEditing = true;
-                                            _cardholderController.text = savedCard['cardholderName'] ?? '';
-                                            _cardNumberController.text = _formatCardNumber(savedCard['cardNumber'] ?? '');
-                                            _expiryController.text = '${savedCard['expMonth']}/${(savedCard['expYear'] ?? '').toString().substring(2)}';
-                                            _cvcController.text = savedCard['cvc'] ?? '';
-                                            _zipController.text = savedCard['zipCode'] ?? '';
-                                            _selectedCountry = savedCard['country'] ?? 'United States';
-                                            _addressController.text = savedCard['addressLine1'] ?? '';
-                                            _differentInvoiceName = savedCard['differentInvoiceName'] ?? false;
-                                            _invoiceNameController.text = savedCard['invoiceName'] ?? '';
-                                            _taxIdController.text = savedCard['taxId'] ?? '';
-                                            _agreedToTerms = true;
-                                          });
+                                             _isInlineEditing = true;
+                                             _cardholderController.text = savedCard['cardholderName'] ?? '';
+                                             _zipController.text = savedCard['zipCode'] ?? '';
+                                             _selectedCountry = savedCard['country'] ?? 'United States';
+                                             _addressController.text = savedCard['addressLine1'] ?? '';
+                                             _differentInvoiceName = savedCard['differentInvoiceName'] ?? false;
+                                             _invoiceNameController.text = savedCard['invoiceName'] ?? '';
+                                             _taxIdController.text = savedCard['taxId'] ?? '';
+                                             _agreedToTerms = true;
+                                           });
                                         },
                                         child: const Text('Edit', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                                       ),

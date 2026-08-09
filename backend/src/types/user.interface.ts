@@ -21,15 +21,15 @@ export interface IUser extends Document {
   createdBy?: string; // admin ID who created this account
   usedCardFingerprints?: string[]; // Array of unique card fingerprints used on this account
   fcmToken?: string;
+  stripeCustomerId?: string; // Stripe Customer ID for tokenized payment flows
   role: 'customer' | 'user' | 'host' | 'admin' | 'superadmin';
   createdAt: Date;
   updatedAt: Date;
   savedCard?: {
     cardholderName: string;
-    cardNumber: string;
-    expMonth: string;
-    expYear: string;
-    cvc: string;
+    stripePaymentMethodId: string; // Stripe PaymentMethod ID (pm_xxx) — replaces raw card number
+    expMonth: string;   // Display only (from Stripe PM response)
+    expYear: string;    // Display only (from Stripe PM response)
     zipCode: string;
     country: string;
     cardBrand: string;

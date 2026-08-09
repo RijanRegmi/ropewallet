@@ -8,6 +8,8 @@ const router = Router();
 router.use(protect);
 
 router.post('/deposit', PaymentController.deposit);
+router.post('/create-deposit-intent', PaymentController.createDepositIntent);
+router.post('/confirm-deposit', PaymentController.confirmDeposit);
 router.post('/checkout', PaymentController.createCheckoutSession);
 router.post('/transfer', PaymentController.transfer);
 router.post('/validate-recipient', PaymentController.validateRecipient);

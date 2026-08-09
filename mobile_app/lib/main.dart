@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/network/api_client.dart';
+import 'core/constants/api_constants.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/home/providers/wallet_provider.dart';
 import 'features/auth/providers/security_provider.dart';
@@ -21,6 +23,10 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Stripe SDK for client-side card tokenization (PCI-compliant)
+  Stripe.publishableKey = ApiConstants.stripePublishableKey;
+
   try {
     await Firebase.initializeApp();
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../../auth/providers/security_provider.dart';
 import '../../providers/wallet_provider.dart';
@@ -18,10 +19,8 @@ class _WithdrawPageState extends State<WithdrawPage> {
   final _amountController = TextEditingController();
   
   // Card Form Fields
-  final _cardNumberController = TextEditingController();
-  final _expiryController = TextEditingController();
-  final _cvcController = TextEditingController();
   final _remarksController = TextEditingController();
+  bool _stripeCardComplete = false;
 
   // Additional Billing Fields
   final _cardholderController = TextEditingController();
@@ -61,9 +60,6 @@ class _WithdrawPageState extends State<WithdrawPage> {
   @override
   void dispose() {
     _amountController.dispose();
-    _cardNumberController.dispose();
-    _expiryController.dispose();
-    _cvcController.dispose();
     _remarksController.dispose();
     _cardholderController.dispose();
     _addressController.dispose();
@@ -92,12 +88,18 @@ class _WithdrawPageState extends State<WithdrawPage> {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final savedCard = authProvider.user?['savedCard'];
-    final hasSavedCard = savedCard != null && savedCard['cardNumber'] != null && savedCard['cardNumber'].toString().isNotEmpty;
+    final hasSavedCard = savedCard != null && savedCard['stripePaymentMethodId'] != null && savedCard['stripePaymentMethodId'].toString().isNotEmpty;
 
     // Validate forms
     final bool needsSaveCard = !hasSavedCard || _isInlineEditing;
     if (needsSaveCard) {
       if (!_cardFormKey.currentState!.validate()) return;
+      if (!_stripeCardComplete) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter valid card details')),
+        );
+        return;
+      }
       if (!_agreedToTerms) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please agree to the storage terms to proceed.')),
@@ -129,41 +131,60 @@ class _WithdrawPageState extends State<WithdrawPage> {
     String remarksText = '';
     String receiverName = '';
 
-    // Step 1: Save card if needed
+    // Step 1: Save card via Stripe SDK if needed
     if (needsSaveCard) {
       setState(() {
         _isSavingCard = true;
       });
 
-      final expiryParts = _expiryController.text.split('/');
-      final saveSuccess = await authProvider.saveCard(
-        cardholderName: _cardholderController.text.trim(),
-        cardNumber: _cardNumberController.text.trim(),
-        expMonth: expiryParts[0].trim(),
-        expYear: '20${expiryParts[1].trim()}',
-        cvc: _cvcController.text.trim(),
-        zipCode: _zipController.text.trim(),
-        country: _selectedCountry,
-        addressLine1: _addressController.text.trim(),
-        differentInvoiceName: _differentInvoiceName,
-        invoiceName: _differentInvoiceName ? _invoiceNameController.text.trim() : '',
-        taxId: _taxIdController.text.trim(),
-      );
-
-      setState(() {
-        _isSavingCard = false;
-        if (saveSuccess) {
-          _isInlineEditing = false;
-        }
-      });
-
-      if (!saveSuccess) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFFEF4444),
-            content: Text(authProvider.errorMessage ?? 'Failed to save payment card details'),
+      try {
+        final paymentMethod = await Stripe.instance.createPaymentMethod(
+          params: const PaymentMethodParams.card(
+            paymentMethodData: PaymentMethodData(),
           ),
         );
+
+        final saveSuccess = await authProvider.saveCard(
+          paymentMethodId: paymentMethod.id,
+          cardholderName: _cardholderController.text.trim(),
+          zipCode: _zipController.text.trim(),
+          country: _selectedCountry,
+          addressLine1: _addressController.text.trim(),
+          differentInvoiceName: _differentInvoiceName,
+          invoiceName: _differentInvoiceName ? _invoiceNameController.text.trim() : '',
+          taxId: _taxIdController.text.trim(),
+        );
+
+        setState(() {
+          _isSavingCard = false;
+          if (saveSuccess) {
+            _isInlineEditing = false;
+          }
+        });
+
+        if (!saveSuccess) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: const Color(0xFFEF4444),
+                content: Text(authProvider.errorMessage ?? 'Failed to save payment card details'),
+              ),
+            );
+          }
+          return;
+        }
+      } catch (e) {
+        setState(() {
+          _isSavingCard = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFFEF4444),
+              content: Text('Card error: ${e.toString()}'),
+            ),
+          );
+        }
         return;
       }
     }
@@ -237,7 +258,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
         : 0.00;
 
     final savedCard = user['savedCard'];
-    final hasSavedCard = savedCard != null && savedCard['cardNumber'] != null && savedCard['cardNumber'].toString().isNotEmpty;
+    final hasSavedCard = savedCard != null && savedCard['stripePaymentMethodId'] != null && savedCard['stripePaymentMethodId'].toString().isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -548,99 +569,24 @@ class _WithdrawPageState extends State<WithdrawPage> {
                     ),
                     const SizedBox(height: 18),
 
-                    TextFormField(
-                      controller: _cardNumberController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'[0-9 ]')),
-                        LengthLimitingTextInputFormatter(19),
-                        CardNumberFormatter(),
-                      ],
-                      decoration: InputDecoration(
-                        labelText: 'Card Number',
-                        prefixIcon: const Icon(Icons.credit_card_rounded),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                        suffixIcon: Container(
-                          width: 120,
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Image.network('https://img.icons8.com/color/48/000000/visa.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('Visa')),
-                              const SizedBox(width: 3),
-                              Image.network('https://img.icons8.com/color/48/000000/mastercard.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('MC')),
-                              const SizedBox(width: 3),
-                              Image.network('https://img.icons8.com/color/48/000000/amex.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('Amex')),
-                              const SizedBox(width: 3),
-                              Image.network('https://img.icons8.com/color/48/000000/discover.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('Disc')),
-                            ],
-                          ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: CardField(
+                        onCardChanged: (card) {
+                          setState(() {
+                            _stripeCardComplete = card?.complete ?? false;
+                          });
+                        },
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
+                          fontSize: 16,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Card Information',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Card number is required';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 18),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _expiryController,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(RegExp(r'[0-9/]')),
-                              LengthLimitingTextInputFormatter(5),
-                              CardExpiryFormatter(),
-                            ],
-                            decoration: InputDecoration(
-                              labelText: 'MM / YY',
-                              prefixIcon: const Icon(Icons.calendar_today_rounded, size: 20),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Required';
-                              }
-                              final parts = value.split('/');
-                              if (parts.length != 2) return 'MM/YY';
-                              final month = int.tryParse(parts[0]);
-                              if (month == null || month < 1 || month > 12) return '1-12';
-                              return null;
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _cvcController,
-                            keyboardType: TextInputType.number,
-                            obscureText: true,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              LengthLimitingTextInputFormatter(4),
-                            ],
-                            decoration: InputDecoration(
-                              labelText: 'CVC',
-                              prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().length < 3) {
-                                return 'Required';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                      ],
                     ),
                     const SizedBox(height: 18),
 

@@ -59,16 +59,11 @@ class WalletProvider with ChangeNotifier {
     }
   }
 
-  // Deposit funds via Stripe (REST API integration)
-  Future<bool> deposit({
+  // Step 1: Create a PaymentIntent on the backend, returns clientSecret
+  // for client-side Stripe SDK confirmation
+  Future<Map<String, dynamic>?> createDepositIntent({
     required double amount,
-    String? cardNumber,
-    String? expMonth,
-    String? expYear,
-    String? cvc,
-    required AuthProvider authProvider,
     String? remarks,
-    bool useSavedCard = false,
     String? pin,
   }) async {
     _isLoading = true;
@@ -76,33 +71,55 @@ class WalletProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      String cleanCard = '';
-
-      if (!useSavedCard) {
-        if (cardNumber == null || expMonth == null || expYear == null || cvc == null) {
-          _errorMessage = 'Card details are required';
-          _isLoading = false;
-          notifyListeners();
-          return false;
-        }
-        cleanCard = cardNumber.replaceAll(' ', '');
-        // Card tokenization is handled server-side by the backend.
-        // We never send raw card data to the Stripe API from the client.
-      }
-
-      // Send card details (or saved card flag) to our backend.
-      // The backend handles Stripe tokenization using the secret key.
       final response = await _apiClient.post(
-        ApiConstants.deposit,
+        ApiConstants.createDepositIntent,
         {
           'amount': amount,
-          if (!useSavedCard) 'cardNumber': cleanCard,
-          if (!useSavedCard) 'expMonth': expMonth,
-          if (!useSavedCard) 'expYear': expYear,
-          if (!useSavedCard) 'cvc': cvc,
-          'useSavedCard': useSavedCard,
           'remarks': remarks,
           if (pin != null) 'pin': pin,
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        _isLoading = false;
+        notifyListeners();
+        return {
+          'clientSecret': responseData['clientSecret'],
+          'paymentIntentId': responseData['paymentIntentId'],
+          'savedCardInfo': responseData['savedCardInfo'],
+        };
+      } else {
+        _errorMessage = responseData['error'] ?? 'Failed to create payment intent';
+        _isLoading = false;
+        notifyListeners();
+        return null;
+      }
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return null;
+    }
+  }
+
+  // Step 2: After client-side Stripe confirmation, tell backend to credit wallet
+  Future<bool> confirmDeposit({
+    required String paymentIntentId,
+    required AuthProvider authProvider,
+    String? remarks,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post(
+        ApiConstants.confirmDeposit,
+        {
+          'paymentIntentId': paymentIntentId,
+          'remarks': remarks,
         },
       );
 
@@ -120,7 +137,7 @@ class WalletProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = responseData['error'] ?? 'Deposit failed';
+        _errorMessage = responseData['error'] ?? 'Deposit confirmation failed';
         _isLoading = false;
         notifyListeners();
         return false;
@@ -228,10 +245,6 @@ class WalletProvider with ChangeNotifier {
     required double amount,
     required String method,
     required AuthProvider authProvider,
-    String? cardNumber,
-    int? expMonth,
-    int? expYear,
-    String? cvc,
     String? routingNumber,
     String? accountNumber,
     String? bankName,
@@ -252,10 +265,6 @@ class WalletProvider with ChangeNotifier {
         {
           'amount': amount,
           'method': method,
-          'cardNumber': cardNumber?.replaceAll(' ', ''),
-          'expMonth': expMonth,
-          'expYear': expYear,
-          'cvc': cvc,
           'routingNumber': routingNumber,
           'accountNumber': accountNumber,
           'bankName': bankName,

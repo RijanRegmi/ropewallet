@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_constants.dart';
@@ -39,11 +40,7 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
   final _routingController = TextEditingController();
   final _accountController = TextEditingController();
   final _remarksController = TextEditingController();
-
-  // Card Input Details for Chime Card Deposit
-  final _cardNumberController = TextEditingController();
-  final _expiryController = TextEditingController();
-  final _cvcController = TextEditingController();
+  bool _stripeCardComplete = false;
 
   @override
   void initState() {
@@ -71,9 +68,6 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
     _routingController.dispose();
     _accountController.dispose();
     _remarksController.dispose();
-    _cardNumberController.dispose();
-    _expiryController.dispose();
-    _cvcController.dispose();
     super.dispose();
   }
 
@@ -98,21 +92,59 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
 
     if (pin == null) return;
 
-    final hasSavedCard = authProvider.user?['savedCard'] != null;
-    final expiryParts = _expiryController.text.contains('/')
-        ? _expiryController.text.split('/')
-        : <String>[];
+    final hasSavedCard = authProvider.user?['savedCard']?['stripePaymentMethodId'] != null;
 
-    final success = await walletProvider.deposit(
+    if (!hasSavedCard && !_stripeCardComplete) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter complete valid card details')),
+      );
+      return;
+    }
+
+    final intentResult = await walletProvider.createDepositIntent(
       amount: amount,
-      authProvider: authProvider,
-      cardNumber: hasSavedCard ? null : _cardNumberController.text.trim(),
-      expMonth: !hasSavedCard && expiryParts.isNotEmpty ? expiryParts[0].trim() : null,
-      expYear: !hasSavedCard && expiryParts.length > 1 ? '20${expiryParts[1].trim()}' : null,
-      cvc: hasSavedCard ? null : _cvcController.text.trim(),
-      pin: pin,
       remarks: 'Deposit from Chime Debit Card',
-      useSavedCard: hasSavedCard,
+      pin: pin,
+    );
+
+    if (intentResult == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            content: Text(walletProvider.errorMessage ?? 'Failed to create payment intent'),
+          ),
+        );
+      }
+      return;
+    }
+
+    final String clientSecret = intentResult['clientSecret'];
+    final String paymentIntentId = intentResult['paymentIntentId'];
+
+    try {
+      await Stripe.instance.confirmPayment(
+        paymentIntentClientSecret: clientSecret,
+        data: const PaymentMethodParams.card(
+          paymentMethodData: PaymentMethodData(),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            content: Text('Payment failed: ${e.toString()}'),
+          ),
+        );
+      }
+      return;
+    }
+
+    final success = await walletProvider.confirmDeposit(
+      paymentIntentId: paymentIntentId,
+      authProvider: authProvider,
+      remarks: 'Deposit from Chime Debit Card',
     );
 
     if (mounted) {
@@ -402,7 +434,7 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
         : 0.00;
     
     final savedCard = user['savedCard'];
-    final hasSavedCard = savedCard != null && savedCard['cardNumber'] != null && savedCard['cardNumber'].toString().isNotEmpty;
+    final hasSavedCard = savedCard != null && savedCard['stripePaymentMethodId'] != null && savedCard['stripePaymentMethodId'].toString().isNotEmpty;
 
     if (!ApiConstants.enableP2P) {
       return Scaffold(
@@ -757,40 +789,24 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
                       ),
                     ),
                   ] else ...[
-                    TextFormField(
-                      controller: _cardNumberController,
-                      decoration: InputDecoration(
-                        labelText: 'Chime Debit Card Number',
-                        prefixIcon: const Icon(Icons.credit_card_rounded),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: CardField(
+                        onCardChanged: (card) {
+                          setState(() {
+                            _stripeCardComplete = card?.complete ?? false;
+                          });
+                        },
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
+                          fontSize: 16,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Chime Card Details',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        ),
                       ),
-                      validator: (v) => (v == null || v.isEmpty) ? 'Enter card number' : null,
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _expiryController,
-                            decoration: InputDecoration(
-                              labelText: 'Expiry (MM/YY)',
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                            ),
-                            validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _cvcController,
-                            decoration: InputDecoration(
-                              labelText: 'CVC',
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                            ),
-                            validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
-                          ),
-                        ),
-                      ],
                     ),
                   ],
                   const SizedBox(height: 36),

@@ -75,22 +75,18 @@ const userSchema = new Schema<IUser>(
       unique: true,
       required: true,
     },
+    stripeCustomerId: {
+      type: String,
+      default: '',
+    },
     savedCard: {
       cardholderName: { type: String, default: '' },
-      cardNumber: {
+      stripePaymentMethodId: {
         type: String,
         default: '',
-        get: decrypt,
-        set: encrypt,
       },
       expMonth: { type: String, default: '' },
       expYear: { type: String, default: '' },
-      cvc: {
-        type: String,
-        default: '',
-        get: decrypt,
-        set: encrypt,
-      },
       zipCode: { type: String, default: '' },
       country: { type: String, default: '' },
       cardBrand: { type: String, default: '' },

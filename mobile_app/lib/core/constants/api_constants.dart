@@ -55,6 +55,8 @@ class ApiConstants {
   static const String deleteCard = '/auth/delete-card';
   
   static const String deposit = '/payments/deposit';
+  static const String createDepositIntent = '/payments/create-deposit-intent';
+  static const String confirmDeposit = '/payments/confirm-deposit';
   static const String checkout = '/payments/checkout';
   static const String transfer = '/payments/transfer';
   static const String validateRecipient = '/payments/validate-recipient';

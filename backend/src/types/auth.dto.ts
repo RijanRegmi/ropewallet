@@ -34,10 +34,9 @@ export interface AuthResponse {
     profileImage?: string;
     savedCard?: {
       cardholderName: string;
-      cardNumber?: string;
+      stripePaymentMethodId?: string;
       expMonth: string;
       expYear: string;
-      cvc?: string;
       zipCode: string;
       country: string;
       cardBrand: string;
