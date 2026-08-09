@@ -9,6 +9,8 @@ import '../../../auth/providers/security_provider.dart';
 import '../../providers/wallet_provider.dart';
 import 'receipt_page.dart';
 import '../../../auth/presentation/widgets/pin_code_dialog.dart';
+import '../widgets/review_bottom_sheet.dart';
+import '../widgets/full_page_loading_overlay.dart';
 import 'package:ropewallet/core/network/api_client.dart';
 
 class DepositPage extends StatefulWidget {
@@ -130,7 +132,6 @@ class _DepositPageState extends State<DepositPage> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final savedCard = authProvider.user?['savedCard'];
     final pmId = savedCard?['stripePaymentMethodId']?.toString();
-    // A card is only truly "saved" for payment if it has a valid Stripe PM token
     final hasValidStripePM = pmId != null && pmId.isNotEmpty && pmId.startsWith('pm_');
 
     // Validate form if adding/editing card details
@@ -144,11 +145,32 @@ class _DepositPageState extends State<DepositPage> {
         return;
       }
     } else {
-      // Validate amount/remarks form part
       if (!_cardFormKey.currentState!.validate()) return;
     }
 
-    // Prompt for Biometric / Security PIN authorization on deposit
+    final String cardDisplay = hasValidStripePM && savedCard != null
+        ? '${savedCard['cardBrand'] ?? 'Card'} ****${savedCard['last4'] ?? '****'}'
+        : 'Credit/Debit Card';
+    final String customRemarks = _remarksController.text.trim();
+    final String remarksDisplay = customRemarks.isNotEmpty ? customRemarks : 'Load money';
+
+    // 1. Show "Let's Review!" Bottom Sheet (Matching Image 2)
+    final bool? confirmed = await ReviewBottomSheet.show(
+      context,
+      title: "Let's Review!",
+      items: [
+        ReviewItem(label: 'From Account', value: cardDisplay),
+        ReviewItem(label: 'Wallet ID', value: authProvider.user?['userTag'] ?? authProvider.user?['email'] ?? ''),
+        ReviewItem(label: 'Customer Name', value: authProvider.user?['fullName'] ?? 'Customer'),
+        ReviewItem(label: 'Amount', value: '\$${amount.toStringAsFixed(2)}', isHighlight: true),
+        ReviewItem(label: 'Remarks', value: remarksDisplay),
+      ],
+      onConfirm: () {},
+    );
+
+    if (confirmed != true) return;
+
+    // 2. Prompt for Biometric / Security PIN authorization
     final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
     final String? userPin = await securityProvider.authorizeSecurityWithPin(
       context,
@@ -165,36 +187,8 @@ class _DepositPageState extends State<DepositPage> {
       _isSavingCard = true;
     });
 
-    // Show clean non-dismissible progress dialog after PIN is entered
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => const PopScope(
-        canPop: false,
-        child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(18))),
-          content: Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 26,
-                  height: 26,
-                  child: CircularProgressIndicator(strokeWidth: 2.5),
-                ),
-                SizedBox(width: 18),
-                Expanded(
-                  child: Text(
-                    'Processing deposit...',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    // 3. Show Full Page Loading Overlay (Matching Image 3)
+    final loadingOverlay = FullPageLoadingOverlay.show(context, message: 'Processing wallet load...');
 
     try {
       // Step 1: Save card via Stripe SDK if needed
@@ -203,7 +197,6 @@ class _DepositPageState extends State<DepositPage> {
         final expMonth = int.tryParse(expiryParts[0].trim()) ?? 1;
         final expYear = int.tryParse('20${expiryParts[1].trim()}') ?? 2026;
 
-        // Tokenize card client-side via Stripe SDK
         await Stripe.instance.dangerouslyUpdateCardDetails(
           CardDetails(
             number: _cardNumberController.text.replaceAll(' ', ''),
@@ -219,7 +212,6 @@ class _DepositPageState extends State<DepositPage> {
           ),
         );
 
-        // Send only the pm_xxx ID to our backend
         final saveSuccess = await authProvider.saveCard(
           paymentMethodId: paymentMethod.id,
           cardholderName: _cardholderController.text.trim(),
@@ -234,8 +226,8 @@ class _DepositPageState extends State<DepositPage> {
         if (saveSuccess) {
           _isInlineEditing = false;
         } else {
+          loadingOverlay.remove();
           if (mounted) {
-            Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 backgroundColor: const Color(0xFFEF4444),
@@ -248,7 +240,6 @@ class _DepositPageState extends State<DepositPage> {
       }
 
       // Step 2: Create PaymentIntent on the backend
-      final String customRemarks = _remarksController.text.trim();
       final intentResult = await walletProvider.createDepositIntent(
         amount: amount,
         remarks: customRemarks.isNotEmpty ? customRemarks : null,
@@ -256,8 +247,8 @@ class _DepositPageState extends State<DepositPage> {
       );
 
       if (intentResult == null) {
+        loadingOverlay.remove();
         if (mounted) {
-          Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               backgroundColor: const Color(0xFFEF4444),
@@ -310,9 +301,9 @@ class _DepositPageState extends State<DepositPage> {
         remarks: finalRemarks,
       );
 
-      if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
+      loadingOverlay.remove();
 
+      if (mounted) {
         if (success) {
           final newTx = {
             '_id': walletProvider.transactions.isNotEmpty
@@ -348,8 +339,8 @@ class _DepositPageState extends State<DepositPage> {
         }
       }
     } catch (e) {
+      loadingOverlay.remove();
       if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFFEF4444),
@@ -986,17 +977,43 @@ class _DepositPageState extends State<DepositPage> {
                                     width: double.infinity,
                                     height: 52,
                                     child: ElevatedButton(
-                                      onPressed: _isSavingCard ? null : _submitInAppDeposit,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: theme.primaryColor,
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                      ),
-                                      child: _isSavingCard
-                                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                          : const Text('Load', style: TextStyle(fontWeight: FontWeight.bold)),
-                                    ),
-                                  ),
+                                 Align(
+                                   alignment: Alignment.centerRight,
+                                   child: GestureDetector(
+                                     onTap: walletProvider.isLoading ? null : _submitInAppDeposit,
+                                     child: Container(
+                                       width: 60,
+                                       height: 60,
+                                       decoration: BoxDecoration(
+                                         color: isDark ? const Color(0xFF93B0FF) : theme.primaryColor,
+                                         shape: BoxShape.circle,
+                                         boxShadow: [
+                                           BoxShadow(
+                                             color: (isDark ? const Color(0xFF93B0FF) : theme.primaryColor).withOpacity(0.3),
+                                             blurRadius: 12,
+                                             offset: const Offset(0, 4),
+                                           ),
+                                         ],
+                                       ),
+                                       child: Center(
+                                         child: (walletProvider.isLoading || _isSavingCard)
+                                             ? SizedBox(
+                                                 width: 22,
+                                                 height: 22,
+                                                 child: CircularProgressIndicator(
+                                                   color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                                                   strokeWidth: 2.5,
+                                                 ),
+                                               )
+                                             : Icon(
+                                                 Icons.arrow_forward_rounded,
+                                                 color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                                                 size: 26,
+                                               ),
+                                       ),
+                                     ),
+                                   ),
+                                 ),
                                 ],
                               ] else ...[
                                 // Collapsed saved card details

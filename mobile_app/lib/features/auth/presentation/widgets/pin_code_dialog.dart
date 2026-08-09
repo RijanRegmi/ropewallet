@@ -21,18 +21,10 @@ class _PinCodeDialogState extends State<PinCodeDialog> {
   bool _isVerifying = false;
   String? _error;
 
-  @override
-  void initState() {
-    super.initState();
-    // Auto-trigger biometric scanning if enabled
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkBiometricBypass();
-    });
-  }
-
-  Future<void> _checkBiometricBypass({bool force = false}) async {
+  // Manual trigger when user taps fingerprint icon button
+  Future<void> _triggerBiometricScan() async {
     final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
-    if (securityProvider.isBiometricSupported && (force || securityProvider.useBiometrics)) {
+    if (securityProvider.isBiometricSupported && securityProvider.useBiometricsForPin) {
       final authenticated = await securityProvider.authenticateBiometrically();
       if (authenticated && mounted) {
         final savedPin = await securityProvider.getSavedPin();
@@ -145,6 +137,10 @@ class _PinCodeDialogState extends State<PinCodeDialog> {
     final isDark = theme.brightness == Brightness.dark;
     final securityProvider = Provider.of<SecurityProvider>(context);
 
+    // Only show fingerprint icon button if biometrics is supported AND enabled for PIN
+    final bool showFingerprintButton =
+        securityProvider.isBiometricSupported && securityProvider.useBiometricsForPin;
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -237,16 +233,16 @@ class _PinCodeDialogState extends State<PinCodeDialog> {
               ),
               Row(
                 children: [
-                  // Left button: Biometric Auth trigger if supported & enabled
+                  // Left button: Biometric Auth trigger (ONLY IF ENABLED FOR TRANSACTION PIN)
                   Expanded(
-                    child: securityProvider.isBiometricSupported
+                    child: showFingerprintButton
                         ? IconButton(
                             icon: Icon(
                               Icons.fingerprint_rounded,
                               size: 32,
                               color: theme.primaryColor,
                             ),
-                            onPressed: () => _checkBiometricBypass(force: true),
+                            onPressed: _triggerBiometricScan,
                           )
                         : const SizedBox(),
                   ),

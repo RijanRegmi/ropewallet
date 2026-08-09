@@ -128,19 +128,37 @@ class _SecuritySettingsSheetState extends State<SecuritySettingsSheet> {
             ),
             const Divider(height: 32),
 
-            // Biometrics Toggle
+            // 1. Biometric Login Toggle
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: CircleAvatar(
                 backgroundColor: theme.primaryColor.withOpacity(0.15),
                 child: Icon(Icons.fingerprint_rounded, color: theme.primaryColor),
               ),
-              title: const Text('Biometric Authentication', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('Use FaceID/Fingerprint for PIN verification'),
+              title: const Text('Biometric Login', style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: const Text('Use FaceID/Fingerprint to unlock app & login'),
               trailing: Switch(
-                value: securityProvider.useBiometrics && securityProvider.isBiometricSupported,
+                value: securityProvider.useBiometricsForLogin && securityProvider.isBiometricSupported,
                 onChanged: securityProvider.isBiometricSupported
-                    ? (value) => securityProvider.setUseBiometrics(value)
+                    ? (value) => securityProvider.setUseBiometricsForLogin(value)
+                    : null,
+              ),
+            ),
+            const SizedBox(height: 4),
+
+            // 2. Biometric for Transaction PIN Toggle
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: CircleAvatar(
+                backgroundColor: theme.primaryColor.withOpacity(0.15),
+                child: Icon(Icons.shield_outlined, color: theme.primaryColor),
+              ),
+              title: const Text('Biometric for Transactions', style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: const Text('Use FaceID/Fingerprint for PIN payment verification'),
+              trailing: Switch(
+                value: securityProvider.useBiometricsForPin && securityProvider.isBiometricSupported,
+                onChanged: securityProvider.isBiometricSupported
+                    ? (value) => securityProvider.setUseBiometricsForPin(value)
                     : null,
               ),
             ),

@@ -5,6 +5,8 @@ import '../../../auth/providers/auth_provider.dart';
 import '../../../auth/providers/security_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../../auth/presentation/widgets/pin_code_dialog.dart';
+import '../widgets/review_bottom_sheet.dart';
+import '../widgets/full_page_loading_overlay.dart';
 import 'receipt_page.dart';
 
 class SendMoneyPage extends StatefulWidget {
@@ -52,43 +54,63 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
     if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isSubmitting = true;
-    });
-
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
     final String receiverQr = _recipientController.text.trim();
     final String remarks = _remarksController.text.trim();
 
+    // 1. Pre-validate recipient
+    final validationResult = await walletProvider.validateRecipient(receiverQrData: receiverQr);
+    if (validationResult['success'] != true) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: Text(validationResult['error'] ?? 'Customer to customer payments are not allowed. You can only send money to Host accounts.'),
+          ),
+        );
+      }
+      return;
+    }
+
+    // 2. Show "Let's Review!" Bottom Sheet (Matching Image 2)
+    final bool? confirmed = await ReviewBottomSheet.show(
+      context,
+      title: "Let's Review!",
+      items: [
+        ReviewItem(label: 'From Account', value: 'Available Balance'),
+        ReviewItem(label: 'Wallet ID', value: receiverQr),
+        ReviewItem(label: 'Customer Name', value: authProvider.user?['fullName'] ?? 'Customer'),
+        ReviewItem(label: 'Amount', value: '\$${_amount.toStringAsFixed(2)}', isHighlight: true),
+        ReviewItem(label: 'Remarks', value: remarks.isNotEmpty ? remarks : 'Transfer'),
+      ],
+      onConfirm: () {},
+    );
+
+    if (confirmed != true) return;
+
+    // 3. Security Authorization
+    final String? pin = await securityProvider.authorizeSecurityWithPin(
+      context,
+      actionName: 'Send Money',
+      amount: _amount,
+    );
+
+    if (pin == null || pin.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    // 4. Show Full Page Loading Overlay (Matching Image 3)
+    final loadingOverlay = FullPageLoadingOverlay.show(context, message: 'Processing money transfer...');
+
     try {
-      // Pre-validate recipient (customer-to-customer restriction)
-      final validationResult = await walletProvider.validateRecipient(receiverQrData: receiverQr);
-      if (validationResult['success'] != true) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFFEF4444),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              content: Text(validationResult['error'] ?? 'Customer to customer payments are not allowed. You can only send money to Host accounts.'),
-            ),
-          );
-        }
-        return;
-      }
-
-      final String? pin = await securityProvider.authorizeSecurityWithPin(
-        context,
-        actionName: 'Send Money',
-        amount: _amount,
-      );
-
-      if (pin == null || pin.isEmpty) {
-        return;
-      }
-
       final success = await walletProvider.transfer(
         receiverQrData: receiverQr,
         amount: _amount,
@@ -96,6 +118,8 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
         authProvider: authProvider,
         pin: pin,
       );
+
+      loadingOverlay.remove();
 
       if (mounted) {
         if (success) {
@@ -130,6 +154,16 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
             ),
           );
         }
+      }
+    } catch (e) {
+      loadingOverlay.remove();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            content: Text('Transfer error: ${e.toString()}'),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -337,29 +371,41 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
               const SizedBox(height: 36),
 
               // Confirm Button
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: (_isSubmitting || walletProvider.isLoading) ? null : _submitTransfer,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 2,
-                  ),
-                  child: (_isSubmitting || walletProvider.isLoading)
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                        )
-                      : const Text(
-                          'Confirm & Send Money',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  onTap: (_isSubmitting || walletProvider.isLoading) ? null : _submitTransfer,
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF93B0FF) : theme.primaryColor,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: (isDark ? const Color(0xFF93B0FF) : theme.primaryColor).withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
                         ),
+                      ],
+                    ),
+                    child: Center(
+                      child: (_isSubmitting || walletProvider.isLoading)
+                          ? SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : Icon(
+                              Icons.arrow_forward_rounded,
+                              color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                              size: 26,
+                            ),
+                    ),
+                  ),
                 ),
               ),
             ],

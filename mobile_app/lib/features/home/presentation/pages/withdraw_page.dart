@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../../auth/providers/security_provider.dart';
-import '../../providers/wallet_provider.dart';
+import '../../../auth/presentation/widgets/pin_code_dialog.dart';
+import '../widgets/review_bottom_sheet.dart';
+import '../widgets/full_page_loading_overlay.dart';
 import 'receipt_page.dart';
 
 class WithdrawPage extends StatefulWidget {
@@ -111,7 +113,29 @@ class _WithdrawPageState extends State<WithdrawPage> {
       if (!_cardFormKey.currentState!.validate()) return;
     }
 
-    // Prompt for Biometric / Security PIN authorization on cash out
+    final String cardBrandDisplay = hasValidStripePM && savedCard != null
+        ? '${savedCard['cardBrand'] ?? 'Card'} ****${savedCard['last4'] ?? '****'}'
+        : 'Debit Card';
+    final String customRemarks = _remarksController.text.trim();
+    final String remarksDisplay = customRemarks.isNotEmpty ? customRemarks : 'Instant Card Cash Out';
+
+    // 1. Show "Let's Review!" Bottom Sheet (Matching Image 2)
+    final bool? confirmed = await ReviewBottomSheet.show(
+      context,
+      title: "Let's Review!",
+      items: [
+        ReviewItem(label: 'From Account', value: 'Available Balance'),
+        ReviewItem(label: 'Wallet ID', value: cardBrandDisplay),
+        ReviewItem(label: 'Customer Name', value: authProvider.user?['fullName'] ?? 'Customer'),
+        ReviewItem(label: 'Amount', value: '\$${amount.toStringAsFixed(2)}', isHighlight: true),
+        ReviewItem(label: 'Remarks', value: remarksDisplay),
+      ],
+      onConfirm: () {},
+    );
+
+    if (confirmed != true) return;
+
+    // 2. Prompt for Biometric / Security PIN authorization
     final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
     final String? userPin = await securityProvider.authorizeSecurityWithPin(
       context,
@@ -120,12 +144,12 @@ class _WithdrawPageState extends State<WithdrawPage> {
     );
 
     if (userPin == null || userPin.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cash Out authorization canceled')),
-      );
       return;
     }
     final String pin = userPin;
+
+    // 3. Show Full Page Loading Overlay (Matching Image 3)
+    final loadingOverlay = FullPageLoadingOverlay.show(context, message: 'Processing cash out...');
 
     bool success = false;
     final String customRemarks = _remarksController.text.trim();
@@ -218,6 +242,8 @@ class _WithdrawPageState extends State<WithdrawPage> {
       remarks: remarksText,
       useSavedCard: true,
     );
+
+    loadingOverlay.remove();
 
     if (mounted) {
       if (success) {
@@ -761,19 +787,41 @@ class _WithdrawPageState extends State<WithdrawPage> {
                   ),
                   const SizedBox(height: 28),
 
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: (_isSavingCard || walletProvider.isLoading) ? null : () => _submitWithdrawal('card'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.primaryColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: GestureDetector(
+                      onTap: (_isSavingCard || walletProvider.isLoading) ? null : () => _submitWithdrawal('card'),
+                      child: Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF93B0FF) : theme.primaryColor,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: (isDark ? const Color(0xFF93B0FF) : theme.primaryColor).withOpacity(0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: (_isSavingCard || walletProvider.isLoading)
+                              ? SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.arrow_forward_rounded,
+                                  color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                                  size: 26,
+                                ),
+                        ),
                       ),
-                      child: (_isSavingCard || walletProvider.isLoading)
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text('Confirm Instant Card Cash Out', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],
