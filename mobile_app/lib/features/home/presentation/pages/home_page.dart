@@ -777,6 +777,30 @@ class _HomePageState extends State<HomePage> {
                               txTitle = 'Deposit via Stripe';
                               txAmountText = '+\$${amount.toStringAsFixed(2)}';
                               txAmountColor = const Color(0xFF3B82F6);
+                            } else if (type == 'withdrawal') {
+                              final String status = tx['status'] ?? 'completed';
+                              if (status == 'declined') {
+                                txIcon = Icons.cancel_outlined;
+                                txIconColor = const Color(0xFFEF4444);
+                                txTitle = 'Withdrawal Refunded';
+                                txAmountText = '+\$${amount.toStringAsFixed(2)}';
+                                txAmountColor = const Color(0xFF10B981);
+                                txSubtitle = '$formattedDate • Refunded to balance';
+                              } else if (status == 'pending') {
+                                txIcon = Icons.access_time_rounded;
+                                txIconColor = const Color(0xFFF59E0B);
+                                txTitle = 'Withdrawal (Pending)';
+                                txAmountText = '-\$${amount.toStringAsFixed(2)}';
+                                txAmountColor = const Color(0xFFF59E0B);
+                                txSubtitle = '$formattedDate • Pending Admin Approval';
+                              } else {
+                                txIcon = Icons.arrow_upward_rounded;
+                                txIconColor = const Color(0xFFEF4444);
+                                txTitle = 'Withdrawal Payout';
+                                txAmountText = '-\$${amount.toStringAsFixed(2)}';
+                                txAmountColor = const Color(0xFFEF4444);
+                                txSubtitle = '$formattedDate • Fee \$${fee.toStringAsFixed(2)}';
+                              }
                             } else {
                               if (isSender) {
                                 txIcon = Icons.arrow_upward_rounded;

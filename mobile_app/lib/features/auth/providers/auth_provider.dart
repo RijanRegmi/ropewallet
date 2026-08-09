@@ -41,9 +41,12 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  void updateWalletBalance(double newBalance) {
+  void updateWalletBalance(double newBalance, [double? newPendingCashout]) {
     if (_user != null) {
       _user!['walletBalance'] = newBalance;
+      if (newPendingCashout != null) {
+        _user!['pendingCashoutBalance'] = newPendingCashout;
+      }
       try {
         _secureStorage.write(key: 'cached_user_profile', value: jsonEncode(_user));
       } catch (_) {}

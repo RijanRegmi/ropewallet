@@ -62,4 +62,9 @@ router.delete('/notices/:id', NoticeController.deleteNotice);
 // Export
 router.get('/export/transactions', AdminController.exportTransactions);
 
+// ─── Security: Stripe Integrity Audit ─────────────────────────────────────────
+// Compares RopeWallet DB deposit totals against Stripe verified charges.
+// Only Super Admin can run this check.
+router.get('/stripe-integrity', superAdminOnly, AdminController.verifyStripeIntegrity);
+
 export default router;

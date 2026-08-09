@@ -98,4 +98,18 @@ transactionSchema.index({ createdAt: -1 });
 transactionSchema.index({ receiver: 1, createdAt: -1 });
 transactionSchema.index({ sender: 1, createdAt: -1 });
 
+// ─── SECURITY: Unique sparse index on stripePaymentIntentId ───────────────────
+// This ensures that even if two simultaneous requests race to credit the same
+// PaymentIntent, only ONE will succeed at the database level. The second will
+// throw a duplicate key error before any money is touched.
+transactionSchema.index(
+  { stripePaymentIntentId: 1 },
+  {
+    unique: true,
+    sparse: true, // allows multiple null values (non-Stripe transactions)
+    name: 'stripe_pi_idempotency_idx',
+  }
+);
+
 export const Transaction = model<ITransaction>('Transaction', transactionSchema);
+

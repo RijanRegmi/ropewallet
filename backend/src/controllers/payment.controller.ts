@@ -154,55 +154,75 @@ export class PaymentController {
   // via flutter_stripe. This endpoint verifies the payment and credits the wallet.
   static async confirmDeposit(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      // ─── SECURITY: Only accept paymentIntentId from client. NEVER trust client-provided amount. ───
       const { paymentIntentId, remarks } = req.body;
       const userId = (req as any).user?.id;
 
-      if (!paymentIntentId) {
-        res.status(400).json({ success: false, error: 'Payment intent ID is required' });
+      if (!paymentIntentId || typeof paymentIntentId !== 'string' || !paymentIntentId.startsWith('pi_')) {
+        res.status(400).json({ success: false, error: 'A valid Stripe Payment Intent ID is required.' });
         return;
       }
 
-      // 1. Verify the PaymentIntent with Stripe
-      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      // ─── LAYER 1: Retrieve & verify PaymentIntent from Stripe server-side ───
+      let paymentIntent: import('stripe').Stripe.PaymentIntent;
+      try {
+        paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      } catch (stripeErr: any) {
+        console.error('[SECURITY] Failed to retrieve PaymentIntent from Stripe:', stripeErr.message);
+        res.status(402).json({ success: false, error: 'Unable to verify payment with Stripe. Please try again.' });
+        return;
+      }
 
+      // ─── LAYER 2: Stripe must confirm payment succeeded ───
       if (paymentIntent.status !== 'succeeded') {
         res.status(402).json({
           success: false,
-          error: `Payment not confirmed by Stripe (status: ${paymentIntent.status}). Please try again.`,
+          error: `Payment not confirmed by Stripe (status: ${paymentIntent.status}). No funds have been added.`,
         });
         return;
       }
 
-      // 2. Verify the user matches the payment metadata
+      // ─── LAYER 3: PaymentIntent must belong to this authenticated user ───
       if (paymentIntent.metadata.userId !== userId) {
-        res.status(403).json({ success: false, error: 'Payment intent does not belong to this user.' });
+        console.error(`[SECURITY ALERT] PaymentIntent userId (${paymentIntent.metadata.userId}) does not match auth userId (${userId})`);
+        res.status(403).json({ success: false, error: 'Payment security check failed: ownership mismatch.' });
         return;
       }
 
-      // 3. Check for duplicate confirmation (idempotency)
+      // ─── LAYER 4: Idempotency — prevent double-credit on retry/replay ───
       const existingTx = await Transaction.findOne({ stripePaymentIntentId: paymentIntentId });
       if (existingTx) {
-        // Already processed — return success with existing data
         const user = await User.findById(userId);
         res.status(200).json({
           success: true,
-          message: 'Deposit already processed',
-          data: {
-            walletBalance: user?.walletBalance || 0,
-            transaction: existingTx,
-          },
+          message: 'Deposit already processed.',
+          data: { walletBalance: user?.walletBalance || 0, transaction: existingTx },
         });
         return;
       }
 
-      // 4. Credit wallet
-      const amount = paymentIntent.amount / 100; // Convert cents to dollars
-      const user = await User.findById(userId);
-      if (!user) {
-        res.status(404).json({ success: false, error: 'User not found' });
+      // ─── LAYER 5: Amount comes ONLY from Stripe — never from client body ───
+      const amount = (paymentIntent.amount_received || paymentIntent.amount) / 100;
+      if (amount <= 0) {
+        res.status(400).json({ success: false, error: 'Stripe confirmed $0 for this payment. No funds added.' });
         return;
       }
 
+      const user = await User.findById(userId);
+      if (!user) {
+        res.status(404).json({ success: false, error: 'User account not found.' });
+        return;
+      }
+
+      // ─── LAYER 6: Cross-check Stripe Customer ID to prevent payment replay from another account ───
+      if (paymentIntent.customer && user.stripeCustomerId &&
+          paymentIntent.customer !== user.stripeCustomerId) {
+        console.error(`[SECURITY ALERT] Stripe customer mismatch — PI: ${paymentIntent.customer}, User: ${user.stripeCustomerId}, userId: ${userId}`);
+        res.status(403).json({ success: false, error: 'Payment security check failed: Stripe customer mismatch.' });
+        return;
+      }
+
+      // ─── LAYER 7: Atomic wallet credit — only after all 6 layers passed ───
       const updatedUser = await User.findByIdAndUpdate(
         user._id,
         { $inc: { walletBalance: amount } },
@@ -210,7 +230,7 @@ export class PaymentController {
       );
       const newWalletBalance = updatedUser ? updatedUser.walletBalance : (user.walletBalance + amount);
 
-      // 5. Determine card display info from the PaymentIntent
+      // ─── Determine card display info from Stripe ───
       let cardBrandName = 'Card';
       let cardLast4 = '****';
       if (paymentIntent.payment_method) {
@@ -227,13 +247,13 @@ export class PaymentController {
         } catch (_) {}
       }
 
-      const remarksText = remarks || paymentIntent.metadata.remarks || `Deposit from ${cardBrandName} ending in ${cardLast4}`;
+      const remarksText = `Deposit from ${cardBrandName} ending in ${cardLast4}`;
 
-      // 6. Create Transaction history log
+      // ─── Create immutable audit transaction log ───
       const transaction = await Transaction.create({
         receiver: userId,
         type: 'deposit',
-        amount: amount,
+        amount,
         fee: 0,
         netAmount: amount,
         status: 'completed',
@@ -241,25 +261,24 @@ export class PaymentController {
         stripePaymentIntentId: paymentIntentId,
       });
 
-      // 7. Push Notification
+      // ─── Push Notification ───
       try {
         if (user.fcmToken) {
           sendPushNotification(
             user.fcmToken,
-            'Money Added to Wallet',
-            `Successfully deposited $${amount.toFixed(2)} to your balance from ${cardBrandName}.`,
+            '💰 Money Added to Wallet',
+            `$${amount.toFixed(2)} deposited from ${cardBrandName} ****${cardLast4}.`,
             { type: 'deposit', amount: amount.toString() }
           );
         }
       } catch (_) {}
 
+      console.log(`[DEPOSIT] ✅ userId=${userId} amount=$${amount} pi=${paymentIntentId}`);
+
       res.status(200).json({
         success: true,
-        message: `Successfully loaded $${amount.toFixed(2)} to wallet`,
-        data: {
-          walletBalance: newWalletBalance,
-          transaction,
-        },
+        message: `$${amount.toFixed(2)} successfully added to your wallet.`,
+        data: { walletBalance: newWalletBalance, transaction },
       });
     } catch (error) {
       next(error);
@@ -1111,65 +1130,84 @@ export class PaymentController {
     const sig = req.headers['stripe-signature'];
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-    let event: Stripe.Event;
-
-    try {
-      if (!endpointSecret) {
-        if (process.env.NODE_ENV === 'production') {
-          console.error('[SECURITY FATAL] STRIPE_WEBHOOK_SECRET missing in production environment');
-          res.status(500).send('Webhook configuration error');
-          return;
-        }
-        console.warn('[SECURITY WARNING] STRIPE_WEBHOOK_SECRET not set. Processing unverified webhook body in local dev mode only.');
-        event = req.body;
-      } else {
-        if (!sig) {
-          res.status(400).send('Missing stripe-signature header');
-          return;
-        }
-        const rawBody = (req as any).rawBody || req.body;
-        event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
-      }
-    } catch (err: any) {
-      console.error('[SECURITY ALERT] Stripe Webhook signature verification failed:', err.message);
-      res.status(400).send(`Webhook Error: ${err.message}`);
+    // ─── SECURITY: Stripe webhook signature MUST always be verified ───
+    // Never process webhook payloads without cryptographic signature verification.
+    if (!endpointSecret) {
+      console.error('[SECURITY FATAL] STRIPE_WEBHOOK_SECRET is missing. Cannot verify webhook authenticity.');
+      res.status(500).send('Webhook configuration error: missing secret.');
       return;
     }
 
+    if (!sig) {
+      console.error('[SECURITY ALERT] Webhook received without stripe-signature header. Rejected.');
+      res.status(400).send('Missing stripe-signature header. Webhook rejected.');
+      return;
+    }
+
+    let event: Stripe.Event;
+    try {
+      const rawBody = (req as any).rawBody || req.body;
+      event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
+    } catch (err: any) {
+      console.error('[SECURITY ALERT] Stripe Webhook signature verification FAILED:', err.message);
+      res.status(400).send(`Webhook signature verification failed: ${err.message}`);
+      return;
+    }
+
+    // ─── Process verified Stripe events ───
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       const userId = session.metadata?.userId;
-      const amountStr = session.metadata?.amount;
 
-      if (userId && amountStr) {
-        const amount = parseFloat(amountStr);
-        try {
-          const user = await User.findById(userId);
-          if (user) {
-            user.walletBalance = Number((user.walletBalance + amount).toFixed(2));
-            await user.save();
+      // Amount comes STRICTLY from Stripe's server-verified session object
+      const amountFromSession = session.amount_total ? (session.amount_total / 100) : 0;
 
-            // Log Transaction
-            await Transaction.create({
-              receiver: user._id,
-              type: 'deposit',
-              amount: amount,
-              fee: 0,
-              netAmount: amount,
-              stripePaymentIntentId: session.id,
-              remarks: 'Deposit via Stripe Checkout (Apple Pay/Chime/Venmo)',
-            });
+      if (!userId || amountFromSession <= 0) {
+        console.warn('[WEBHOOK] Missing userId or zero amount in checkout.session.completed. Skipping.');
+        res.json({ received: true });
+        return;
+      }
 
-            console.log(`Successfully credited $${amount} to user ${user.fullName} via Webhook.`);
-          }
-        } catch (dbError) {
-          console.error('Error updating user balance in webhook:', dbError);
-          res.status(500).send('Internal Server Error');
+      try {
+        // Idempotency guard: prevent duplicate credit if Stripe retries the webhook
+        const existingTx = await Transaction.findOne({ stripePaymentIntentId: session.id });
+        if (existingTx) {
+          console.log(`[WEBHOOK] Session ${session.id} already processed. Skipping duplicate.`);
+          res.json({ received: true, message: 'Already processed.' });
           return;
         }
+
+        // Atomically credit wallet with Stripe-confirmed amount
+        const updatedUser = await User.findOneAndUpdate(
+          { _id: userId },
+          { $inc: { walletBalance: amountFromSession } },
+          { new: true }
+        );
+
+        if (updatedUser) {
+          await Transaction.create({
+            receiver: updatedUser._id,
+            type: 'deposit',
+            amount: amountFromSession,
+            fee: 0,
+            netAmount: amountFromSession,
+            status: 'completed',
+            stripePaymentIntentId: session.id,
+            remarks: 'Deposit via Stripe Checkout',
+          });
+
+          console.log(`[WEBHOOK] ✅ Credited $${amountFromSession} to user ${updatedUser.fullName} (session: ${session.id})`);
+        } else {
+          console.error(`[WEBHOOK] User not found for userId ${userId}. No funds credited.`);
+        }
+      } catch (dbError) {
+        console.error('[WEBHOOK] Database error during balance credit:', dbError);
+        res.status(500).send('Internal Server Error');
+        return;
       }
     }
 
+    // Always acknowledge receipt so Stripe doesn't retry
     res.json({ received: true });
   }
 

@@ -106,6 +106,17 @@ const authLimiter = rateLimit({
   message: { success: false, error: 'Too many authentication attempts, please try again after 15 minutes' },
 });
 
+// Strict Rate Limiter for Financial Operations (Max 20 requests per 15 mins)
+// Protects deposit, withdraw, transfer from brute-force & automated attacks
+const financialLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { trustProxy: false },
+  message: { success: false, error: 'Too many financial requests. Please wait before trying again.' },
+});
+
 // Normalize URL paths for Vercel Serverless environment
 app.use((req, res, next) => {
   if (!req.url.startsWith('/api') && req.url !== '/') {
@@ -168,7 +179,7 @@ app.post(['/api/webhook', '/webhook'], PaymentController.handleWebhook);
 app.use(['/api/auth', '/auth'], authLimiter as any, authRoutes);
 app.use(['/api/admin/login', '/admin/login'], authLimiter as any); // Protect admin login from brute force attacks
 app.use(['/api/admin', '/admin'], adminRoutes);
-app.use(['/api/payments', '/payments'], paymentRoutes);
+app.use(['/api/payments', '/payments'], financialLimiter as any, paymentRoutes);
 app.use(['/api/p2p', '/p2p'], p2pRoutes);
 app.use(['/api/pay', '/pay'], p2pOrderRoutes);
 app.use(['/api/notices', '/notices'], noticeRoutes);
