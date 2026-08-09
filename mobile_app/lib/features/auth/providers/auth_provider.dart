@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../home/providers/wallet_provider.dart';
+import 'security_provider.dart';
 import '../presentation/pages/login_page.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -636,7 +637,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<void> logout({WalletProvider? walletProvider}) async {
+  Future<void> logout({WalletProvider? walletProvider, SecurityProvider? securityProvider}) async {
     _token = null;
     _user = null;
     _isLoading = false;
@@ -644,6 +645,7 @@ class AuthProvider with ChangeNotifier {
     await _secureStorage.delete(key: 'auth_token');
     await _secureStorage.delete(key: 'cached_user_profile');
     walletProvider?.reset();
+    securityProvider?.resetOnLogout();
     notifyListeners();
   }
 

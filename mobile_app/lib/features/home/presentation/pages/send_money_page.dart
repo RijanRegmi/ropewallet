@@ -50,126 +50,147 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
     });
   }
 
+  bool _isProcessingFlow = false;
+
   Future<void> _submitTransfer() async {
-    if (_isSubmitting) return;
+    if (_isProcessingFlow || _isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
 
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
-    final String receiverQr = _recipientController.text.trim();
-    final String remarks = _remarksController.text.trim();
-
-    // 1. Pre-validate recipient
-    final validationResult = await walletProvider.validateRecipient(receiverQrData: receiverQr);
-    if (validationResult['success'] != true) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFFEF4444),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            content: Text(validationResult['error'] ?? 'Customer to customer payments are not allowed. You can only send money to Host accounts.'),
-          ),
-        );
-      }
-      return;
-    }
-
-    // 2. Show "Let's Review!" Bottom Sheet (Matching Image 2)
-    final bool? confirmed = await ReviewBottomSheet.show(
-      context,
-      title: "Let's Review!",
-      items: [
-        ReviewItem(label: 'From Account', value: 'Available Balance'),
-        ReviewItem(label: 'Wallet ID', value: receiverQr),
-        ReviewItem(label: 'Customer Name', value: authProvider.user?['fullName'] ?? 'Customer'),
-        ReviewItem(label: 'Amount', value: '\$${_amount.toStringAsFixed(2)}', isHighlight: true),
-        ReviewItem(label: 'Remarks', value: remarks.isNotEmpty ? remarks : 'Transfer'),
-      ],
-      onConfirm: () {},
-    );
-
-    if (confirmed != true) return;
-
-    // 3. Security Authorization
-    final String? pin = await securityProvider.authorizeSecurityWithPin(
-      context,
-      actionName: 'Send Money',
-      amount: _amount,
-    );
-
-    if (pin == null || pin.isEmpty) {
-      return;
-    }
-
-    setState(() {
-      _isSubmitting = true;
-    });
-
-    // 4. Show Full Page Loading Overlay (Matching Image 3)
-    final loadingOverlay = FullPageLoadingOverlay.show(context, message: 'Processing money transfer...');
+    _isProcessingFlow = true;
+    OverlayEntry? loadingOverlay;
 
     try {
-      final success = await walletProvider.transfer(
-        receiverQrData: receiverQr,
-        amount: _amount,
-        remarks: remarks.isNotEmpty ? remarks : null,
-        authProvider: authProvider,
-        pin: pin,
+      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
+      final String receiverQr = _recipientController.text.trim();
+      final String remarks = _remarksController.text.trim();
+
+      // 1. Show "Let's Review!" Bottom Sheet INSTANTLY (0ms delay)
+      final bool? confirmed = await ReviewBottomSheet.show(
+        context,
+        title: "Let's Review!",
+        items: [
+          ReviewItem(label: 'From Account', value: 'Available Balance'),
+          ReviewItem(label: 'Wallet ID', value: receiverQr),
+          ReviewItem(label: 'Customer Name', value: authProvider.user?['fullName'] ?? 'Customer'),
+          ReviewItem(label: 'Amount', value: '\$${_amount.toStringAsFixed(2)}', isHighlight: true),
+          ReviewItem(label: 'Remarks', value: remarks.isNotEmpty ? remarks : 'Transfer'),
+        ],
+        onConfirm: () {},
       );
 
-      loadingOverlay.remove();
+      if (confirmed != true) return;
+
+      // 2. Security Authorization INSTANTLY (0ms delay)
+      final String? pin = await securityProvider.authorizeSecurityWithPin(
+        context,
+        actionName: 'Send Money',
+        amount: _amount,
+      );
+
+      if (pin == null || pin.isEmpty) {
+        return;
+      }
 
       if (mounted) {
-        if (success) {
-          final newTx = walletProvider.transactions.isNotEmpty
-              ? walletProvider.transactions.first
-              : {
-                  'type': 'transfer',
-                  'amount': _amount,
-                  'fee': 0.0,
-                  'netAmount': _amount,
-                  'remarks': remarks,
-                  'createdAt': DateTime.now().toIso8601String(),
-                  'sender': {'fullName': authProvider.user?['fullName'] ?? 'You'},
-                  'receiver': {'fullName': _recipientController.text.isNotEmpty ? _recipientController.text : 'Recipient'},
-                };
+        setState(() {
+          _isSubmitting = true;
+        });
+      }
 
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ReceiptPage(
-                transaction: newTx,
-                currentUser: authProvider.user ?? {},
-                isNewTransferSuccess: true,
-              ),
-            ),
-          );
-        } else {
+      // 3. Show Full Page Loading Overlay (Matching Image 3)
+      loadingOverlay = FullPageLoadingOverlay.show(context, message: 'Processing money transfer...');
+
+      // 4. Validate recipient
+      final validationResult = await walletProvider.validateRecipient(receiverQrData: receiverQr);
+      if (validationResult['success'] != true) {
+        loadingOverlay?.remove();
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               backgroundColor: const Color(0xFFEF4444),
-              content: Text(walletProvider.errorMessage ?? 'Transfer failed'),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              content: Text(validationResult['error'] ?? 'Customer to customer payments are not allowed. You can only send money to Host accounts.'),
             ),
           );
         }
+        return;
       }
-    } catch (e) {
-      loadingOverlay.remove();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFFEF4444),
-            content: Text('Transfer error: ${e.toString()}'),
-          ),
+
+      try {
+        final success = await walletProvider.transfer(
+          receiverQrData: receiverQr,
+          amount: _amount,
+          remarks: remarks.isNotEmpty ? remarks : null,
+          authProvider: authProvider,
+          pin: pin,
         );
+
+        loadingOverlay?.remove();
+
+        if (mounted) {
+          if (success) {
+            final createdTx = walletProvider.lastCreatedTransaction;
+            final Map<String, dynamic> newTx = {
+              '_id': createdTx?['_id'] ?? 'TX-${DateTime.now().millisecondsSinceEpoch}',
+              'type': 'transfer',
+              'amount': _amount,
+              'fee': (createdTx?['fee'] as num?)?.toDouble() ?? 0.0,
+              'netAmount': (createdTx?['netAmount'] as num?)?.toDouble() ?? _amount,
+              'remarks': remarks.isNotEmpty ? remarks : 'Transfer',
+              'createdAt': createdTx?['createdAt'] ?? DateTime.now().toIso8601String(),
+              'sender': {
+                'fullName': authProvider.user?['fullName'] ?? 'You',
+              },
+              'receiver': {
+                'fullName': (createdTx?['receiver'] is Map && createdTx!['receiver']['fullName'] != null)
+                    ? createdTx['receiver']['fullName']
+                    : (_recipientController.text.isNotEmpty ? _recipientController.text : 'Recipient'),
+              },
+            };
+
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ReceiptPage(
+                  transaction: newTx,
+                  currentUser: authProvider.user ?? {},
+                  isNewTransferSuccess: true,
+                ),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: const Color(0xFFEF4444),
+                content: Text(walletProvider.errorMessage ?? 'Transfer failed'),
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        loadingOverlay?.remove();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFFEF4444),
+              content: Text('Transfer error: ${e.toString()}'),
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isSubmitting = false;
+          });
+        }
       }
     } finally {
+      _isProcessingFlow = false;
       if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
+        setState(() {});
       }
     }
   }

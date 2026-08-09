@@ -8,11 +8,13 @@ class WalletProvider with ChangeNotifier {
   final ApiClient _apiClient = ApiClient();
   
   List<dynamic> _transactions = [];
+  Map<String, dynamic>? _lastCreatedTransaction;
   bool _isLoading = false;
   String? _errorMessage;
   bool _isBalanceHidden = true;
 
   List<dynamic> get transactions => _transactions;
+  Map<String, dynamic>? get lastCreatedTransaction => _lastCreatedTransaction;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isBalanceHidden => _isBalanceHidden;
@@ -30,6 +32,7 @@ class WalletProvider with ChangeNotifier {
   // Reset provider state when switching accounts or logging out
   void reset() {
     _transactions = [];
+    _lastCreatedTransaction = null;
     _isLoading = false;
     _errorMessage = null;
     _isBalanceHidden = true;
@@ -338,6 +341,9 @@ class WalletProvider with ChangeNotifier {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200 && responseData['success'] == true) {
+        if (responseData['data']?['transaction'] != null) {
+          _lastCreatedTransaction = Map<String, dynamic>.from(responseData['data']['transaction']);
+        }
         final newBalance = (responseData['data']?['senderWalletBalance'] ?? responseData['data']?['walletBalance'] as num?)?.toDouble();
         final newPending = (responseData['data']?['pendingCashoutBalance'] as num?)?.toDouble();
         final currentBal = (authProvider.user?['walletBalance'] as num?)?.toDouble() ?? 0.0;

@@ -15,7 +15,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  Future<void> _toggleBiometrics(bool enable, SecurityProvider securityProvider) async {
+  Future<void> _toggleBiometricsForLogin(bool enable, SecurityProvider securityProvider) async {
     if (!securityProvider.isBiometricSupported) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -27,15 +27,14 @@ class _SettingsPageState extends State<SettingsPage> {
     }
 
     if (enable) {
-      // Trigger scan to verify before enabling
       final success = await securityProvider.authenticateBiometrically();
       if (success) {
-        await securityProvider.setUseBiometrics(true);
+        await securityProvider.setUseBiometricsForLogin(true);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               backgroundColor: Color(0xFF10B981),
-              content: Text('Biometric verification enabled!'),
+              content: Text('Biometric login enabled!'),
             ),
           );
         }
@@ -50,11 +49,56 @@ class _SettingsPageState extends State<SettingsPage> {
         }
       }
     } else {
-      await securityProvider.setUseBiometrics(false);
+      await securityProvider.setUseBiometricsForLogin(false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Biometric verification disabled.'),
+            content: Text('Biometric login disabled.'),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleBiometricsForPin(bool enable, SecurityProvider securityProvider) async {
+    if (!securityProvider.isBiometricSupported) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFEF4444),
+          content: Text('Biometrics not supported or registered on this device.'),
+        ),
+      );
+      return;
+    }
+
+    if (enable) {
+      final success = await securityProvider.authenticateBiometrically();
+      if (success) {
+        await securityProvider.setUseBiometricsForPin(true);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Color(0xFF10B981),
+              content: Text('Biometric for transactions enabled!'),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Color(0xFFEF4444),
+              content: Text('Biometric authentication failed. Could not enable.'),
+            ),
+          );
+        }
+      }
+    } else {
+      await securityProvider.setUseBiometricsForPin(false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Biometric for transactions disabled.'),
           ),
         );
       }
@@ -119,18 +163,34 @@ class _SettingsPageState extends State<SettingsPage> {
             decoration: _buildCardDecoration(isDark),
             child: Column(
               children: [
-                // Biometrics toggle
+                // 1. Biometric Login Toggle
                 ListTile(
                   leading: const Icon(Icons.fingerprint_rounded, color: Color(0xFF10B981)),
-                  title: const Text('Biometric Authentication', style: TextStyle(fontWeight: FontWeight.bold)),
+                  title: const Text('Biometric Login', style: TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text(securityProvider.isBiometricSupported
-                      ? 'Use Fingerprint / FaceID to authorize'
+                      ? 'Use Fingerprint / Face ID for account login'
                       : 'Biometrics unavailable'),
                   trailing: Switch(
                     activeColor: const Color(0xFF10B981),
-                    value: securityProvider.useBiometrics && securityProvider.isBiometricSupported,
+                    value: securityProvider.useBiometricsForLogin && securityProvider.isBiometricSupported,
                     onChanged: securityProvider.isBiometricSupported
-                        ? (val) => _toggleBiometrics(val, securityProvider)
+                        ? (val) => _toggleBiometricsForLogin(val, securityProvider)
+                        : null,
+                  ),
+                ),
+
+                // 2. Biometric for Transaction PIN Toggle
+                ListTile(
+                  leading: const Icon(Icons.shield_outlined, color: Color(0xFF10B981)),
+                  title: const Text('Biometric for Transactions', style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text(securityProvider.isBiometricSupported
+                      ? 'Use Fingerprint / Face ID for PIN payment authorization'
+                      : 'Biometrics unavailable'),
+                  trailing: Switch(
+                    activeColor: const Color(0xFF10B981),
+                    value: securityProvider.useBiometricsForPin && securityProvider.isBiometricSupported,
+                    onChanged: securityProvider.isBiometricSupported
+                        ? (val) => _toggleBiometricsForPin(val, securityProvider)
                         : null,
                   ),
                 ),

@@ -112,85 +112,91 @@ class _DepositPageState extends State<DepositPage> {
     return buffer.toString();
   }
 
+  bool _isProcessingFlow = false;
+
   Future<void> _submitInAppDeposit() async {
-    final String amountText = _amountController.text.trim();
-    if (amountText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter an amount')),
-      );
-      return;
-    }
-    final double? amount = double.tryParse(amountText);
-    if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid positive amount')),
-      );
-      return;
-    }
+    if (_isProcessingFlow || _isSavingCard) return;
+    _isProcessingFlow = true;
+    OverlayEntry? loadingOverlay;
 
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final savedCard = authProvider.user?['savedCard'];
-    final pmId = savedCard?['stripePaymentMethodId']?.toString();
-    final hasValidStripePM = pmId != null && pmId.isNotEmpty && pmId.startsWith('pm_');
-
-    // Validate form if adding/editing card details
-    final bool needsSaveCard = !hasValidStripePM || _isInlineEditing;
-    if (needsSaveCard) {
-      if (!_cardFormKey.currentState!.validate()) return;
-      if (!_agreedToTerms) {
+    try {
+      final String amountText = _amountController.text.trim();
+      if (amountText.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please agree to the storage terms to proceed.')),
+          const SnackBar(content: Text('Please enter an amount')),
         );
         return;
       }
-    } else {
-      if (!_cardFormKey.currentState!.validate()) return;
-    }
+      final double? amount = double.tryParse(amountText);
+      if (amount == null || amount <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter a valid positive amount')),
+        );
+        return;
+      }
 
-    final String cardDisplay = hasValidStripePM && savedCard != null
-        ? '${savedCard['cardBrand'] ?? 'Card'} ****${savedCard['last4'] ?? '****'}'
-        : 'Credit/Debit Card';
-    final String customRemarks = _remarksController.text.trim();
-    final String remarksDisplay = customRemarks.isNotEmpty ? customRemarks : 'Load money';
+      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final savedCard = authProvider.user?['savedCard'];
+      final pmId = savedCard?['stripePaymentMethodId']?.toString();
+      final hasValidStripePM = pmId != null && pmId.isNotEmpty && pmId.startsWith('pm_');
 
-    // 1. Show "Let's Review!" Bottom Sheet (Matching Image 2)
-    final bool? confirmed = await ReviewBottomSheet.show(
-      context,
-      title: "Let's Review!",
-      items: [
-        ReviewItem(label: 'From Account', value: cardDisplay),
-        ReviewItem(label: 'Wallet ID', value: authProvider.user?['userTag'] ?? authProvider.user?['email'] ?? ''),
-        ReviewItem(label: 'Customer Name', value: authProvider.user?['fullName'] ?? 'Customer'),
-        ReviewItem(label: 'Amount', value: '\$${amount.toStringAsFixed(2)}', isHighlight: true),
-        ReviewItem(label: 'Remarks', value: remarksDisplay),
-      ],
-      onConfirm: () {},
-    );
+      // Validate form if adding/editing card details
+      final bool needsSaveCard = !hasValidStripePM || _isInlineEditing;
+      if (needsSaveCard) {
+        if (!_cardFormKey.currentState!.validate()) return;
+        if (!_agreedToTerms) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please agree to the storage terms to proceed.')),
+          );
+          return;
+        }
+      } else {
+        if (!_cardFormKey.currentState!.validate()) return;
+      }
 
-    if (confirmed != true) return;
+      final String cardDisplay = hasValidStripePM && savedCard != null
+          ? '${savedCard['cardBrand'] ?? 'Card'} ****${savedCard['last4'] ?? '****'}'
+          : 'Credit/Debit Card';
+      final String customRemarks = _remarksController.text.trim();
+      final String remarksDisplay = customRemarks.isNotEmpty ? customRemarks : 'Load money';
 
-    // 2. Prompt for Biometric / Security PIN authorization
-    final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
-    final String? userPin = await securityProvider.authorizeSecurityWithPin(
-      context,
-      actionName: 'Authorize Deposit',
-      amount: amount,
-    );
+      // 1. Show "Let's Review!" Bottom Sheet (Matching Image 2)
+      final bool? confirmed = await ReviewBottomSheet.show(
+        context,
+        title: "Let's Review!",
+        items: [
+          ReviewItem(label: 'From Account', value: cardDisplay),
+          ReviewItem(label: 'Wallet ID', value: authProvider.user?['userTag'] ?? authProvider.user?['email'] ?? ''),
+          ReviewItem(label: 'Customer Name', value: authProvider.user?['fullName'] ?? 'Customer'),
+          ReviewItem(label: 'Amount', value: '\$${amount.toStringAsFixed(2)}', isHighlight: true),
+          ReviewItem(label: 'Remarks', value: remarksDisplay),
+        ],
+        onConfirm: () {},
+      );
 
-    if (userPin == null || userPin.isEmpty) {
-      return;
-    }
-    final String pin = userPin;
+      if (confirmed != true) return;
 
-    setState(() {
-      _isSavingCard = true;
-    });
+      // 2. Prompt for Biometric / Security PIN authorization
+      final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
+      final String? userPin = await securityProvider.authorizeSecurityWithPin(
+        context,
+        actionName: 'Authorize Deposit',
+        amount: amount,
+      );
 
-    // 3. Show Full Page Loading Overlay (Matching Image 3)
-    final loadingOverlay = FullPageLoadingOverlay.show(context, message: 'Processing wallet load...');
+      if (userPin == null || userPin.isEmpty) {
+        return;
+      }
+      final String pin = userPin;
 
-    try {
+      setState(() {
+        _isSavingCard = true;
+      });
+
+      // 3. Show Full Page Loading Overlay (Matching Image 3)
+      loadingOverlay = FullPageLoadingOverlay.show(context, message: 'Processing wallet load...');
+
       // Step 1: Save card via Stripe SDK if needed
       if (needsSaveCard) {
         final expiryParts = _expiryController.text.split('/');
@@ -305,16 +311,15 @@ class _DepositPageState extends State<DepositPage> {
 
       if (mounted) {
         if (success) {
+          final createdTx = walletProvider.lastCreatedTransaction;
           final newTx = {
-            '_id': walletProvider.transactions.isNotEmpty
-                ? (walletProvider.transactions.first['_id'] ?? 'TX-${DateTime.now().millisecondsSinceEpoch}')
-                : 'TX-${DateTime.now().millisecondsSinceEpoch}',
+            '_id': createdTx?['_id'] ?? 'TX-${DateTime.now().millisecondsSinceEpoch}',
             'type': 'deposit',
             'amount': amount,
             'fee': 0.0,
             'netAmount': amount,
             'remarks': finalRemarks,
-            'createdAt': DateTime.now().toIso8601String(),
+            'createdAt': createdTx?['createdAt'] ?? DateTime.now().toIso8601String(),
             'sender': {'fullName': cardBrand},
             'receiver': {'fullName': authProvider.user?['fullName'] ?? 'You'},
           };
@@ -339,7 +344,7 @@ class _DepositPageState extends State<DepositPage> {
         }
       }
     } catch (e) {
-      loadingOverlay.remove();
+      loadingOverlay?.remove();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -354,6 +359,7 @@ class _DepositPageState extends State<DepositPage> {
           _isSavingCard = false;
         });
       }
+      _isProcessingFlow = false;
     }
   }
 
@@ -501,8 +507,16 @@ class _DepositPageState extends State<DepositPage> {
 
     final savedCard = user['savedCard'];
     final pmId = savedCard?['stripePaymentMethodId']?.toString();
-    // Only treat card as saved for UI/payment if it has a valid Stripe PM token
-    final hasSavedCard = pmId != null && pmId.isNotEmpty && pmId.startsWith('pm_');
+    final cardBrandStr = savedCard?['cardBrand']?.toString();
+    final last4Str = savedCard?['last4']?.toString();
+    // Only treat card as saved for UI/payment if it has a valid Stripe PM token and brand/last4 details
+    final hasSavedCard = pmId != null &&
+        pmId.isNotEmpty &&
+        pmId.startsWith('pm_') &&
+        cardBrandStr != null &&
+        cardBrandStr.isNotEmpty &&
+        last4Str != null &&
+        last4Str.isNotEmpty;
 
     return DefaultTabController(
       length: 2,
@@ -676,9 +690,26 @@ class _DepositPageState extends State<DepositPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               if (!hasSavedCard || _isInlineEditing) ...[
-                                // Symmetrical saved card form
-                                const Text('Payment method', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 14),
+                                if (hasSavedCard) ...[
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Enter New Card Details:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                      TextButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _isInlineEditing = false;
+                                          });
+                                        },
+                                        child: const Text('Use Saved Card'),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                ] else ...[
+                                  const Text('Payment method', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 14),
+                                ],
                                 DropdownButtonFormField<String>(
                                   value: _selectedCountry,
                                   decoration: InputDecoration(

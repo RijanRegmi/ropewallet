@@ -583,8 +583,8 @@ export class PaymentController {
       let creditToReceiver = amount;    // What gets added to receiver's wallet
 
       if (senderRole === 'customer') {
-        // Customer → Host/SuperAdmin: 20% platform revenue fee deducted from receiver side
-        fee = Number((amount * 0.20).toFixed(2));
+        // Customer → Host/SuperAdmin: 17% platform revenue fee deducted from receiver side
+        fee = Number((amount * 0.17).toFixed(2));
         totalCostFromSender = amount;
         creditToReceiver = Number((amount - fee).toFixed(2));
       } else {

@@ -76,210 +76,223 @@ class _WithdrawPageState extends State<WithdrawPage> {
     super.dispose();
   }
 
+  bool _isProcessingFlow = false;
+
   Future<void> _submitWithdrawal(String method) async {
-    final String amountText = _amountController.text.trim();
-    if (amountText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter an amount')),
-      );
-      return;
-    }
-    final double? amount = double.tryParse(amountText);
-    if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid positive amount')),
-      );
-      return;
-    }
+    if (_isProcessingFlow || _isSavingCard) return;
+    _isProcessingFlow = true;
+    OverlayEntry? loadingOverlay;
 
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final savedCard = authProvider.user?['savedCard'];
-    final pmId = savedCard?['stripePaymentMethodId']?.toString();
-    // A card is only truly "saved" for payment if it has a valid Stripe PM token
-    final hasValidStripePM = pmId != null && pmId.isNotEmpty && pmId.startsWith('pm_');
-
-    // Validate forms
-    final bool needsSaveCard = !hasValidStripePM || _isInlineEditing;
-    if (needsSaveCard) {
-      if (!_cardFormKey.currentState!.validate()) return;
-      if (!_agreedToTerms) {
+    try {
+      final String amountText = _amountController.text.trim();
+      if (amountText.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please agree to the storage terms to proceed.')),
+          const SnackBar(content: Text('Please enter an amount')),
         );
         return;
       }
-    } else {
-      if (!_cardFormKey.currentState!.validate()) return;
-    }
-
-    final String cardBrandDisplay = hasValidStripePM && savedCard != null
-        ? '${savedCard['cardBrand'] ?? 'Card'} ****${savedCard['last4'] ?? '****'}'
-        : 'Debit Card';
-    final String customRemarks = _remarksController.text.trim();
-    final String remarksDisplay = customRemarks.isNotEmpty ? customRemarks : 'Instant Card Cash Out';
-
-    // 1. Show "Let's Review!" Bottom Sheet (Matching Image 2)
-    final bool? confirmed = await ReviewBottomSheet.show(
-      context,
-      title: "Let's Review!",
-      items: [
-        ReviewItem(label: 'From Account', value: 'Available Balance'),
-        ReviewItem(label: 'Wallet ID', value: cardBrandDisplay),
-        ReviewItem(label: 'Customer Name', value: authProvider.user?['fullName'] ?? 'Customer'),
-        ReviewItem(label: 'Amount', value: '\$${amount.toStringAsFixed(2)}', isHighlight: true),
-        ReviewItem(label: 'Remarks', value: remarksDisplay),
-      ],
-      onConfirm: () {},
-    );
-
-    if (confirmed != true) return;
-
-    // 2. Prompt for Biometric / Security PIN authorization
-    final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
-    final String? userPin = await securityProvider.authorizeSecurityWithPin(
-      context,
-      actionName: 'Authorize Cash Out',
-      amount: amount,
-    );
-
-    if (userPin == null || userPin.isEmpty) {
-      return;
-    }
-    final String pin = userPin;
-
-    // 3. Show Full Page Loading Overlay (Matching Image 3)
-    final loadingOverlay = FullPageLoadingOverlay.show(context, message: 'Processing cash out...');
-
-    bool success = false;
-    String remarksText = '';
-    String receiverName = '';
-
-    // Step 1: Save card via Stripe SDK if needed
-    if (needsSaveCard) {
-      setState(() {
-        _isSavingCard = true;
-      });
-
-      try {
-        final expiryParts = _expiryController.text.split('/');
-        final expMonth = int.tryParse(expiryParts[0].trim()) ?? 1;
-        final expYear = int.tryParse('20${expiryParts[1].trim()}') ?? 2026;
-
-        await Stripe.instance.dangerouslyUpdateCardDetails(
-          CardDetails(
-            number: _cardNumberController.text.replaceAll(' ', ''),
-            cvc: _cvcController.text.trim(),
-            expirationMonth: expMonth,
-            expirationYear: expYear,
-          ),
+      final double? amount = double.tryParse(amountText);
+      if (amount == null || amount <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter a valid positive amount')),
         );
+        return;
+      }
+      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final savedCard = authProvider.user?['savedCard'];
+      final pmId = savedCard?['stripePaymentMethodId']?.toString();
+      final hasValidStripePM = pmId != null && pmId.isNotEmpty && pmId.startsWith('pm_');
 
-        final paymentMethod = await Stripe.instance.createPaymentMethod(
-          params: const PaymentMethodParams.card(
-            paymentMethodData: PaymentMethodData(),
-          ),
-        );
+      // Validate forms
+      final bool needsSaveCard = !hasValidStripePM || _isInlineEditing;
+      if (needsSaveCard) {
+        if (!_cardFormKey.currentState!.validate()) return;
+        if (!_agreedToTerms) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please agree to the storage terms to proceed.')),
+          );
+          return;
+        }
+      } else {
+        if (!_cardFormKey.currentState!.validate()) return;
+      }
 
-        final saveSuccess = await authProvider.saveCard(
-          paymentMethodId: paymentMethod.id,
-          cardholderName: _cardholderController.text.trim(),
-          zipCode: _zipController.text.trim(),
-          country: _selectedCountry,
-          addressLine1: _addressController.text.trim(),
-          differentInvoiceName: _differentInvoiceName,
-          invoiceName: _differentInvoiceName ? _invoiceNameController.text.trim() : '',
-          taxId: _taxIdController.text.trim(),
-        );
+      final String cardBrandDisplay = hasValidStripePM && savedCard != null
+          ? '${savedCard['cardBrand'] ?? 'Card'} ****${savedCard['last4'] ?? '****'}'
+          : 'Debit Card';
+      final String customRemarks = _remarksController.text.trim();
+      final String remarksDisplay = customRemarks.isNotEmpty ? customRemarks : 'Instant Card Cash Out';
 
+      // 1. Show "Let's Review!" Bottom Sheet INSTANTLY (0ms delay)
+      final bool? confirmed = await ReviewBottomSheet.show(
+        context,
+        title: "Let's Review!",
+        items: [
+          ReviewItem(label: 'From Account', value: 'Available Balance'),
+          ReviewItem(label: 'Wallet ID', value: cardBrandDisplay),
+          ReviewItem(label: 'Customer Name', value: authProvider.user?['fullName'] ?? 'Customer'),
+          ReviewItem(label: 'Amount', value: '\$${amount.toStringAsFixed(2)}', isHighlight: true),
+          ReviewItem(label: 'Remarks', value: remarksDisplay),
+        ],
+        onConfirm: () {},
+      );
+
+      if (confirmed != true) return;
+
+      // 2. Prompt for Biometric / Security PIN authorization
+      final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
+      final String? userPin = await securityProvider.authorizeSecurityWithPin(
+        context,
+        actionName: 'Authorize Cash Out',
+        amount: amount,
+      );
+
+      if (userPin == null || userPin.isEmpty) {
+        return;
+      }
+      final String pin = userPin;
+
+      // 3. Show Full Page Loading Overlay (Matching Image 3)
+      loadingOverlay = FullPageLoadingOverlay.show(context, message: 'Processing cash out...');
+
+      bool success = false;
+      String remarksText = '';
+      String receiverName = '';
+
+      // Step 1: Save card via Stripe SDK if needed
+      if (needsSaveCard) {
         setState(() {
-          _isSavingCard = false;
-          if (saveSuccess) {
-            _isInlineEditing = false;
-          }
+          _isSavingCard = true;
         });
 
-        if (!saveSuccess) {
+        try {
+          final expiryParts = _expiryController.text.split('/');
+          final expMonth = int.tryParse(expiryParts[0].trim()) ?? 1;
+          final expYear = int.tryParse('20${expiryParts[1].trim()}') ?? 2026;
+
+          await Stripe.instance.dangerouslyUpdateCardDetails(
+            CardDetails(
+              number: _cardNumberController.text.replaceAll(' ', ''),
+              cvc: _cvcController.text.trim(),
+              expirationMonth: expMonth,
+              expirationYear: expYear,
+            ),
+          );
+
+          final paymentMethod = await Stripe.instance.createPaymentMethod(
+            params: const PaymentMethodParams.card(
+              paymentMethodData: PaymentMethodData(),
+            ),
+          );
+
+          final saveSuccess = await authProvider.saveCard(
+            paymentMethodId: paymentMethod.id,
+            cardholderName: _cardholderController.text.trim(),
+            zipCode: _zipController.text.trim(),
+            country: _selectedCountry,
+            addressLine1: _addressController.text.trim(),
+            differentInvoiceName: _differentInvoiceName,
+            invoiceName: _differentInvoiceName ? _invoiceNameController.text.trim() : '',
+            taxId: _taxIdController.text.trim(),
+          );
+
+          setState(() {
+            _isSavingCard = false;
+            if (saveSuccess) {
+              _isInlineEditing = false;
+            }
+          });
+
+          if (!saveSuccess) {
+            loadingOverlay?.remove();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  backgroundColor: const Color(0xFFEF4444),
+                  content: Text(authProvider.errorMessage ?? 'Failed to save payment card details'),
+                ),
+              );
+            }
+            return;
+          }
+        } catch (e) {
+          loadingOverlay?.remove();
+          setState(() {
+            _isSavingCard = false;
+          });
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 backgroundColor: const Color(0xFFEF4444),
-                content: Text(authProvider.errorMessage ?? 'Failed to save payment card details'),
+                content: Text('Card error: ${e.toString()}'),
               ),
             );
           }
           return;
         }
-      } catch (e) {
-        setState(() {
-          _isSavingCard = false;
-        });
-        if (mounted) {
+      }
+
+      // Step 2: Perform Instant Withdrawal using saved card
+      final updatedSavedCard = authProvider.user?['savedCard'];
+      final cardBrand = updatedSavedCard?['cardBrand'] ?? 'Debit Card';
+      final cardLast4 = updatedSavedCard?['last4'] ?? '4242';
+      remarksText = customRemarks.isNotEmpty ? customRemarks : 'Withdrawal to $cardBrand ending in $cardLast4';
+      receiverName = cardBrand;
+
+      success = await walletProvider.withdraw(
+        amount: amount,
+        method: 'card',
+        authProvider: authProvider,
+        pin: pin,
+        remarks: remarksText,
+        useSavedCard: true,
+      );
+
+      loadingOverlay?.remove();
+
+      if (mounted) {
+        if (success) {
+          final createdTx = walletProvider.lastCreatedTransaction;
+          final userRole = authProvider.user?['role'] ?? 'customer';
+          final isHost = ['admin', 'host', 'superadmin'].contains(userRole);
+          final fee = isHost ? (amount * 0.03) : 0.0;
+          final newTx = {
+            '_id': createdTx?['_id'] ?? 'TX-${DateTime.now().millisecondsSinceEpoch}',
+            'type': 'withdrawal',
+            'amount': amount,
+            'fee': fee,
+            'netAmount': amount - fee,
+            'remarks': remarksText,
+            'createdAt': createdTx?['createdAt'] ?? DateTime.now().toIso8601String(),
+            'sender': {'fullName': authProvider.user?['fullName'] ?? 'You'},
+            'receiver': {'fullName': receiverName},
+          };
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ReceiptPage(
+                transaction: newTx,
+                currentUser: authProvider.user ?? {},
+                isNewTransferSuccess: true,
+              ),
+            ),
+          );
+        } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               backgroundColor: const Color(0xFFEF4444),
-              content: Text('Card error: ${e.toString()}'),
+              content: Text(walletProvider.errorMessage ?? 'Withdrawal failed'),
             ),
           );
         }
-        return;
       }
-    }
-
-    // Step 2: Perform Instant Withdrawal using saved card
-    final updatedSavedCard = authProvider.user?['savedCard'];
-    final cardBrand = updatedSavedCard?['cardBrand'] ?? 'Debit Card';
-    final cardLast4 = updatedSavedCard?['last4'] ?? '4242';
-    remarksText = customRemarks.isNotEmpty ? customRemarks : 'Withdrawal to $cardBrand ending in $cardLast4';
-    receiverName = cardBrand;
-
-    success = await walletProvider.withdraw(
-      amount: amount,
-      method: 'card',
-      authProvider: authProvider,
-      pin: pin,
-      remarks: remarksText,
-      useSavedCard: true,
-    );
-
-    loadingOverlay.remove();
-
-    if (mounted) {
-      if (success) {
-        final userRole = authProvider.user?['role'] ?? 'customer';
-        final isHost = ['admin', 'host', 'superadmin'].contains(userRole);
-        final fee = isHost ? (amount * 0.03) : 0.0;
-        final newTx = {
-          '_id': walletProvider.transactions.isNotEmpty
-              ? (walletProvider.transactions.first['_id'] ?? 'TX-${DateTime.now().millisecondsSinceEpoch}')
-              : 'TX-${DateTime.now().millisecondsSinceEpoch}',
-          'type': 'withdrawal',
-          'amount': amount,
-          'fee': fee,
-          'netAmount': amount - fee,
-          'remarks': remarksText,
-          'createdAt': DateTime.now().toIso8601String(),
-          'sender': {'fullName': authProvider.user?['fullName'] ?? 'You'},
-          'receiver': {'fullName': receiverName},
-        };
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ReceiptPage(
-              transaction: newTx,
-              currentUser: authProvider.user ?? {},
-              isNewTransferSuccess: true,
-            ),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFFEF4444),
-            content: Text(walletProvider.errorMessage ?? 'Withdrawal failed'),
-          ),
-        );
+    } finally {
+      loadingOverlay?.remove();
+      _isProcessingFlow = false;
+      if (mounted) {
+        setState(() {});
       }
     }
   }
@@ -298,8 +311,16 @@ class _WithdrawPageState extends State<WithdrawPage> {
 
     final savedCard = user['savedCard'];
     final pmId = savedCard?['stripePaymentMethodId']?.toString();
-    // Only treat card as saved for UI/payment if it has a valid Stripe PM token
-    final hasSavedCard = pmId != null && pmId.isNotEmpty && pmId.startsWith('pm_');
+    final cardBrandStr = savedCard?['cardBrand']?.toString();
+    final last4Str = savedCard?['last4']?.toString();
+    // Only treat card as saved for UI/payment if it has a valid Stripe PM token and brand/last4 details
+    final hasSavedCard = pmId != null &&
+        pmId.isNotEmpty &&
+        pmId.startsWith('pm_') &&
+        cardBrandStr != null &&
+        cardBrandStr.isNotEmpty &&
+        last4Str != null &&
+        last4Str.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(

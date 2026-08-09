@@ -78,8 +78,15 @@ class _HomePageState extends State<HomePage> {
   void _checkBiometricsPrompt() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final user = authProvider.user;
+      final userId = user?['_id']?.toString() ?? user?['email']?.toString();
+
+      await securityProvider.loadUserSecuritySettings(userId);
+
       if (securityProvider.isBiometricSupported &&
-          !securityProvider.useBiometrics &&
+          !securityProvider.useBiometricsForLogin &&
+          !securityProvider.useBiometricsForPin &&
           !securityProvider.hasPromptedBiometrics) {
         _showBiometricSetupBottomSheet(securityProvider);
       }
@@ -121,7 +128,7 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Would you like to enable Face ID or Fingerprint authentication for faster and more secure sign-ins?',
+                'Would you like to enable Face ID or Fingerprint authentication for faster sign-ins and PIN verification?',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
@@ -138,11 +145,12 @@ class _HomePageState extends State<HomePage> {
                     await securityProvider.setHasPromptedBiometrics(true);
                     final authenticated = await securityProvider.authenticateBiometrically();
                     if (authenticated) {
-                      await securityProvider.setUseBiometrics(true);
+                      await securityProvider.setUseBiometricsForLogin(true);
+                      await securityProvider.setUseBiometricsForPin(true);
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: const Text('Biometric login enabled successfully!'),
+                            content: const Text('Biometrics enabled for login and transactions!'),
                             backgroundColor: const Color(0xFF10B981),
                             behavior: SnackBarBehavior.floating,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

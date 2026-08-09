@@ -17,54 +17,69 @@ class SecurityProvider with ChangeNotifier {
   bool _hasPromptedBiometrics = false;
   bool _isLoading = false;
   String? _errorMessage;
+  String? _currentUserId;
 
   bool get isBiometricSupported => _isBiometricSupported;
   bool get useBiometricsForLogin => _useBiometricsForLogin;
   bool get useBiometricsForPin => _useBiometricsForPin;
-  // Legacy getter for backward compatibility
   bool get useBiometrics => _useBiometricsForLogin || _useBiometricsForPin;
   bool get hasPromptedBiometrics => _hasPromptedBiometrics;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
   SecurityProvider() {
-    _initSecuritySettings();
+    loadUserSecuritySettings(null);
   }
 
-  Future<void> _initSecuritySettings() async {
+  // Load user-scoped biometric security settings
+  Future<void> loadUserSecuritySettings(String? userId) async {
+    _currentUserId = userId;
     try {
       final isSupported = await _localAuth.isDeviceSupported();
       final canCheck = await _localAuth.canCheckBiometrics;
       _isBiometricSupported = isSupported && canCheck;
 
       final prefs = await SharedPreferences.getInstance();
-      
-      // Load independent toggles for Login and PIN
-      if (prefs.containsKey('use_biometrics_login')) {
-        _useBiometricsForLogin = prefs.getBool('use_biometrics_login') ?? false;
+
+      final String loginKey = userId != null ? 'use_biometrics_login_$userId' : 'use_biometrics_login';
+      final String pinKey = userId != null ? 'use_biometrics_pin_$userId' : 'use_biometrics_pin';
+      final String promptedKey = userId != null ? 'has_prompted_biometrics_$userId' : 'has_prompted_biometrics';
+
+      if (prefs.containsKey(loginKey)) {
+        _useBiometricsForLogin = prefs.getBool(loginKey) ?? false;
       } else {
-        // Migration fallback from legacy single toggle
-        _useBiometricsForLogin = prefs.getBool('use_biometrics') ?? false;
+        _useBiometricsForLogin = prefs.getBool('use_biometrics_login') ?? prefs.getBool('use_biometrics') ?? false;
       }
 
-      if (prefs.containsKey('use_biometrics_pin')) {
-        _useBiometricsForPin = prefs.getBool('use_biometrics_pin') ?? false;
+      if (prefs.containsKey(pinKey)) {
+        _useBiometricsForPin = prefs.getBool(pinKey) ?? false;
       } else {
-        // Migration fallback from legacy single toggle
-        _useBiometricsForPin = prefs.getBool('use_biometrics') ?? false;
+        _useBiometricsForPin = prefs.getBool('use_biometrics_pin') ?? prefs.getBool('use_biometrics') ?? false;
       }
 
-      _hasPromptedBiometrics = prefs.getBool('has_prompted_biometrics') ?? false;
+      _hasPromptedBiometrics = prefs.getBool(promptedKey) ?? false;
       notifyListeners();
     } catch (e) {
       debugPrint('Biometrics initialization error: $e');
     }
   }
 
+  // Reset runtime biometric state on user logout
+  Future<void> resetOnLogout() async {
+    _currentUserId = null;
+    _useBiometricsForLogin = false;
+    _useBiometricsForPin = false;
+    _hasPromptedBiometrics = false;
+    notifyListeners();
+  }
+
   // Toggle biometric for Login
   Future<void> setUseBiometricsForLogin(bool value) async {
     _useBiometricsForLogin = value;
     final prefs = await SharedPreferences.getInstance();
+    if (_currentUserId != null) {
+      await prefs.setBool('use_biometrics_login_$_currentUserId', value);
+    }
     await prefs.setBool('use_biometrics_login', value);
     await prefs.setBool('use_biometrics', _useBiometricsForLogin || _useBiometricsForPin);
     notifyListeners();
@@ -74,6 +89,9 @@ class SecurityProvider with ChangeNotifier {
   Future<void> setUseBiometricsForPin(bool value) async {
     _useBiometricsForPin = value;
     final prefs = await SharedPreferences.getInstance();
+    if (_currentUserId != null) {
+      await prefs.setBool('use_biometrics_pin_$_currentUserId', value);
+    }
     await prefs.setBool('use_biometrics_pin', value);
     await prefs.setBool('use_biometrics', _useBiometricsForLogin || _useBiometricsForPin);
     notifyListeners();
@@ -81,18 +99,16 @@ class SecurityProvider with ChangeNotifier {
 
   // Legacy single toggle (updates both)
   Future<void> setUseBiometrics(bool value) async {
-    _useBiometricsForLogin = value;
-    _useBiometricsForPin = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('use_biometrics_login', value);
-    await prefs.setBool('use_biometrics_pin', value);
-    await prefs.setBool('use_biometrics', value);
-    notifyListeners();
+    await setUseBiometricsForLogin(value);
+    await setUseBiometricsForPin(value);
   }
 
   Future<void> setHasPromptedBiometrics(bool value) async {
     _hasPromptedBiometrics = value;
     final prefs = await SharedPreferences.getInstance();
+    if (_currentUserId != null) {
+      await prefs.setBool('has_prompted_biometrics_$_currentUserId', value);
+    }
     await prefs.setBool('has_prompted_biometrics', value);
     notifyListeners();
   }
@@ -108,7 +124,7 @@ class SecurityProvider with ChangeNotifier {
 
     try {
       return await _localAuth.authenticate(
-        localizedReason: 'Authenticate to authorize your RopeWallet transaction',
+        localizedReason: 'Authenticate to authorize your RopeWallet action',
         options: const AuthenticationOptions(
           stickyAuth: true,
           biometricOnly: true,
