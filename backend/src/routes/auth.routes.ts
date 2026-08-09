@@ -10,6 +10,8 @@ router.post('/send-register-otp', AuthController.sendRegisterOtp);
 router.post('/verify-register-otp', AuthController.verifyRegisterOtp);
 router.post('/register', AuthController.register);
 router.post('/login', AuthController.login);
+router.post('/verify-new-device', AuthController.verifyNewDevice);
+router.post('/resend-device-otp', AuthController.resendDeviceOtp);
 router.post('/forgot-password', AuthController.forgotPassword);
 router.post('/verify-forgot-password-otp', AuthController.verifyForgotPasswordOtp);
 router.post('/reset-password', AuthController.resetPassword);

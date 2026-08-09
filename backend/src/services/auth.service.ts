@@ -10,8 +10,8 @@ import { CustomError } from '../middlewares/error.middleware.js';
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretjwtkeyforwalletapp12345';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
-const generateToken = (userId: string): string => {
-  return jwt.sign({ id: userId }, JWT_SECRET, {
+const generateToken = (userId: string, sessionToken?: string): string => {
+  return jwt.sign({ id: userId, sessionToken }, JWT_SECRET, {
     expiresIn: JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'],
   });
 };
@@ -172,7 +172,46 @@ export class AuthService {
       throw new CustomError(`Your account has been frozen by Administrator.${reasonText}\n\nPlease contact Support for assistance.`, 403);
     }
 
-    const token = generateToken(user._id.toString());
+    const deviceId = data.deviceId?.trim();
+
+    // Check if logging in from a new device (and activeDeviceId was already set for a previous device)
+    if (user.activeDeviceId && deviceId && user.activeDeviceId !== deviceId) {
+      // Trigger Email OTP Verification for New Device Sign-In
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const tempToken = crypto.randomBytes(32).toString('hex');
+
+      user.newDeviceOtp = {
+        code,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 mins
+        tempToken,
+        deviceId,
+      };
+      await user.save();
+
+      // Send OTP code to user's registered email
+      try {
+        await EmailService.sendNewDeviceOtpEmail(user.email, code);
+      } catch (err) {
+        console.error('Failed to send new device OTP email:', err);
+      }
+
+      return {
+        requiresDeviceVerification: true,
+        tempToken,
+        message: 'New device detected. A 6-digit verification code has been sent to your email.',
+      };
+    }
+
+    // First login or same device login: Bind activeDeviceId & activeSessionToken
+    const newSessionToken = crypto.randomBytes(32).toString('hex');
+    if (deviceId) {
+      user.activeDeviceId = deviceId;
+    }
+    user.activeSessionToken = newSessionToken;
+    user.newDeviceOtp = undefined;
+    await user.save();
+
+    const token = generateToken(user._id.toString(), newSessionToken);
 
     return {
       token,
@@ -195,6 +234,67 @@ export class AuthService {
         savedCard: user.toObject({ getters: true }).savedCard,
       },
     };
+  }
+
+  static async verifyNewDevice(tempToken: string, otpCode: string, deviceId?: string): Promise<AuthResponse> {
+    const user = await User.findOne({ 'newDeviceOtp.tempToken': tempToken }).select('+transactionPin');
+    if (!user || !user.newDeviceOtp || !user.newDeviceOtp.code) {
+      throw new CustomError('Invalid or expired device verification session.', 400);
+    }
+
+    if (user.newDeviceOtp.expiresAt && user.newDeviceOtp.expiresAt.getTime() < Date.now()) {
+      throw new CustomError('Verification code has expired. Please request a new code.', 400);
+    }
+
+    if (user.newDeviceOtp.code.trim() !== otpCode.trim()) {
+      throw new CustomError('Invalid verification code. Please check your email and try again.', 400);
+    }
+
+    // OTP Verified! Bind new device and invalidate all previous device sessions!
+    const boundDeviceId = deviceId || user.newDeviceOtp.deviceId || 'DEV-VERIFIED';
+    const newSessionToken = crypto.randomBytes(32).toString('hex');
+    user.activeDeviceId = boundDeviceId;
+    user.activeSessionToken = newSessionToken;
+    user.newDeviceOtp = undefined;
+    await user.save();
+
+    const token = generateToken(user._id.toString(), newSessionToken);
+
+    return {
+      token,
+      user: {
+        id: user._id.toString(),
+        firstName: user.firstName,
+        middleName: user.middleName,
+        lastName: user.lastName,
+        userTag: user.userTag,
+        fullName: user.fullName,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        walletBalance: user.walletBalance,
+        pendingCashoutBalance: user.pendingCashoutBalance || 0,
+        qrCodeData: user.qrCodeData,
+        role: user.role,
+        createdAt: user.createdAt,
+        hasPin: !!user.transactionPin,
+        profileImage: user.profileImage,
+        savedCard: user.toObject({ getters: true }).savedCard,
+      },
+    };
+  }
+
+  static async resendNewDeviceOtp(tempToken: string): Promise<void> {
+    const user = await User.findOne({ 'newDeviceOtp.tempToken': tempToken });
+    if (!user || !user.newDeviceOtp) {
+      throw new CustomError('Invalid or expired verification session.', 400);
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    user.newDeviceOtp.code = code;
+    user.newDeviceOtp.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save();
+
+    await EmailService.sendNewDeviceOtpEmail(user.email, code);
   }
 
   static async sendForgotPasswordOtp(email: string): Promise<void> {

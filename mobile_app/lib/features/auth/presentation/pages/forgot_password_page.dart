@@ -41,6 +41,26 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     super.dispose();
   }
 
+  Future<void> _pasteOtpFromClipboard() async {
+    final clipboardData = await Clipboard.getData('text/plain');
+    if (clipboardData != null && clipboardData.text != null) {
+      final text = clipboardData.text!.replaceAll(RegExp(r'[^0-9]'), '');
+      if (text.isNotEmpty) {
+        for (int i = 0; i < 6; i++) {
+          if (i < text.length) {
+            _otpControllers[i].text = text[i];
+          }
+        }
+        if (mounted) setState(() {});
+        final lastIdx = (text.length - 1).clamp(0, 5);
+        _otpFocusNodes[lastIdx].requestFocus();
+        if (text.length >= 6) {
+          _verifyOtpCode();
+        }
+      }
+    }
+  }
+
   Future<void> _sendCode() async {
     if (!_formKeyEmail.currentState!.validate()) return;
 
@@ -70,7 +90,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     final otpCode = _otpControllers.map((c) => c.text.trim()).join();
     if (otpCode.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter the full 6-digit code.')),
+        const SnackBar(
+          backgroundColor: Color(0xFFEF4444),
+          content: Text('Please enter the full 6-digit verification code.'),
+        ),
       );
       return;
     }
@@ -152,66 +175,113 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     }
   }
 
-  Widget _buildOtpBox(int index) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+  Widget _buildOtpField(int index, bool isDark) {
     final isFocused = _otpFocusNodes[index].hasFocus;
     final hasValue = _otpControllers[index].text.isNotEmpty;
 
-    return Container(
-      width: 48,
-      height: 56,
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isFocused
-              ? theme.primaryColor
-              : hasValue
-                  ? const Color(0xFF10B981)
-                  : isDark
-                      ? const Color(0xFF475569)
-                      : const Color(0xFFCBD5E1),
-          width: isFocused ? 2 : 1.5,
-        ),
-        boxShadow: isFocused
-            ? [
-                BoxShadow(
-                  color: theme.primaryColor.withOpacity(0.15),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ]
-            : null,
-      ),
-      child: TextField(
-        controller: _otpControllers[index],
-        focusNode: _otpFocusNodes[index],
-        keyboardType: TextInputType.number,
-        textAlign: TextAlign.center,
-        maxLength: 1,
-        style: TextStyle(
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
-          color: isDark ? Colors.white : const Color(0xFF0F172A),
-        ),
-        inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly,
-          LengthLimitingTextInputFormatter(1),
-        ],
-        onChanged: (val) {
-          setState(() {});
-          if (val.isNotEmpty && index < 5) {
-            _otpFocusNodes[index + 1].requestFocus();
-          }
-          if (val.isEmpty && index > 0) {
+    return KeyboardListener(
+      focusNode: FocusNode(),
+      onKeyEvent: (event) {
+        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backspace) {
+          if (_otpControllers[index].text.isEmpty && index > 0) {
             _otpFocusNodes[index - 1].requestFocus();
+            _otpControllers[index - 1].clear();
+            setState(() {});
           }
-        },
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          counterText: '',
-          contentPadding: EdgeInsets.zero,
+        }
+      },
+      child: Container(
+        width: 46,
+        height: 54,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isFocused
+                ? const Color(0xFF10B981) // Emerald border on focus
+                : hasValue
+                    ? const Color(0xFF059669)
+                    : isDark
+                        ? const Color(0xFF334155)
+                        : const Color(0xFFCBD5E1),
+            width: isFocused ? 2.0 : 1.2,
+          ),
+        ),
+        child: TextField(
+          controller: _otpControllers[index],
+          focusNode: _otpFocusNodes[index],
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
+          onTap: () {
+            _otpControllers[index].selection = TextSelection(
+              baseOffset: 0,
+              extentOffset: _otpControllers[index].text.length,
+            );
+          },
+          onChanged: (val) {
+            final digitsOnly = val.replaceAll(RegExp(r'[^0-9]'), '');
+
+            if (digitsOnly.length > 2) {
+              // True paste (3+ digits)
+              for (int i = 0; i < 6; i++) {
+                if (i < digitsOnly.length) {
+                  _otpControllers[i].text = digitsOnly[i];
+                }
+              }
+              final nextIdx = digitsOnly.length.clamp(0, 5);
+              _otpFocusNodes[nextIdx].requestFocus();
+              setState(() {});
+              if (digitsOnly.length >= 6) {
+                _verifyOtpCode();
+              }
+              return;
+            }
+
+            if (val.length == 2) {
+              // Typing over an existing single digit!
+              final newChar = val[1];
+              _otpControllers[index].text = newChar;
+              _otpControllers[index].selection = const TextSelection.collapsed(offset: 1);
+              if (index < 5) {
+                _otpFocusNodes[index + 1].requestFocus();
+              }
+            } else if (val.length == 1) {
+              // Normal typing into an empty box
+              _otpControllers[index].text = val;
+              _otpControllers[index].selection = const TextSelection.collapsed(offset: 1);
+              if (index < 5) {
+                _otpFocusNodes[index + 1].requestFocus();
+              }
+            } else if (val.isEmpty) {
+              // Erased current box digit
+              if (index > 0) {
+                _otpFocusNodes[index - 1].requestFocus();
+              }
+            }
+
+            setState(() {});
+
+            final fullCode = _otpControllers.map((c) => c.text).join();
+            if (fullCode.length == 6) {
+              _verifyOtpCode();
+            }
+          },
+          decoration: const InputDecoration(
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            errorBorder: InputBorder.none,
+            disabledBorder: InputBorder.none,
+            counterText: '',
+            contentPadding: EdgeInsets.zero,
+            isDense: true,
+          ),
         ),
       ),
     );
@@ -231,57 +301,109 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     ];
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? const Color(0xFF0B0F19) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Reset Password'),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: isDark ? Colors.white : Colors.black87, size: 20),
+          onPressed: () {
+            if (_step > 0) {
+              setState(() {
+                _step--;
+              });
+            } else {
+              Navigator.of(context).pop();
+            }
+          },
+        ),
+        title: Text(
+          'Step ${_step + 1} of 3',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+          ),
+        ),
+        centerTitle: true,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Progress indicators
-              Row(
-                children: List.generate(3, (index) {
-                  final isActive = index == _step;
-                  final isDone = index < _step;
-                  return Expanded(
-                    child: Container(
-                      height: 4,
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? theme.primaryColor
-                            : isDone
-                                ? const Color(0xFF10B981)
-                                : const Color(0xFFE2E8F0),
-                        borderRadius: BorderRadius.circular(2),
+              // Header Security Badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.shield_outlined, size: 14, color: Color(0xFF10B981)),
+                    const SizedBox(width: 6),
+                    Text(
+                      stepTitles[_step].toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF10B981),
+                        letterSpacing: 1.0,
                       ),
                     ),
-                  );
-                }),
+                  ],
+                ),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 12),
+
               Text(
                 stepTitles[_step],
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                 ),
               ),
               const SizedBox(height: 6),
               Text(
                 stepSubtitles[_step],
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
+                  height: 1.4,
                   color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 24),
+
+              // Progress Bar (3 Pill Steps)
+              Row(
+                children: List.generate(3, (index) {
+                  final isActive = index == _step;
+                  final isDone = index < _step;
+                  return Expanded(
+                    child: Container(
+                      height: 5,
+                      margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                      decoration: BoxDecoration(
+                        color: isActive
+                            ? const Color(0xFF10B981)
+                            : isDone
+                                ? const Color(0xFF059669)
+                                : isDark
+                                    ? const Color(0xFF1E293B)
+                                    : const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(height: 32),
 
               // STEP 0: ENTER EMAIL
               if (_step == 0)
@@ -294,10 +416,29 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.done,
                         onFieldSubmitted: (_) => _sendCode(),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
                         decoration: InputDecoration(
-                          labelText: 'Email Address',
-                          prefixIcon: const Icon(Icons.email_outlined),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                          labelText: 'Email Address *',
+                          hintText: 'you@example.com',
+                          prefixIcon: Icon(Icons.email_outlined, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), size: 20),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.8),
+                          ),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) return 'Please enter your email';
@@ -307,24 +448,33 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 36),
                       SizedBox(
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton(
                           onPressed: authProvider.isLoading ? null : _sendCode,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: theme.primaryColor,
+                            backgroundColor: const Color(0xFF10B981),
                             foregroundColor: Colors.white,
+                            elevation: 4,
+                            shadowColor: const Color(0xFF10B981).withOpacity(0.4),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
                           child: authProvider.isLoading
                               ? const SizedBox(
-                                  height: 24,
-                                  width: 24,
+                                  height: 22,
+                                  width: 22,
                                   child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                                 )
-                              : const Text('Send Verification Code', style: TextStyle(fontWeight: FontWeight.bold)),
+                              : const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text('Send Verification Code', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                                    SizedBox(width: 8),
+                                    Icon(Icons.send_rounded, size: 18),
+                                  ],
+                                ),
                         ),
                       ),
                     ],
@@ -334,21 +484,55 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               // STEP 1: VERIFY OTP CODE
               if (_step == 1)
                 Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Verification Code',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B).withOpacity(0.5) : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.mark_email_read_outlined, color: Color(0xFF10B981), size: 24),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Code sent to ${_emailController.text.trim()}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
+
+                    // OTP 6-Box Layout (Single Border Clean)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: List.generate(6, (index) => _buildOtpBox(index)),
+                      children: List.generate(6, (index) => _buildOtpField(index, isDark)),
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 20),
+
+                    // 1-Tap Paste Button
+                    TextButton.icon(
+                      onPressed: _pasteOtpFromClipboard,
+                      icon: const Icon(Icons.content_paste_rounded, size: 16, color: Color(0xFF10B981)),
+                      label: const Text(
+                        'Paste Code from Clipboard',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
                     Row(
                       children: [
                         Expanded(
+                          flex: 1,
                           child: OutlinedButton(
                             onPressed: () {
                               setState(() {
@@ -358,27 +542,40 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              side: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
                             ),
-                            child: const Text('Back'),
+                            child: Text('Back', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
                         Expanded(
-                          child: ElevatedButton(
-                            onPressed: authProvider.isLoading ? null : _verifyOtpCode,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: theme.primaryColor,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          flex: 2,
+                          child: SizedBox(
+                            height: 52,
+                            child: ElevatedButton(
+                              onPressed: authProvider.isLoading ? null : _verifyOtpCode,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF10B981),
+                                foregroundColor: Colors.white,
+                                elevation: 4,
+                                shadowColor: const Color(0xFF10B981).withOpacity(0.4),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              ),
+                              child: authProvider.isLoading
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                    )
+                                  : const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text('Verify Code', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                                        SizedBox(width: 6),
+                                        Icon(Icons.arrow_forward_rounded, size: 18),
+                                      ],
+                                    ),
                             ),
-                            child: authProvider.isLoading
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                  )
-                                : const Text('Verify Code', style: TextStyle(fontWeight: FontWeight.bold)),
                           ),
                         ),
                       ],
@@ -387,11 +584,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     Center(
                       child: TextButton(
                         onPressed: authProvider.isLoading ? null : _sendCode,
-                        child: Text(
+                        child: const Text(
                           'Resend Code',
                           style: TextStyle(
-                            color: theme.primaryColor,
-                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF10B981),
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
@@ -409,10 +606,28 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       TextFormField(
                         controller: _newPasswordController,
                         obscureText: _obscureNewPassword,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
                         decoration: InputDecoration(
-                          labelText: 'New Password',
-                          prefixIcon: const Icon(Icons.lock_outline_rounded),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                          labelText: 'New Password *',
+                          prefixIcon: Icon(Icons.lock_outline_rounded, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), size: 20),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.8),
+                          ),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscureNewPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
@@ -434,10 +649,28 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       TextFormField(
                         controller: _confirmPasswordController,
                         obscureText: _obscureConfirmPassword,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
                         decoration: InputDecoration(
-                          labelText: 'Confirm Password',
-                          prefixIcon: const Icon(Icons.lock_reset_rounded),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                          labelText: 'Confirm Password *',
+                          prefixIcon: Icon(Icons.lock_reset_rounded, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), size: 20),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.8),
+                          ),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
@@ -459,6 +692,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       Row(
                         children: [
                           Expanded(
+                            flex: 1,
                             child: OutlinedButton(
                               onPressed: () {
                                 setState(() {
@@ -468,27 +702,40 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                side: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
                               ),
-                              child: const Text('Back'),
+                              child: Text('Back', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 12),
                           Expanded(
-                            child: ElevatedButton(
-                              onPressed: authProvider.isLoading ? null : _resetPassword,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: theme.primaryColor,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            flex: 2,
+                            child: SizedBox(
+                              height: 52,
+                              child: ElevatedButton(
+                                onPressed: authProvider.isLoading ? null : _resetPassword,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF10B981),
+                                  foregroundColor: Colors.white,
+                                  elevation: 4,
+                                  shadowColor: const Color(0xFF10B981).withOpacity(0.4),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                ),
+                                child: authProvider.isLoading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                      )
+                                    : const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text('Reset Password', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                                          SizedBox(width: 6),
+                                          Icon(Icons.check_circle_outline_rounded, size: 18),
+                                        ],
+                                      ),
                               ),
-                              child: authProvider.isLoading
-                                  ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                    )
-                                  : const Text('Reset Password', style: TextStyle(fontWeight: FontWeight.bold)),
                             ),
                           ),
                         ],

@@ -103,18 +103,54 @@ export class AuthController {
 
   static async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, password } = req.body;
+      const { email, password, deviceId } = req.body;
+      const headerDeviceId = (req.headers['x-device-id'] as string) || deviceId;
 
       if (!email || !password) {
         res.status(400).json({ success: false, error: 'Please provide email and password' });
         return;
       }
 
-      const result = await AuthService.login({ email, password });
+      const result = await AuthService.login({ email, password, deviceId: headerDeviceId });
       res.status(200).json({
         success: true,
         data: result,
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async verifyNewDevice(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { tempToken, otpCode, deviceId } = req.body;
+      const headerDeviceId = (req.headers['x-device-id'] as string) || deviceId;
+
+      if (!tempToken || !otpCode) {
+        res.status(400).json({ success: false, error: 'Please provide verification code' });
+        return;
+      }
+
+      const result = await AuthService.verifyNewDevice(tempToken, otpCode, headerDeviceId);
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async resendDeviceOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { tempToken } = req.body;
+      if (!tempToken) {
+        res.status(400).json({ success: false, error: 'Verification session token required' });
+        return;
+      }
+
+      await AuthService.resendNewDeviceOtp(tempToken);
+      res.status(200).json({ success: true, message: 'New verification code sent to your email.' });
     } catch (error) {
       next(error);
     }

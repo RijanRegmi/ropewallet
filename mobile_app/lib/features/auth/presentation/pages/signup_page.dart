@@ -230,71 +230,109 @@ class _SignupPageState extends State<SignupPage> {
     final isFocused = _otpFocusNodes[index].hasFocus;
     final hasValue = _otpControllers[index].text.isNotEmpty;
 
-    return Container(
-      width: 46,
-      height: 54,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isFocused
-              ? const Color(0xFF10B981) // Emerald border on focus
-              : hasValue
-                  ? const Color(0xFF059669)
-                  : isDark
-                      ? const Color(0xFF334155)
-                      : const Color(0xFFCBD5E1),
-          width: isFocused ? 2.0 : 1.2,
+    return KeyboardListener(
+      focusNode: FocusNode(),
+      onKeyEvent: (event) {
+        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backspace) {
+          if (_otpControllers[index].text.isEmpty && index > 0) {
+            _otpFocusNodes[index - 1].requestFocus();
+            _otpControllers[index - 1].clear();
+            setState(() {});
+          }
+        }
+      },
+      child: Container(
+        width: 46,
+        height: 54,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isFocused
+                ? const Color(0xFF10B981) // Emerald border on focus
+                : hasValue
+                    ? const Color(0xFF059669)
+                    : isDark
+                        ? const Color(0xFF334155)
+                        : const Color(0xFFCBD5E1),
+            width: isFocused ? 2.0 : 1.2,
+          ),
         ),
-      ),
-      child: TextField(
-        controller: _otpControllers[index],
-        focusNode: _otpFocusNodes[index],
-        keyboardType: TextInputType.number,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w800,
-          color: isDark ? Colors.white : const Color(0xFF0F172A),
-        ),
-        onChanged: (val) {
-          if (val.length > 1) {
-            // Multi-character paste detected!
-            final digits = val.replaceAll(RegExp(r'[^0-9]'), '');
-            for (int i = 0; i < 6; i++) {
-              if (i < digits.length) {
-                _otpControllers[i].text = digits[i];
+        child: TextField(
+          controller: _otpControllers[index],
+          focusNode: _otpFocusNodes[index],
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
+          onTap: () {
+            _otpControllers[index].selection = TextSelection(
+              baseOffset: 0,
+              extentOffset: _otpControllers[index].text.length,
+            );
+          },
+          onChanged: (val) {
+            final digitsOnly = val.replaceAll(RegExp(r'[^0-9]'), '');
+
+            if (digitsOnly.length > 2) {
+              // True paste (3+ digits)
+              for (int i = 0; i < 6; i++) {
+                if (i < digitsOnly.length) {
+                  _otpControllers[i].text = digitsOnly[i];
+                }
+              }
+              final nextIdx = digitsOnly.length.clamp(0, 5);
+              _otpFocusNodes[nextIdx].requestFocus();
+              setState(() {});
+              if (digitsOnly.length >= 6) {
+                _verifyOtpAndProceed();
+              }
+              return;
+            }
+
+            if (val.length == 2) {
+              // Typing over an existing single digit!
+              final newChar = val[1];
+              _otpControllers[index].text = newChar;
+              _otpControllers[index].selection = const TextSelection.collapsed(offset: 1);
+              if (index < 5) {
+                _otpFocusNodes[index + 1].requestFocus();
+              }
+            } else if (val.length == 1) {
+              // Normal typing into an empty box
+              _otpControllers[index].text = val;
+              _otpControllers[index].selection = const TextSelection.collapsed(offset: 1);
+              if (index < 5) {
+                _otpFocusNodes[index + 1].requestFocus();
+              }
+            } else if (val.isEmpty) {
+              // Erased current box digit
+              if (index > 0) {
+                _otpFocusNodes[index - 1].requestFocus();
               }
             }
-            if (digits.isNotEmpty) {
-              final lastIdx = (digits.length - 1).clamp(0, 5);
-              _otpFocusNodes[lastIdx].requestFocus();
-            }
+
             setState(() {});
-            if (digits.length >= 6) {
+
+            final fullCode = _otpControllers.map((c) => c.text).join();
+            if (fullCode.length == 6) {
               _verifyOtpAndProceed();
             }
-            return;
-          }
-
-          setState(() {});
-          if (val.isNotEmpty && index < 5) {
-            _otpFocusNodes[index + 1].requestFocus();
-          }
-          if (val.isEmpty && index > 0) {
-            _otpFocusNodes[index - 1].requestFocus();
-          }
-        },
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          errorBorder: InputBorder.none,
-          disabledBorder: InputBorder.none,
-          counterText: '',
-          contentPadding: EdgeInsets.zero,
-          isDense: true,
+          },
+          decoration: const InputDecoration(
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            errorBorder: InputBorder.none,
+            disabledBorder: InputBorder.none,
+            counterText: '',
+            contentPadding: EdgeInsets.zero,
+            isDense: true,
+          ),
         ),
       ),
     );

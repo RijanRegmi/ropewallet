@@ -79,6 +79,20 @@ const userSchema = new Schema<IUser>(
       type: String,
       default: '',
     },
+    activeDeviceId: {
+      type: String,
+      default: '',
+    },
+    activeSessionToken: {
+      type: String,
+      default: '',
+    },
+    newDeviceOtp: {
+      code: { type: String, default: '' },
+      expiresAt: { type: Date },
+      tempToken: { type: String, default: '' },
+      deviceId: { type: String, default: '' },
+    },
     savedCard: {
       cardholderName: { type: String, default: '' },
       stripePaymentMethodId: {

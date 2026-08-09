@@ -6,6 +6,7 @@ import '../../../home/providers/wallet_provider.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import 'set_pin_page.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'device_verification_page.dart';
 import 'forgot_password_page.dart';
 import 'signup_page.dart';
 
@@ -21,6 +22,7 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -29,9 +31,7 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  bool _isSubmitting = false;
-
-  void _submit() async {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _isSubmitting) return;
 
     setState(() => _isSubmitting = true);
@@ -39,13 +39,25 @@ class _LoginPageState extends State<LoginPage> {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
 
     try {
-      final success = await authProvider.login(
+      final loginResult = await authProvider.login(
         _emailController.text.trim(),
         _passwordController.text,
         walletProvider: walletProvider,
       );
 
-      if (success) {
+      if (loginResult['requiresDeviceVerification'] == true && mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => DeviceVerificationPage(
+              tempToken: loginResult['tempToken'],
+              emailHint: _emailController.text.trim(),
+            ),
+          ),
+        );
+        return;
+      }
+
+      if (loginResult['success'] == true) {
         const storage = FlutterSecureStorage();
         await storage.write(key: 'saved_email', value: _emailController.text.trim());
         await storage.write(key: 'saved_password', value: _passwordController.text);
@@ -167,8 +179,21 @@ class _LoginPageState extends State<LoginPage> {
       if (savedEmail != null && savedPassword != null) {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-        final success = await authProvider.login(savedEmail, savedPassword, walletProvider: walletProvider);
-        if (success && mounted) {
+        final loginResult = await authProvider.login(savedEmail, savedPassword, walletProvider: walletProvider);
+
+        if (loginResult['requiresDeviceVerification'] == true && mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => DeviceVerificationPage(
+                tempToken: loginResult['tempToken'],
+                emailHint: savedEmail,
+              ),
+            ),
+          );
+          return;
+        }
+
+        if (loginResult['success'] == true && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Welcome back, ${authProvider.user?["fullName"] ?? "User"}!'),

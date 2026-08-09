@@ -22,6 +22,14 @@ export interface IUser extends Document {
   usedCardFingerprints?: string[]; // Array of unique card fingerprints used on this account
   fcmToken?: string;
   stripeCustomerId?: string; // Stripe Customer ID for tokenized payment flows
+  activeDeviceId?: string;
+  activeSessionToken?: string;
+  newDeviceOtp?: {
+    code: string;
+    expiresAt?: Date;
+    tempToken: string;
+    deviceId?: string;
+  };
   role: 'customer' | 'user' | 'host' | 'admin' | 'superadmin';
   createdAt: Date;
   updatedAt: Date;

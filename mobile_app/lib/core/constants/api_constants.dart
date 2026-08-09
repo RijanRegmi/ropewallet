@@ -45,6 +45,8 @@ class ApiConstants {
 
   static const String register = '/auth/register';
   static const String login = '/auth/login';
+  static const String verifyNewDevice = '/auth/verify-new-device';
+  static const String resendDeviceOtp = '/auth/resend-device-otp';
   static const String profile = '/auth/me';
   static const String checkUserTag = '/auth/check-usertag';
   static const String checkEmail = '/auth/check-email';

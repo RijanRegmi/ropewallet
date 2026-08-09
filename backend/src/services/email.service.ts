@@ -82,4 +82,33 @@ export class EmailService {
 
     await transporter.sendMail(mailOptions);
   }
+
+  static async sendNewDeviceOtpEmail(email: string, code: string): Promise<void> {
+    const transporter = this.getTransporter();
+    const from = process.env.SMTP_FROM || 'RopeWallet Security <noreply@ropewallet.com>';
+
+    const mailOptions = {
+      from,
+      to: email,
+      subject: 'Security Alert: New Device Verification Code - RopeWallet',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <div style="display: inline-block; width: 48px; height: 48px; line-height: 48px; border-radius: 50%; background-color: #FEF2F2; color: #EF4444; font-size: 24px; font-weight: bold;">!</div>
+          </div>
+          <h2 style="color: #0F172A; text-align: center; margin-bottom: 12px; font-size: 20px;">New Device Sign-In Attempt</h2>
+          <p style="font-size: 14px; color: #475569; line-height: 1.6; text-align: center;">We detected a sign-in attempt to your RopeWallet account from a new or unrecognized device.</p>
+          <p style="font-size: 14px; color: #475569; line-height: 1.6; text-align: center; margin-top: 10px;">Please enter the 6-digit verification code below on your new device to approve this sign-in:</p>
+          
+          <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; padding: 18px; border-radius: 12px; text-align: center; margin: 24px 0;">
+            <span style="font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #0F172A; font-family: monospace;">${code}</span>
+          </div>
+
+          <p style="font-size: 12px; color: #64748B; text-align: center; line-height: 1.5;">This code will expire in 10 minutes. If you did NOT attempt to log in from a new device, please change your password immediately to secure your account.</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+  }
 }

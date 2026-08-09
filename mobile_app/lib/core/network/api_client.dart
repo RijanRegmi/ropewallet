@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants/api_constants.dart';
+import '../security/device_security_service.dart';
 
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
@@ -12,10 +13,12 @@ class ApiClient {
 
   Future<Map<String, String>> _getHeaders() async {
     final token = await _secureStorage.read(key: 'auth_token');
+    final deviceId = await DeviceSecurityService().getDeviceId();
     
     final headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'X-Device-Id': deviceId,
     };
 
     if (token != null && token.isNotEmpty) {
@@ -26,10 +29,14 @@ class ApiClient {
   }
 
   Future<http.Response> _intercept(http.Response response) async {
-    if (response.statusCode == 403) {
+    if (response.statusCode == 401 || response.statusCode == 403) {
       try {
         final body = jsonDecode(response.body);
-        if (body['error'] != null && body['error'].toString().toLowerCase().contains('frozen')) {
+        if (body['isDeviceRevoked'] == true || 
+            (body['error'] != null && 
+             (body['error'].toString().toLowerCase().contains('frozen') || 
+              body['error'].toString().toLowerCase().contains('logged into on another device') ||
+              body['error'].toString().toLowerCase().contains('session terminated')))) {
           await _secureStorage.delete(key: 'auth_token');
           await _secureStorage.delete(key: 'cached_user_profile');
         }

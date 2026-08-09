@@ -385,6 +385,26 @@ class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerif
     super.dispose();
   }
 
+  Future<void> _pasteOtpFromClipboard() async {
+    final clipboardData = await Clipboard.getData('text/plain');
+    if (clipboardData != null && clipboardData.text != null) {
+      final text = clipboardData.text!.replaceAll(RegExp(r'[^0-9]'), '');
+      if (text.isNotEmpty) {
+        for (int i = 0; i < 6; i++) {
+          if (i < text.length) {
+            _otpControllers[i].text = text[i];
+          }
+        }
+        if (mounted) setState(() {});
+        final lastIdx = (text.length - 1).clamp(0, 5);
+        _otpFocusNodes[lastIdx].requestFocus();
+        if (text.length >= 6) {
+          _verifyOtp();
+        }
+      }
+    }
+  }
+
   Future<void> _sendOtpCode() async {
     setState(() {
       _isSendingOtp = true;
@@ -421,7 +441,10 @@ class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerif
     final otpCode = _otpControllers.map((c) => c.text.trim()).join();
     if (otpCode.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter the full 6-digit code.')),
+        const SnackBar(
+          backgroundColor: Color(0xFFEF4444),
+          content: Text('Please enter the full 6-digit verification code.'),
+        ),
       );
       return;
     }
@@ -489,55 +512,113 @@ class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerif
     }
   }
 
-  Widget _buildOtpBox(int index, bool isDark, ThemeData theme) {
+  Widget _buildOtpField(int index, bool isDark) {
     final isFocused = _otpFocusNodes[index].hasFocus;
     final hasValue = _otpControllers[index].text.isNotEmpty;
 
-    return Container(
-      width: 44,
-      height: 54,
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isFocused
-              ? theme.primaryColor
-              : hasValue
-                  ? const Color(0xFF10B981)
-                  : isDark
-                      ? const Color(0xFF475569)
-                      : const Color(0xFFCBD5E1),
-          width: isFocused ? 2 : 1.5,
-        ),
-      ),
-      child: TextField(
-        controller: _otpControllers[index],
-        focusNode: _otpFocusNodes[index],
-        keyboardType: TextInputType.number,
-        textAlign: TextAlign.center,
-        maxLength: 1,
-        style: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: isDark ? Colors.white : const Color(0xFF0F172A),
-        ),
-        inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly,
-          LengthLimitingTextInputFormatter(1),
-        ],
-        onChanged: (val) {
-          setState(() {});
-          if (val.isNotEmpty && index < 5) {
-            _otpFocusNodes[index + 1].requestFocus();
-          }
-          if (val.isEmpty && index > 0) {
+    return KeyboardListener(
+      focusNode: FocusNode(),
+      onKeyEvent: (event) {
+        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backspace) {
+          if (_otpControllers[index].text.isEmpty && index > 0) {
             _otpFocusNodes[index - 1].requestFocus();
+            _otpControllers[index - 1].clear();
+            setState(() {});
           }
-        },
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          counterText: '',
-          contentPadding: EdgeInsets.zero,
+        }
+      },
+      child: Container(
+        width: 46,
+        height: 54,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isFocused
+                ? const Color(0xFF10B981) // Emerald border on focus
+                : hasValue
+                    ? const Color(0xFF059669)
+                    : isDark
+                        ? const Color(0xFF334155)
+                        : const Color(0xFFCBD5E1),
+            width: isFocused ? 2.0 : 1.2,
+          ),
+        ),
+        child: TextField(
+          controller: _otpControllers[index],
+          focusNode: _otpFocusNodes[index],
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
+          onTap: () {
+            _otpControllers[index].selection = TextSelection(
+              baseOffset: 0,
+              extentOffset: _otpControllers[index].text.length,
+            );
+          },
+          onChanged: (val) {
+            final digitsOnly = val.replaceAll(RegExp(r'[^0-9]'), '');
+
+            if (digitsOnly.length > 2) {
+              // True paste (3+ digits)
+              for (int i = 0; i < 6; i++) {
+                if (i < digitsOnly.length) {
+                  _otpControllers[i].text = digitsOnly[i];
+                }
+              }
+              final nextIdx = digitsOnly.length.clamp(0, 5);
+              _otpFocusNodes[nextIdx].requestFocus();
+              setState(() {});
+              if (digitsOnly.length >= 6) {
+                _verifyOtp();
+              }
+              return;
+            }
+
+            if (val.length == 2) {
+              // Typing over an existing single digit!
+              final newChar = val[1];
+              _otpControllers[index].text = newChar;
+              _otpControllers[index].selection = const TextSelection.collapsed(offset: 1);
+              if (index < 5) {
+                _otpFocusNodes[index + 1].requestFocus();
+              }
+            } else if (val.length == 1) {
+              // Normal typing into an empty box
+              _otpControllers[index].text = val;
+              _otpControllers[index].selection = const TextSelection.collapsed(offset: 1);
+              if (index < 5) {
+                _otpFocusNodes[index + 1].requestFocus();
+              }
+            } else if (val.isEmpty) {
+              // Erased current box digit
+              if (index > 0) {
+                _otpFocusNodes[index - 1].requestFocus();
+              }
+            }
+
+            setState(() {});
+
+            final fullCode = _otpControllers.map((c) => c.text).join();
+            if (fullCode.length == 6) {
+              _verifyOtp();
+            }
+          },
+          decoration: const InputDecoration(
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            errorBorder: InputBorder.none,
+            disabledBorder: InputBorder.none,
+            counterText: '',
+            contentPadding: EdgeInsets.zero,
+            isDense: true,
+          ),
         ),
       ),
     );
@@ -548,78 +629,175 @@ class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerif
     final authProvider = Provider.of<AuthProvider>(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final user = authProvider.user ?? {};
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? const Color(0xFF0B0F19) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(widget.isPinChange ? 'Change PIN' : 'Change Password'),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: isDark ? Colors.white : Colors.black87, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          widget.isPinChange ? 'Change Transaction PIN' : 'Change Password',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
+        ),
+        centerTitle: true,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header Security Badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.shield_outlined, size: 14, color: Color(0xFF10B981)),
+                    const SizedBox(width: 6),
+                    Text(
+                      _step == 0 ? 'VERIFY IDENTITY' : 'SECURITY UPDATE',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF10B981),
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+
               Text(
-                _step == 0 ? 'Verify Identity' : 'Set New Value',
-                style: const TextStyle(
+                _step == 0 ? 'Verify Security Code' : (widget.isPinChange ? 'Set New PIN' : 'Set New Password'),
+                style: TextStyle(
                   fontSize: 26,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                 ),
               ),
               const SizedBox(height: 6),
               Text(
                 _step == 0
-                    ? 'We have sent a 6-digit OTP verification code to your registered email address.'
+                    ? 'Enter the 6-digit verification code sent to your registered email address.'
                     : (widget.isPinChange
-                        ? 'Enter and confirm your new 6-digit Transaction PIN.'
-                        : 'Enter and confirm your new account login password.'),
+                        ? 'Create and confirm a new 6-digit transaction PIN.'
+                        : 'Create and confirm a new account password.'),
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
+                  height: 1.4,
                   color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 24),
 
               // STEP 0: OTP INPUT
               if (_step == 0) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B).withOpacity(0.5) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.mark_email_read_outlined, color: Color(0xFF10B981), size: 24),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Code sent to ${user["email"] ?? "your email"}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // OTP 6-Box Layout (Single Border Clean)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: List.generate(6, (index) => _buildOtpBox(index, isDark, theme)),
+                  children: List.generate(6, (index) => _buildOtpField(index, isDark)),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 20),
+
+                // 1-Tap Paste Button
+                Center(
+                  child: TextButton.icon(
+                    onPressed: _pasteOtpFromClipboard,
+                    icon: const Icon(Icons.content_paste_rounded, size: 16, color: Color(0xFF10B981)),
+                    label: const Text(
+                      'Paste Code from Clipboard',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 32),
                 Row(
                   children: [
                     Expanded(
+                      flex: 1,
                       child: OutlinedButton(
                         onPressed: _isSendingOtp ? null : _sendOtpCode,
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          side: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
                         ),
                         child: _isSendingOtp
                             ? const SizedBox(
-                                height: 20,
-                                width: 20,
+                                height: 18,
+                                width: 18,
                                 child: CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : const Text('Resend Code'),
+                            : Text('Resend Code', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontSize: 13)),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: ElevatedButton(
-                        onPressed: _verifyOtp,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      flex: 2,
+                      child: SizedBox(
+                        height: 52,
+                        child: ElevatedButton(
+                          onPressed: _verifyOtp,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981),
+                            foregroundColor: Colors.white,
+                            elevation: 4,
+                            shadowColor: const Color(0xFF10B981).withOpacity(0.4),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text('Verify Code', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                              SizedBox(width: 6),
+                              Icon(Icons.arrow_forward_rounded, size: 18),
+                            ],
+                          ),
                         ),
-                        child: const Text('Verify Code', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],
@@ -639,11 +817,29 @@ class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerif
                           obscureText: _obscureNewVal,
                           maxLength: 6,
                           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          ),
                           decoration: InputDecoration(
-                            labelText: 'Create 6-digit PIN',
-                            prefixIcon: const Icon(Icons.dialpad_rounded),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                            labelText: 'Create 6-digit PIN *',
+                            prefixIcon: Icon(Icons.dialpad_rounded, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), size: 20),
                             counterText: '',
+                            filled: true,
+                            fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.8),
+                            ),
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscureNewVal ? Icons.visibility_off_outlined : Icons.visibility_outlined,
@@ -669,11 +865,29 @@ class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerif
                           obscureText: _obscureConfirmVal,
                           maxLength: 6,
                           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          ),
                           decoration: InputDecoration(
-                            labelText: 'Confirm 6-digit PIN',
-                            prefixIcon: const Icon(Icons.dialpad_rounded),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                            labelText: 'Confirm 6-digit PIN *',
+                            prefixIcon: Icon(Icons.dialpad_rounded, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), size: 20),
                             counterText: '',
+                            filled: true,
+                            fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.8),
+                            ),
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscureConfirmVal ? Icons.visibility_off_outlined : Icons.visibility_outlined,
@@ -696,10 +910,28 @@ class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerif
                         TextFormField(
                           controller: _newValController,
                           obscureText: _obscureNewVal,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          ),
                           decoration: InputDecoration(
-                            labelText: 'New Password',
-                            prefixIcon: const Icon(Icons.lock_outline_rounded),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                            labelText: 'New Password *',
+                            prefixIcon: Icon(Icons.lock_outline_rounded, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), size: 20),
+                            filled: true,
+                            fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.8),
+                            ),
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscureNewVal ? Icons.visibility_off_outlined : Icons.visibility_outlined,
@@ -721,10 +953,28 @@ class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerif
                         TextFormField(
                           controller: _confirmValController,
                           obscureText: _obscureConfirmVal,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          ),
                           decoration: InputDecoration(
-                            labelText: 'Confirm Password',
-                            prefixIcon: const Icon(Icons.lock_reset_rounded),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                            labelText: 'Confirm Password *',
+                            prefixIcon: Icon(Icons.lock_reset_rounded, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), size: 20),
+                            filled: true,
+                            fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.8),
+                            ),
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscureConfirmVal ? Icons.visibility_off_outlined : Icons.visibility_outlined,
@@ -750,8 +1000,10 @@ class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerif
                         child: ElevatedButton(
                           onPressed: authProvider.isLoading ? null : _submitChange,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: theme.primaryColor,
+                            backgroundColor: const Color(0xFF10B981),
                             foregroundColor: Colors.white,
+                            elevation: 4,
+                            shadowColor: const Color(0xFF10B981).withOpacity(0.4),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
                           child: authProvider.isLoading
@@ -760,7 +1012,17 @@ class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerif
                                   width: 20,
                                   child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                                 )
-                              : const Text('Update Security', style: TextStyle(fontWeight: FontWeight.bold)),
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      widget.isPinChange ? 'Update Transaction PIN' : 'Update Password',
+                                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Icon(Icons.check_circle_outline_rounded, size: 18),
+                                  ],
+                                ),
                         ),
                       ),
                     ],

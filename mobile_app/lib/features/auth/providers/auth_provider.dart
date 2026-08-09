@@ -105,9 +105,13 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> login(String email, String password, {WalletProvider? walletProvider}) async {
+  String? _tempDeviceToken;
+  String? get tempDeviceToken => _tempDeviceToken;
+
+  Future<Map<String, dynamic>> login(String email, String password, {WalletProvider? walletProvider}) async {
     _isLoading = true;
     _errorMessage = null;
+    _tempDeviceToken = null;
     // Wipe previous user session immediately to prevent state leaking
     _user = null;
     _token = null;
@@ -124,10 +128,23 @@ class AuthProvider with ChangeNotifier {
       );
 
       final responseData = jsonDecode(response.body);
+      _isLoading = false;
       
       if (response.statusCode == 200 && responseData['success'] == true) {
-        _token = responseData['data']['token'];
-        _user = responseData['data']['user'];
+        final data = responseData['data'];
+        if (data['requiresDeviceVerification'] == true) {
+          _tempDeviceToken = data['tempToken'];
+          notifyListeners();
+          return {
+            'success': true,
+            'requiresDeviceVerification': true,
+            'tempToken': data['tempToken'],
+            'message': data['message'] ?? 'New device detected. Verification code sent to your email.',
+          };
+        }
+
+        _token = data['token'];
+        _user = data['user'];
         
         await _secureStorage.write(key: 'auth_token', value: _token!);
         await _secureStorage.write(key: 'cached_user_profile', value: jsonEncode(_user));
@@ -135,12 +152,84 @@ class AuthProvider with ChangeNotifier {
         await _secureStorage.write(key: 'saved_email', value: email);
         await _secureStorage.write(key: 'saved_password', value: password);
         
-        _isLoading = false;
+        notifyListeners();
+        return {'success': true, 'requiresDeviceVerification': false};
+      } else {
+        _errorMessage = responseData['error'] ?? 'Failed to login';
+        notifyListeners();
+        return {'success': false, 'error': _errorMessage};
+      }
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return {'success': false, 'error': _errorMessage};
+    }
+  }
+
+  Future<bool> verifyNewDevice({
+    required String tempToken,
+    required String otpCode,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post(
+        ApiConstants.verifyNewDevice,
+        {
+          'tempToken': tempToken,
+          'otpCode': otpCode,
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+      _isLoading = false;
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        final data = responseData['data'];
+        _token = data['token'];
+        _user = data['user'];
+
+        await _secureStorage.write(key: 'auth_token', value: _token!);
+        await _secureStorage.write(key: 'cached_user_profile', value: jsonEncode(_user));
         notifyListeners();
         return true;
       } else {
-        _errorMessage = responseData['error'] ?? 'Failed to login';
-        _isLoading = false;
+        _errorMessage = responseData['error'] ?? 'Invalid verification code';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> resendDeviceOtp({required String tempToken}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post(
+        ApiConstants.resendDeviceOtp,
+        {
+          'tempToken': tempToken,
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+      _isLoading = false;
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = responseData['error'] ?? 'Failed to resend code';
         notifyListeners();
         return false;
       }

@@ -13,11 +13,15 @@ export interface RegisterDTO {
 export interface LoginDTO {
   email: string;
   password: string;
+  deviceId?: string;
 }
 
 export interface AuthResponse {
-  token: string;
-  user: {
+  token?: string;
+  requiresDeviceVerification?: boolean;
+  tempToken?: string;
+  message?: string;
+  user?: {
     id: string;
     firstName: string;
     middleName?: string;
