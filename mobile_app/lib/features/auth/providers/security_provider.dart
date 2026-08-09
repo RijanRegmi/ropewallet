@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
+import '../presentation/widgets/pin_code_dialog.dart';
 
 class SecurityProvider with ChangeNotifier {
   final ApiClient _apiClient = ApiClient();
@@ -167,127 +168,18 @@ class SecurityProvider with ChangeNotifier {
     }
 
     // 2. Security PIN Authorization Modal Sheet
-    final pinController = TextEditingController();
-    bool isAuthenticating = false;
-    String? pinError;
+    final String subtitleText = amount > 0
+        ? 'Confirm PIN to ${actionName.replaceAll('Authorize ', '').toLowerCase()} (\$${amount.toStringAsFixed(2)})'
+        : 'Confirm PIN to ${actionName.replaceAll('Authorize ', '').toLowerCase()}';
 
     final String? enteredPin = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final theme = Theme.of(context);
-            return Container(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-                top: 24,
-                left: 24,
-                right: 24,
-              ),
-              decoration: BoxDecoration(
-                color: theme.scaffoldBackgroundColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: theme.primaryColor.withOpacity(0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.shield_outlined, color: theme.primaryColor, size: 24),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(actionName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                            if (amount > 0)
-                              Text('Amount: \$${amount.toStringAsFixed(2)}', style: const TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.w600)),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded),
-                        onPressed: () => Navigator.pop(ctx, null),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  const Text('Enter 6-Digit Security PIN to authorize', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: pinController,
-                    keyboardType: TextInputType.number,
-                    obscureText: true,
-                    maxLength: 6,
-                    autofocus: true,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
-                    decoration: InputDecoration(
-                      counterText: '',
-                      hintText: '••••••',
-                      errorText: pinError,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: isAuthenticating
-                          ? null
-                          : () async {
-                              final pin = pinController.text.trim();
-                              if (pin.length < 6) {
-                                setSheetState(() {
-                                  pinError = 'Please enter 6-digit PIN';
-                                });
-                                return;
-                              }
-                              setSheetState(() {
-                                isAuthenticating = true;
-                                pinError = null;
-                              });
-
-                              final valid = await verifyTransactionPin(pin);
-
-                              if (valid) {
-                                await _secureStorage.write(key: 'transaction_pin', value: pin);
-                                Navigator.pop(ctx, pin);
-                              } else {
-                                setSheetState(() {
-                                  isAuthenticating = false;
-                                  pinError = _errorMessage ?? 'Incorrect Security PIN';
-                                });
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.primaryColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                      child: isAuthenticating
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Text('Authorize & Confirm', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+      builder: (ctx) => PinCodeDialog(
+        title: 'Enter Transaction PIN',
+        subtitle: subtitleText,
+      ),
     );
 
     return enteredPin;

@@ -17,6 +17,10 @@ export interface DashboardStatsModel {
   totalPlatformFee: number;
   totalStripeFee: number;
   totalNetProfit: number;
+  stripeBalance?: number;
+  stripeAvailable?: number;
+  stripePending?: number;
+  totalUserBalances?: number;
   recentTransactions: TransactionModel[];
   monthlyRevenue: MonthlyRevenueData[];
 }

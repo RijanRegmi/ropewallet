@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../auth/providers/auth_provider.dart';
+import '../../../auth/providers/security_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../../auth/presentation/widgets/pin_code_dialog.dart';
 import 'receipt_page.dart';
@@ -20,6 +21,7 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
   final _recipientController = TextEditingController();
   final _remarksController = TextEditingController();
   double _amount = 0.00;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -47,88 +49,93 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
   }
 
   Future<void> _submitTransfer() async {
+    if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
 
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
     final String receiverQr = _recipientController.text.trim();
     final String remarks = _remarksController.text.trim();
 
-    // Pre-validate recipient (customer-to-customer restriction)
-    final validationResult = await walletProvider.validateRecipient(receiverQrData: receiverQr);
-    if (validationResult['success'] != true) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFFEF4444),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            content: Text(validationResult['error'] ?? 'Customer to customer payments are not allowed. You can only send money to Host accounts.'),
-          ),
-        );
-      }
-      return;
-    }
-
-    final String? pin = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (context) => PinCodeDialog(
-        title: 'Enter Transaction PIN',
-        subtitle: 'Confirm PIN to send money',
-      ),
-    );
-
-    if (pin == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Transaction canceled')),
-      );
-      return;
-    }
-
-    final success = await walletProvider.transfer(
-      receiverQrData: receiverQr,
-      amount: _amount,
-      remarks: remarks.isNotEmpty ? remarks : null,
-      authProvider: authProvider,
-      pin: pin,
-    );
-
-    if (mounted) {
-      if (success) {
-        final newTx = walletProvider.transactions.isNotEmpty
-            ? walletProvider.transactions.first
-            : {
-                'type': 'transfer',
-                'amount': _amount,
-                'fee': 0.0,
-                'netAmount': _amount,
-                'remarks': remarks,
-                'createdAt': DateTime.now().toIso8601String(),
-                'sender': {'fullName': authProvider.user?['fullName'] ?? 'You'},
-                'receiver': {'fullName': _recipientController.text.isNotEmpty ? _recipientController.text : 'Recipient'},
-              };
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ReceiptPage(
-              transaction: newTx,
-              currentUser: authProvider.user ?? {},
-              isNewTransferSuccess: true,
+    try {
+      // Pre-validate recipient (customer-to-customer restriction)
+      final validationResult = await walletProvider.validateRecipient(receiverQrData: receiverQr);
+      if (validationResult['success'] != true) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFFEF4444),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              content: Text(validationResult['error'] ?? 'Customer to customer payments are not allowed. You can only send money to Host accounts.'),
             ),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFFEF4444),
-            content: Text(walletProvider.errorMessage ?? 'Transfer failed'),
-          ),
-        );
+          );
+        }
+        return;
+      }
+
+      final String? pin = await securityProvider.authorizeSecurityWithPin(
+        context,
+        actionName: 'Send Money',
+        amount: _amount,
+      );
+
+      if (pin == null || pin.isEmpty) {
+        return;
+      }
+
+      final success = await walletProvider.transfer(
+        receiverQrData: receiverQr,
+        amount: _amount,
+        remarks: remarks.isNotEmpty ? remarks : null,
+        authProvider: authProvider,
+        pin: pin,
+      );
+
+      if (mounted) {
+        if (success) {
+          final newTx = walletProvider.transactions.isNotEmpty
+              ? walletProvider.transactions.first
+              : {
+                  'type': 'transfer',
+                  'amount': _amount,
+                  'fee': 0.0,
+                  'netAmount': _amount,
+                  'remarks': remarks,
+                  'createdAt': DateTime.now().toIso8601String(),
+                  'sender': {'fullName': authProvider.user?['fullName'] ?? 'You'},
+                  'receiver': {'fullName': _recipientController.text.isNotEmpty ? _recipientController.text : 'Recipient'},
+                };
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ReceiptPage(
+                transaction: newTx,
+                currentUser: authProvider.user ?? {},
+                isNewTransferSuccess: true,
+              ),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFFEF4444),
+              content: Text(walletProvider.errorMessage ?? 'Transfer failed'),
+            ),
+          );
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
       }
     }
   }
@@ -334,7 +341,7 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: walletProvider.isLoading ? null : _submitTransfer,
+                  onPressed: (_isSubmitting || walletProvider.isLoading) ? null : _submitTransfer,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.primaryColor,
                     foregroundColor: Colors.white,
@@ -343,7 +350,7 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                     ),
                     elevation: 2,
                   ),
-                  child: walletProvider.isLoading
+                  child: (_isSubmitting || walletProvider.isLoading)
                       ? const SizedBox(
                           height: 24,
                           width: 24,

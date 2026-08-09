@@ -1,5 +1,8 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -22,7 +25,9 @@ class ReceiptPage extends StatefulWidget {
 }
 
 class _ReceiptPageState extends State<ReceiptPage> {
+  final GlobalKey _receiptKey = GlobalKey();
   bool _isGeneratingPdf = false;
+  bool _isSavingGallery = false;
 
   Future<pw.Document> _generatePdfDoc() async {
     final tx = widget.transaction;
@@ -262,6 +267,64 @@ class _ReceiptPageState extends State<ReceiptPage> {
     }
   }
 
+  Future<void> _saveToGallery() async {
+    if (_isSavingGallery) return;
+    setState(() {
+      _isSavingGallery = true;
+    });
+
+    try {
+      final boundary = _receiptKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) throw Exception('Could not render receipt image');
+
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) throw Exception('Failed to encode PNG image');
+
+      final bytes = byteData.buffer.asUint8List();
+      final tempDir = await getTemporaryDirectory();
+      final String txId = widget.transaction['_id'] ?? 'N/A';
+      final file = File('${tempDir.path}/RopeWallet_Receipt_${txId.length >= 8 ? txId.substring(0, 8) : txId}.png');
+      await file.writeAsBytes(bytes);
+
+      await Gal.putImage(file.path);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF10B981),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle_rounded, color: Colors.white),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text('Receipt saved to Photo Gallery!'),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            content: Text('Failed to save image to Gallery: $e'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSavingGallery = false;
+        });
+      }
+    }
+  }
+
   pw.Widget _buildPdfDetailRow(String label, String value) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(vertical: 8),
@@ -320,130 +383,164 @@ class _ReceiptPageState extends State<ReceiptPage> {
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            // Receipt card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+            // Receipt card wrapped in RepaintBoundary for Gallery saving
+            RepaintBoundary(
+              key: _receiptKey,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // Success Icon
-                  TweenAnimationBuilder<double>(
-                    duration: const Duration(milliseconds: 600),
-                    tween: Tween(begin: 0.0, end: 1.0),
-                    curve: Curves.elasticOut,
-                    builder: (context, value, child) {
-                      return Transform.scale(
-                        scale: value,
-                        child: child,
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFECFDF5),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check_circle_rounded,
-                        color: Color(0xFF10B981),
-                        size: 44,
+                child: Column(
+                  children: [
+                    // Success Icon
+                    TweenAnimationBuilder<double>(
+                      duration: const Duration(milliseconds: 600),
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      curve: Curves.elasticOut,
+                      builder: (context, value, child) {
+                        return Transform.scale(
+                          scale: value,
+                          child: child,
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFECFDF5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check_circle_rounded,
+                          color: Color(0xFF10B981),
+                          size: 44,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Transaction Successful',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF10B981),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Transaction Successful',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF10B981),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Amount
-                  Text(
-                    amountText,
-                    style: const TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
+                    const SizedBox(height: 24),
+                    
+                    // Amount
+                    Text(
+                      amountText,
+                      style: const TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Type: ${type.toUpperCase()}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: theme.primaryColor,
+                    const SizedBox(height: 4),
+                    Text(
+                      'Type: ${type.toUpperCase()}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: theme.primaryColor,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  const Divider(),
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    const SizedBox(height: 16),
 
-                  _buildDetailRow('Transaction ID', txId, isDark, isMonospace: true),
-                  _buildDetailRow('Date & Time', formattedDate, isDark),
-                  _buildDetailRow('Sender', senderName, isDark),
-                  _buildDetailRow('Recipient', receiverName, isDark),
-                  _buildDetailRow('Platform Fee', feeText, isDark),
-                  _buildDetailRow('Net Amount Received', netText, isDark),
-                  _buildDetailRow('Remarks', remarks, isDark),
-                ],
+                    _buildDetailRow('Transaction ID', txId, isDark, isMonospace: true),
+                    _buildDetailRow('Date & Time', formattedDate, isDark),
+                    _buildDetailRow('Sender', senderName, isDark),
+                    _buildDetailRow('Recipient', receiverName, isDark),
+                    _buildDetailRow('Platform Fee', feeText, isDark),
+                    _buildDetailRow('Net Amount Received', netText, isDark),
+                    _buildDetailRow('Remarks', remarks, isDark),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
 
-            Row(
+            // Action Buttons
+            Column(
               children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 52,
-                    child: ElevatedButton.icon(
-                      onPressed: _isGeneratingPdf ? null : _downloadPdf,
-                      icon: const Icon(Icons.download_rounded, color: Colors.white, size: 20),
-                      label: const Text(
-                        'Download PDF',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.primaryColor,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    onPressed: _isSavingGallery ? null : _saveToGallery,
+                    icon: _isSavingGallery
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Icon(Icons.photo_library_rounded, color: Colors.white, size: 20),
+                    label: const Text(
+                      'Save to Gallery',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.primaryColor,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 2,
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: SizedBox(
-                    height: 52,
-                    child: OutlinedButton.icon(
-                      onPressed: _isGeneratingPdf ? null : _sharePdf,
-                      icon: Icon(Icons.share_rounded, color: theme.primaryColor, size: 20),
-                      label: Text(
-                        'Share PDF',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: theme.primaryColor),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: theme.primaryColor, width: 1.5),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          onPressed: _isGeneratingPdf ? null : _downloadPdf,
+                          icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+                          label: const Text(
+                            'Download PDF',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: theme.primaryColor,
+                            side: BorderSide(color: theme.primaryColor, width: 1.5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SizedBox(
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          onPressed: _isGeneratingPdf ? null : _sharePdf,
+                          icon: const Icon(Icons.share_rounded, size: 18),
+                          label: const Text(
+                            'Share PDF',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: theme.primaryColor,
+                            side: BorderSide(color: theme.primaryColor, width: 1.5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

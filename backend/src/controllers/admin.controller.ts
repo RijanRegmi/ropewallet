@@ -10,8 +10,10 @@ import { sendPushNotification } from '../services/push_notification.service.js';
 import { CustomError } from '../middlewares/error.middleware.js';
 import crypto from 'crypto';
 import bcryptjs from 'bcryptjs';
+import Stripe from 'stripe';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretjwtkeyforwalletapp12345';
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
 export class AdminController {
 
@@ -124,6 +126,7 @@ export class AdminController {
         revenueAgg,
         recentTransactions,
         monthlyRevenue,
+        userBalancesAgg,
       ] = await Promise.all([
         User.countDocuments(),
         User.countDocuments({ isFrozen: true }),
@@ -160,9 +163,30 @@ export class AdminController {
           },
           { $sort: { _id: 1 } },
         ]),
+        // Total User Wallet Balances in system
+        User.aggregate([
+          { $group: { _id: null, total: { $sum: '$walletBalance' } } },
+        ]),
       ]);
 
+      // Fetch live Stripe Account Balance if secret key is present
+      let stripeBalance = 0;
+      let stripeAvailable = 0;
+      let stripePending = 0;
+
+      if (process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_SECRET_KEY.includes('dummy')) {
+        try {
+          const bal = await stripe.balance.retrieve();
+          stripeAvailable = (bal.available.find((b: any) => b.currency === 'usd')?.amount || 0) / 100;
+          stripePending = (bal.pending.find((b: any) => b.currency === 'usd')?.amount || 0) / 100;
+          stripeBalance = stripeAvailable + stripePending;
+        } catch (err) {
+          console.error('Failed to retrieve Stripe live balance:', err);
+        }
+      }
+
       const revenue = revenueAgg[0] || { totalCashFlow: 0, totalPlatformFee: 0, totalStripeFee: 0, totalNetProfit: 0, totalFees: 0 };
+      const totalUserBalances = userBalancesAgg[0]?.total || 0;
 
       res.json({
         success: true,
@@ -176,6 +200,10 @@ export class AdminController {
           totalPlatformFee: revenue.totalPlatformFee,
           totalStripeFee: revenue.totalStripeFee,
           totalNetProfit: revenue.totalNetProfit,
+          stripeBalance,
+          stripeAvailable,
+          stripePending,
+          totalUserBalances,
           recentTransactions,
           monthlyRevenue,
         },

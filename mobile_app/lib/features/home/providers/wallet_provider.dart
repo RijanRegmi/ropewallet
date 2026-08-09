@@ -109,6 +109,7 @@ class WalletProvider with ChangeNotifier {
     required String paymentIntentId,
     required AuthProvider authProvider,
     String? remarks,
+    double amount = 0.0,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -127,12 +128,10 @@ class WalletProvider with ChangeNotifier {
 
       if (response.statusCode == 200 && responseData['success'] == true) {
         final newBalance = (responseData['data']?['walletBalance'] as num?)?.toDouble();
-        if (newBalance != null) {
-          authProvider.updateWalletBalance(newBalance);
-        } else {
-          await authProvider.tryAutoLogin();
-        }
-        await fetchTransactions();
+        final currentBal = (authProvider.user?['walletBalance'] as num?)?.toDouble() ?? 0.0;
+        authProvider.updateWalletBalance(newBalance ?? (currentBal + amount));
+        authProvider.tryAutoLogin();
+        fetchTransactions();
         _isLoading = false;
         notifyListeners();
         return true;
@@ -183,10 +182,11 @@ class WalletProvider with ChangeNotifier {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200 && responseData['success'] == true) {
-        await Future.wait([
-          authProvider.tryAutoLogin(),
-          fetchTransactions(),
-        ]);
+        final newBalance = (responseData['data']?['walletBalance'] as num?)?.toDouble();
+        final currentBal = (authProvider.user?['walletBalance'] as num?)?.toDouble() ?? 0.0;
+        authProvider.updateWalletBalance(newBalance ?? (currentBal + amount));
+        authProvider.tryAutoLogin();
+        fetchTransactions();
         _isLoading = false;
         notifyListeners();
         return true;
@@ -280,11 +280,11 @@ class WalletProvider with ChangeNotifier {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200 && responseData['success'] == true) {
-        // Refresh User profile and transaction log concurrently
-        await Future.wait([
-          authProvider.tryAutoLogin(),
-          fetchTransactions(),
-        ]);
+        final newBalance = (responseData['data']?['walletBalance'] as num?)?.toDouble();
+        final currentBal = (authProvider.user?['walletBalance'] as num?)?.toDouble() ?? 0.0;
+        authProvider.updateWalletBalance(newBalance ?? ((currentBal - amount).clamp(0.0, double.infinity)));
+        authProvider.tryAutoLogin();
+        fetchTransactions();
         _isLoading = false;
         notifyListeners();
         return true;
@@ -328,11 +328,11 @@ class WalletProvider with ChangeNotifier {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200 && responseData['success'] == true) {
-        // Refresh User profile and transaction log concurrently
-        await Future.wait([
-          authProvider.tryAutoLogin(),
-          fetchTransactions(),
-        ]);
+        final newBalance = (responseData['data']?['senderWalletBalance'] ?? responseData['data']?['walletBalance'] as num?)?.toDouble();
+        final currentBal = (authProvider.user?['walletBalance'] as num?)?.toDouble() ?? 0.0;
+        authProvider.updateWalletBalance(newBalance ?? ((currentBal - amount).clamp(0.0, double.infinity)));
+        authProvider.tryAutoLogin();
+        fetchTransactions();
         _isLoading = false;
         notifyListeners();
         return true;

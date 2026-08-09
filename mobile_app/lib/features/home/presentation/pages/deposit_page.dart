@@ -22,9 +22,11 @@ class _DepositPageState extends State<DepositPage> {
   final _cardFormKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
 
-  // Stripe CardField collects card data securely — no raw card controllers needed
+  // Card Form Fields (Pure Flutter TextFormFields - 100% visible on all Android devices)
+  final _cardNumberController = TextEditingController();
+  final _expiryController = TextEditingController();
+  final _cvcController = TextEditingController();
   final _remarksController = TextEditingController();
-  bool _stripeCardComplete = false; // Tracks if Stripe CardField has valid data
 
   // Additional Billing Fields (Symmetrical to SavedCardPage)
   final _cardholderController = TextEditingController();
@@ -57,9 +59,14 @@ class _DepositPageState extends State<DepositPage> {
   bool _launchedPayment = false;
   String? _generatedLink;
 
+  final _cardFormController = CardFormEditController();
+
   @override
   void dispose() {
     _amountController.dispose();
+    _cardNumberController.dispose();
+    _expiryController.dispose();
+    _cvcController.dispose();
     _remarksController.dispose();
     _cardholderController.dispose();
     _addressController.dispose();
@@ -122,18 +129,14 @@ class _DepositPageState extends State<DepositPage> {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final savedCard = authProvider.user?['savedCard'];
-    final hasSavedCard = savedCard != null && savedCard['stripePaymentMethodId'] != null && savedCard['stripePaymentMethodId'].toString().isNotEmpty;
+    final pmId = savedCard?['stripePaymentMethodId']?.toString();
+    // A card is only truly "saved" for payment if it has a valid Stripe PM token
+    final hasValidStripePM = pmId != null && pmId.isNotEmpty && pmId.startsWith('pm_');
 
     // Validate form if adding/editing card details
-    final bool needsSaveCard = !hasSavedCard || _isInlineEditing;
+    final bool needsSaveCard = !hasValidStripePM || _isInlineEditing;
     if (needsSaveCard) {
       if (!_cardFormKey.currentState!.validate()) return;
-      if (!_stripeCardComplete) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter valid card details')),
-        );
-        return;
-      }
       if (!_agreedToTerms) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please agree to the storage terms to proceed.')),
@@ -154,21 +157,62 @@ class _DepositPageState extends State<DepositPage> {
     );
 
     if (userPin == null || userPin.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Deposit authorization canceled')),
-      );
       return;
     }
     final String pin = userPin;
 
-    // Step 1: Save card via Stripe SDK if needed
-    if (needsSaveCard) {
-      setState(() {
-        _isSavingCard = true;
-      });
+    setState(() {
+      _isSavingCard = true;
+    });
 
-      try {
-        // Create a PaymentMethod using Stripe SDK (card data stays in Stripe's SDK)
+    // Show clean non-dismissible progress dialog after PIN is entered
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const PopScope(
+        canPop: false,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(18))),
+          content: Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 26,
+                  height: 26,
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
+                ),
+                SizedBox(width: 18),
+                Expanded(
+                  child: Text(
+                    'Processing deposit...',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      // Step 1: Save card via Stripe SDK if needed
+      if (needsSaveCard) {
+        final expiryParts = _expiryController.text.split('/');
+        final expMonth = int.tryParse(expiryParts[0].trim()) ?? 1;
+        final expYear = int.tryParse('20${expiryParts[1].trim()}') ?? 2026;
+
+        // Tokenize card client-side via Stripe SDK
+        await Stripe.instance.dangerouslyUpdateCardDetails(
+          CardDetails(
+            number: _cardNumberController.text.replaceAll(' ', ''),
+            cvc: _cvcController.text.trim(),
+            expirationMonth: expMonth,
+            expirationYear: expYear,
+          ),
+        );
+
         final paymentMethod = await Stripe.instance.createPaymentMethod(
           params: const PaymentMethodParams.card(
             paymentMethodData: PaymentMethodData(),
@@ -187,15 +231,11 @@ class _DepositPageState extends State<DepositPage> {
           taxId: _taxIdController.text.trim(),
         );
 
-        setState(() {
-          _isSavingCard = false;
-          if (saveSuccess) {
-            _isInlineEditing = false;
-          }
-        });
-
-        if (!saveSuccess) {
+        if (saveSuccess) {
+          _isInlineEditing = false;
+        } else {
           if (mounted) {
+            Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 backgroundColor: const Color(0xFFEF4444),
@@ -205,110 +245,123 @@ class _DepositPageState extends State<DepositPage> {
           }
           return;
         }
-      } catch (e) {
-        setState(() {
-          _isSavingCard = false;
-        });
+      }
+
+      // Step 2: Create PaymentIntent on the backend
+      final String customRemarks = _remarksController.text.trim();
+      final intentResult = await walletProvider.createDepositIntent(
+        amount: amount,
+        remarks: customRemarks.isNotEmpty ? customRemarks : null,
+        pin: pin,
+      );
+
+      if (intentResult == null) {
         if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               backgroundColor: const Color(0xFFEF4444),
-              content: Text('Card error: ${e.toString()}'),
+              content: Text(walletProvider.errorMessage ?? 'Failed to create payment'),
             ),
           );
         }
         return;
       }
-    }
 
-    // Step 2: Create PaymentIntent on the backend
-    final String customRemarks = _remarksController.text.trim();
-    final intentResult = await walletProvider.createDepositIntent(
-      amount: amount,
-      remarks: customRemarks.isNotEmpty ? customRemarks : null,
-      pin: pin,
-    );
+      final String clientSecret = intentResult['clientSecret'];
+      final String paymentIntentId = intentResult['paymentIntentId'];
 
-    if (intentResult == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFFEF4444),
-            content: Text(walletProvider.errorMessage ?? 'Failed to create payment'),
+      // Step 3: Confirm payment client-side via Stripe SDK
+      if (needsSaveCard) {
+        final expiryParts = _expiryController.text.split('/');
+        final expMonth = int.tryParse(expiryParts[0].trim()) ?? 1;
+        final expYear = int.tryParse('20${expiryParts[1].trim()}') ?? 2026;
+
+        await Stripe.instance.dangerouslyUpdateCardDetails(
+          CardDetails(
+            number: _cardNumberController.text.replaceAll(' ', ''),
+            cvc: _cvcController.text.trim(),
+            expirationMonth: expMonth,
+            expirationYear: expYear,
           ),
         );
-      }
-      return;
-    }
 
-    final String clientSecret = intentResult['clientSecret'];
-    final String paymentIntentId = intentResult['paymentIntentId'];
-
-    // Step 3: Confirm payment client-side via Stripe SDK
-    try {
-      await Stripe.instance.confirmPayment(
-        paymentIntentClientSecret: clientSecret,
-        data: const PaymentMethodParams.card(
-          paymentMethodData: PaymentMethodData(),
-        ),
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFFEF4444),
-            content: Text('Payment failed: ${e.toString()}'),
-          ),
-        );
-      }
-      return;
-    }
-
-    // Step 4: Tell backend to verify and credit wallet
-    final updatedSavedCard = authProvider.user?['savedCard'];
-    final cardBrand = updatedSavedCard?['cardBrand'] ?? 'Card';
-    final cardLast4 = updatedSavedCard?['last4'] ?? '****';
-    final String finalRemarks = customRemarks.isNotEmpty ? customRemarks : 'Deposit from $cardBrand ending in $cardLast4';
-
-    final success = await walletProvider.confirmDeposit(
-      paymentIntentId: paymentIntentId,
-      authProvider: authProvider,
-      remarks: finalRemarks,
-    );
-
-    if (mounted) {
-      if (success) {
-        final newTx = {
-          '_id': walletProvider.transactions.isNotEmpty
-              ? (walletProvider.transactions.first['_id'] ?? 'TX-${DateTime.now().millisecondsSinceEpoch}')
-              : 'TX-${DateTime.now().millisecondsSinceEpoch}',
-          'type': 'deposit',
-          'amount': amount,
-          'fee': 0.0,
-          'netAmount': amount,
-          'remarks': finalRemarks,
-          'createdAt': DateTime.now().toIso8601String(),
-          'sender': {'fullName': cardBrand},
-          'receiver': {'fullName': authProvider.user?['fullName'] ?? 'You'},
-        };
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ReceiptPage(
-              transaction: newTx,
-              currentUser: authProvider.user ?? {},
-              isNewTransferSuccess: true,
-            ),
+        await Stripe.instance.confirmPayment(
+          paymentIntentClientSecret: clientSecret,
+          data: const PaymentMethodParams.card(
+            paymentMethodData: PaymentMethodData(),
           ),
         );
       } else {
+        await Stripe.instance.confirmPayment(
+          paymentIntentClientSecret: clientSecret,
+        );
+      }
+
+      // Step 4: Tell backend to verify and credit wallet
+      final updatedSavedCard = authProvider.user?['savedCard'];
+      final cardBrand = updatedSavedCard?['cardBrand'] ?? 'Card';
+      final cardLast4 = updatedSavedCard?['last4'] ?? '****';
+      final String finalRemarks = customRemarks.isNotEmpty ? customRemarks : 'Deposit from $cardBrand ending in $cardLast4';
+
+      final success = await walletProvider.confirmDeposit(
+        paymentIntentId: paymentIntentId,
+        authProvider: authProvider,
+        remarks: finalRemarks,
+      );
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
+
+        if (success) {
+          final newTx = {
+            '_id': walletProvider.transactions.isNotEmpty
+                ? (walletProvider.transactions.first['_id'] ?? 'TX-${DateTime.now().millisecondsSinceEpoch}')
+                : 'TX-${DateTime.now().millisecondsSinceEpoch}',
+            'type': 'deposit',
+            'amount': amount,
+            'fee': 0.0,
+            'netAmount': amount,
+            'remarks': finalRemarks,
+            'createdAt': DateTime.now().toIso8601String(),
+            'sender': {'fullName': cardBrand},
+            'receiver': {'fullName': authProvider.user?['fullName'] ?? 'You'},
+          };
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ReceiptPage(
+                transaction: newTx,
+                currentUser: authProvider.user ?? {},
+                isNewTransferSuccess: true,
+              ),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFFEF4444),
+              content: Text(walletProvider.errorMessage ?? 'Deposit failed'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFFEF4444),
-            content: Text(walletProvider.errorMessage ?? 'Deposit failed'),
+            content: Text('Payment error: ${e.toString()}'),
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSavingCard = false;
+        });
       }
     }
   }
@@ -456,7 +509,9 @@ class _DepositPageState extends State<DepositPage> {
         : 0.00;
 
     final savedCard = user['savedCard'];
-    final hasSavedCard = savedCard != null && savedCard['stripePaymentMethodId'] != null && savedCard['stripePaymentMethodId'].toString().isNotEmpty;
+    final pmId = savedCard?['stripePaymentMethodId']?.toString();
+    // Only treat card as saved for UI/payment if it has a valid Stripe PM token
+    final hasSavedCard = pmId != null && pmId.isNotEmpty && pmId.startsWith('pm_');
 
     return DefaultTabController(
       length: 2,
@@ -712,24 +767,97 @@ class _DepositPageState extends State<DepositPage> {
                                 ),
                                 const SizedBox(height: 18),
 
-                                Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 4),
-                                  child: CardField(
-                                    onCardChanged: (card) {
-                                      setState(() {
-                                        _stripeCardComplete = card?.complete ?? false;
-                                      });
-                                    },
-                                    style: TextStyle(
-                                      color: isDark ? Colors.white : Colors.black,
-                                      fontSize: 16,
-                                    ),
-                                    decoration: InputDecoration(
-                                      labelText: 'Card Information',
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                TextFormField(
+                                  controller: _cardNumberController,
+                                  keyboardType: TextInputType.number,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(RegExp(r'[0-9 ]')),
+                                    LengthLimitingTextInputFormatter(19),
+                                    CardNumberFormatter(),
+                                  ],
+                                  decoration: InputDecoration(
+                                    labelText: 'Card Number',
+                                    prefixIcon: const Icon(Icons.credit_card_rounded),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                                    suffixIcon: Container(
+                                      width: 120,
+                                      padding: const EdgeInsets.only(right: 8.0),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+                                          Image.network('https://img.icons8.com/color/48/000000/visa.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('Visa')),
+                                          const SizedBox(width: 3),
+                                          Image.network('https://img.icons8.com/color/48/000000/mastercard.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('MC')),
+                                          const SizedBox(width: 3),
+                                          Image.network('https://img.icons8.com/color/48/000000/amex.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('Amex')),
+                                          const SizedBox(width: 3),
+                                          Image.network('https://img.icons8.com/color/48/000000/discover.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('Disc')),
+                                        ],
+                                      ),
                                     ),
                                   ),
+                                  validator: (value) {
+                                    if (hasSavedCard && !_isInlineEditing) return null;
+                                    if (value == null || value.trim().isEmpty) return 'Card number is required';
+                                    if (!_isValidLuhn(value)) return 'Invalid card format';
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 18),
+
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: _expiryController,
+                                        keyboardType: TextInputType.number,
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter.allow(RegExp(r'[0-9/]')),
+                                          LengthLimitingTextInputFormatter(5),
+                                          CardExpiryFormatter(),
+                                        ],
+                                        decoration: InputDecoration(
+                                          labelText: 'MM / YY',
+                                          prefixIcon: const Icon(Icons.calendar_today_rounded, size: 20),
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                                        ),
+                                        validator: (value) {
+                                          if (hasSavedCard && !_isInlineEditing) return null;
+                                          if (value == null || value.trim().isEmpty) return 'Required';
+                                          final parts = value.split('/');
+                                          if (parts.length != 2) return 'MM/YY';
+                                          final month = int.tryParse(parts[0]);
+                                          if (month == null || month < 1 || month > 12) return '1-12';
+                                          return null;
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: _cvcController,
+                                        keyboardType: TextInputType.number,
+                                        obscureText: true,
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter.digitsOnly,
+                                          LengthLimitingTextInputFormatter(4),
+                                        ],
+                                        decoration: InputDecoration(
+                                          labelText: 'CVC',
+                                          prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                                        ),
+                                        validator: (value) {
+                                          if (hasSavedCard && !_isInlineEditing) return null;
+                                          if (value == null || value.trim().length < 3) return 'Required';
+                                          return null;
+                                        },
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 18),
 
@@ -953,9 +1081,9 @@ class _DepositPageState extends State<DepositPage> {
                                       foregroundColor: Colors.white,
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                     ),
-                                    child: walletProvider.isLoading
-                                        ? const CircularProgressIndicator(color: Colors.white)
-                                        : const Text('Load', style: TextStyle(fontWeight: FontWeight.bold)),
+                                     child: (walletProvider.isLoading || _isSavingCard)
+                                         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                         : const Text('Load', style: TextStyle(fontWeight: FontWeight.bold)),
                                   ),
                                 ),
                               ],

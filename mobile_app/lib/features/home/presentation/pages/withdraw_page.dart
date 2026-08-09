@@ -19,8 +19,10 @@ class _WithdrawPageState extends State<WithdrawPage> {
   final _amountController = TextEditingController();
   
   // Card Form Fields
+  final _cardNumberController = TextEditingController();
+  final _expiryController = TextEditingController();
+  final _cvcController = TextEditingController();
   final _remarksController = TextEditingController();
-  bool _stripeCardComplete = false;
 
   // Additional Billing Fields
   final _cardholderController = TextEditingController();
@@ -60,6 +62,9 @@ class _WithdrawPageState extends State<WithdrawPage> {
   @override
   void dispose() {
     _amountController.dispose();
+    _cardNumberController.dispose();
+    _expiryController.dispose();
+    _cvcController.dispose();
     _remarksController.dispose();
     _cardholderController.dispose();
     _addressController.dispose();
@@ -88,18 +93,14 @@ class _WithdrawPageState extends State<WithdrawPage> {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final savedCard = authProvider.user?['savedCard'];
-    final hasSavedCard = savedCard != null && savedCard['stripePaymentMethodId'] != null && savedCard['stripePaymentMethodId'].toString().isNotEmpty;
+    final pmId = savedCard?['stripePaymentMethodId']?.toString();
+    // A card is only truly "saved" for payment if it has a valid Stripe PM token
+    final hasValidStripePM = pmId != null && pmId.isNotEmpty && pmId.startsWith('pm_');
 
     // Validate forms
-    final bool needsSaveCard = !hasSavedCard || _isInlineEditing;
+    final bool needsSaveCard = !hasValidStripePM || _isInlineEditing;
     if (needsSaveCard) {
       if (!_cardFormKey.currentState!.validate()) return;
-      if (!_stripeCardComplete) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter valid card details')),
-        );
-        return;
-      }
       if (!_agreedToTerms) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please agree to the storage terms to proceed.')),
@@ -138,6 +139,19 @@ class _WithdrawPageState extends State<WithdrawPage> {
       });
 
       try {
+        final expiryParts = _expiryController.text.split('/');
+        final expMonth = int.tryParse(expiryParts[0].trim()) ?? 1;
+        final expYear = int.tryParse('20${expiryParts[1].trim()}') ?? 2026;
+
+        await Stripe.instance.dangerouslyUpdateCardDetails(
+          CardDetails(
+            number: _cardNumberController.text.replaceAll(' ', ''),
+            cvc: _cvcController.text.trim(),
+            expirationMonth: expMonth,
+            expirationYear: expYear,
+          ),
+        );
+
         final paymentMethod = await Stripe.instance.createPaymentMethod(
           params: const PaymentMethodParams.card(
             paymentMethodData: PaymentMethodData(),
@@ -258,7 +272,9 @@ class _WithdrawPageState extends State<WithdrawPage> {
         : 0.00;
 
     final savedCard = user['savedCard'];
-    final hasSavedCard = savedCard != null && savedCard['stripePaymentMethodId'] != null && savedCard['stripePaymentMethodId'].toString().isNotEmpty;
+    final pmId = savedCard?['stripePaymentMethodId']?.toString();
+    // Only treat card as saved for UI/payment if it has a valid Stripe PM token
+    final hasSavedCard = pmId != null && pmId.isNotEmpty && pmId.startsWith('pm_');
 
     return Scaffold(
       appBar: AppBar(
@@ -569,24 +585,99 @@ class _WithdrawPageState extends State<WithdrawPage> {
                     ),
                     const SizedBox(height: 18),
 
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: CardField(
-                        onCardChanged: (card) {
-                          setState(() {
-                            _stripeCardComplete = card?.complete ?? false;
-                          });
-                        },
-                        style: TextStyle(
-                          color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
-                          fontSize: 16,
-                        ),
-                        decoration: InputDecoration(
-                          labelText: 'Card Information',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    TextFormField(
+                      controller: _cardNumberController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9 ]')),
+                        LengthLimitingTextInputFormatter(19),
+                        CardNumberFormatter(),
+                      ],
+                      decoration: InputDecoration(
+                        labelText: 'Card Number',
+                        prefixIcon: const Icon(Icons.credit_card_rounded),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                        suffixIcon: Container(
+                          width: 120,
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Image.network('https://img.icons8.com/color/48/000000/visa.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('Visa')),
+                              const SizedBox(width: 3),
+                              Image.network('https://img.icons8.com/color/48/000000/mastercard.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('MC')),
+                              const SizedBox(width: 3),
+                              Image.network('https://img.icons8.com/color/48/000000/amex.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('Amex')),
+                              const SizedBox(width: 3),
+                              Image.network('https://img.icons8.com/color/48/000000/discover.png', width: 22, height: 14, errorBuilder: (c, e, s) => const Text('Disc')),
+                            ],
+                          ),
                         ),
                       ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Card number is required';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 18),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _expiryController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'[0-9/]')),
+                              LengthLimitingTextInputFormatter(5),
+                              CardExpiryFormatter(),
+                            ],
+                            decoration: InputDecoration(
+                              labelText: 'MM / YY',
+                              prefixIcon: const Icon(Icons.calendar_today_rounded, size: 20),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Required';
+                              }
+                              final parts = value.split('/');
+                              if (parts.length != 2) return 'MM/YY';
+                              final month = int.tryParse(parts[0]);
+                              if (month == null || month < 1 || month > 12) return '1-12';
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _cvcController,
+                            keyboardType: TextInputType.number,
+                            obscureText: true,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(4),
+                            ],
+                            decoration: InputDecoration(
+                              labelText: 'CVC',
+                              prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().length < 3) {
+                                return 'Required';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 18),
 

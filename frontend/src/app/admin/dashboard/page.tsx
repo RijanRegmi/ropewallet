@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { apiRequest } from '@/lib/api';
 import { DashboardStatsModel } from '@/models/dashboard.model';
-import { DollarSign, Users, UserX, Clock, TrendingUp, CreditCard, Sparkles } from 'lucide-react';
+import { DollarSign, Users, UserX, Clock, TrendingUp, CreditCard, Sparkles, Wallet, Landmark } from 'lucide-react';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStatsModel | null>(null);
@@ -30,14 +30,16 @@ export default function DashboardPage() {
   }
 
   const cards = [
-    { label: 'Total Cash Flow',    value: `$${Number(stats?.totalCashFlow || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,    icon: TrendingUp,  accent: '#7ba5b5' },
-    { label: 'Platform Revenue',   value: `$${Number(stats?.totalPlatformFee || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,  icon: DollarSign,  accent: '#5C7C89' },
-    { label: 'Stripe Fees Paid',   value: `$${Number(stats?.totalStripeFee || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,   icon: CreditCard,  accent: '#a8c4cc' },
-    { label: 'Net Profit',         value: `$${Number(stats?.totalNetProfit || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,   icon: Sparkles,    accent: '#d0e8ef' },
-    { label: 'Total Users',        value: stats?.totalUsers || 0,         icon: Users,       accent: '#7ba5b5' },
-    { label: 'Active Users',       value: stats?.activeUsers || 0,        icon: Users,       accent: '#10B981' },
-    { label: 'Pending Deposits',   value: stats?.pendingDeposits || 0,    icon: Clock,       accent: '#F59E0B' },
-    { label: 'Frozen Accounts',    value: stats?.frozenUsers || 0,        icon: UserX,       accent: '#EF4444' },
+    { label: 'Total Cash Flow',      value: `$${Number(stats?.totalCashFlow || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,      icon: TrendingUp,  accent: '#7ba5b5' },
+    { label: 'Stripe Total Money',   value: `$${Number(stats?.stripeBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,       icon: Wallet,      accent: '#10B981' },
+    { label: 'User Wallet Balances', value: `$${Number(stats?.totalUserBalances || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, icon: Landmark,    accent: '#3B82F6' },
+    { label: 'Platform Revenue',     value: `$${Number(stats?.totalPlatformFee || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,  icon: DollarSign,  accent: '#5C7C89' },
+    { label: 'Stripe Fees Paid',     value: `$${Number(stats?.totalStripeFee || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,   icon: CreditCard,  accent: '#a8c4cc' },
+    { label: 'Net Profit',           value: `$${Number(stats?.totalNetProfit || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,   icon: Sparkles,    accent: '#d0e8ef' },
+    { label: 'Total Users',          value: stats?.totalUsers || 0,           icon: Users,       accent: '#7ba5b5' },
+    { label: 'Active Users',         value: stats?.activeUsers || 0,          icon: Users,       accent: '#10B981' },
+    { label: 'Pending Deposits',     value: stats?.pendingDeposits || 0,      icon: Clock,       accent: '#F59E0B' },
+    { label: 'Frozen Accounts',      value: stats?.frozenUsers || 0,          icon: UserX,       accent: '#EF4444' },
   ];
 
   const glassCard = {
