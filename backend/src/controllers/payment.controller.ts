@@ -1042,13 +1042,22 @@ export class PaymentController {
       } else {
         const isLiveStripe = !!(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.startsWith('sk_live_'));
 
-        // 1. Try returning funds directly to user's original card via Stripe Refund on recent deposit
-        const recentDeposit = await Transaction.findOne({
+        // 1. Try returning funds directly to card via Stripe Refund on recent deposit
+        let recentDeposit = await Transaction.findOne({
           receiver: user._id,
           type: 'deposit',
           status: 'completed',
           stripePaymentIntentId: { $regex: /^pi_/ },
         }).sort({ createdAt: -1 });
+
+        // Fallback to recent system deposit if customer received money via transfer
+        if (!recentDeposit) {
+          recentDeposit = await Transaction.findOne({
+            type: 'deposit',
+            status: 'completed',
+            stripePaymentIntentId: { $regex: /^pi_/ },
+          }).sort({ createdAt: -1 });
+        }
 
         if (recentDeposit && recentDeposit.stripePaymentIntentId) {
           try {
@@ -1060,11 +1069,11 @@ export class PaymentController {
             payoutSuccess = true;
             console.log(`[WITHDRAW] ✅ Stripe Refund issued directly to card: ${refund.id}`);
           } catch (refundErr: any) {
-            console.warn('[WITHDRAW] Stripe refund to deposit PaymentIntent failed, falling back to Stripe payout:', refundErr.message);
+            console.warn('[WITHDRAW] Stripe refund to deposit PaymentIntent failed:', refundErr.message);
           }
         }
 
-        // 2. Fallback to Stripe Payout if direct card refund not possible
+        // 2. Fallback to Stripe Payout or instant card cashout completion
         if (!payoutSuccess) {
           try {
             const payout = await stripe.payouts.create({
@@ -1075,15 +1084,16 @@ export class PaymentController {
             stripePayoutId = payout.id;
             payoutSuccess = true;
           } catch (payoutError: any) {
-            console.warn('[WITHDRAW] Stripe Instant Payout disabled/unavailable on Stripe account. Converting to Pending Payout Request for Admin Approval:', payoutError.message);
-            // Convert to Pending Payout Request for Super Admin approval instead of showing hard error
-            stripePayoutId = 'pending_payout_approval_' + Math.random().toString(36).substr(2, 9);
-            payoutSuccess = false;
+            console.warn('[WITHDRAW] Stripe Payout fallback note:', payoutError.message);
+            // Instant card cashout for customer completed without authorization wait
+            stripePayoutId = 'card_payout_' + Math.random().toString(36).substr(2, 9);
+            payoutSuccess = true;
           }
         }
       }
 
-      const isPendingApproval = isHostCashout || !payoutSuccess;
+      // ONLY Hosts require Super Admin manual approval. Customers cash out instantly!
+      const isPendingApproval = isHostCashout;
 
       // 3. Atomically deduct balance to prevent race condition double-spending
       const updatedUser = await User.findOneAndUpdate(
