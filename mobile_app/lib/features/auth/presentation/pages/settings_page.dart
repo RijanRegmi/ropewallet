@@ -810,22 +810,31 @@ class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerif
                     Expanded(
                       flex: 2,
                       child: SizedBox(
-                        height: 52,
+                        height: 56,
                         child: ElevatedButton(
                           onPressed: _verifyOtp,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF10B981),
                             foregroundColor: Colors.white,
                             elevation: 4,
+                            padding: EdgeInsets.zero,
                             shadowColor: const Color(0xFF10B981).withOpacity(0.4),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
                           child: const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Text('Verify Code', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                              Text(
+                                'Verify Code',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  height: 1.2,
+                                ),
+                              ),
                               SizedBox(width: 6),
-                              Icon(Icons.arrow_forward_rounded, size: 18),
+                              Icon(Icons.arrow_forward_rounded, size: 20),
                             ],
                           ),
                         ),
@@ -1027,31 +1036,37 @@ class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerif
                       const SizedBox(height: 40),
                       SizedBox(
                         width: double.infinity,
-                        height: 52,
+                        height: 56,
                         child: ElevatedButton(
                           onPressed: authProvider.isLoading ? null : _submitChange,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF10B981),
                             foregroundColor: Colors.white,
                             elevation: 4,
+                            padding: EdgeInsets.zero,
                             shadowColor: const Color(0xFF10B981).withOpacity(0.4),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
                           child: authProvider.isLoading
                               ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
+                                  height: 22,
+                                  width: 22,
                                   child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                                 )
                               : Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     Text(
                                       widget.isPinChange ? 'Update Transaction PIN' : 'Update Password',
-                                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        height: 1.2,
+                                      ),
                                     ),
                                     const SizedBox(width: 8),
-                                    const Icon(Icons.check_circle_outline_rounded, size: 18),
+                                    const Icon(Icons.check_circle_outline_rounded, size: 20),
                                   ],
                                 ),
                         ),

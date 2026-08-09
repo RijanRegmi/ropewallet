@@ -87,7 +87,7 @@ class _DeviceVerificationPageState extends State<DeviceVerificationPage> {
   Future<void> _submitVerification() async {
     if (_isVerifying) return;
 
-    final code = _otpCode;
+    final code = _otpCode.trim();
     if (code.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -103,34 +103,49 @@ class _DeviceVerificationPageState extends State<DeviceVerificationPage> {
     });
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final success = await authProvider.verifyNewDevice(
-      tempToken: widget.tempToken,
-      otpCode: code,
-    );
+    authProvider.clearError();
 
-    if (mounted) {
-      setState(() {
-        _isVerifying = false;
-      });
+    try {
+      final success = await authProvider.verifyNewDevice(
+        tempToken: widget.tempToken,
+        otpCode: code,
+      );
 
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Color(0xFF10B981),
-            content: Text('New device approved! Sign-in complete.'),
-          ),
-        );
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const HomePage()),
-          (route) => false,
-        );
-      } else {
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Color(0xFF10B981),
+              content: Text('New device approved! Sign-in complete.'),
+            ),
+          );
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const HomePage()),
+            (route) => false,
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFFEF4444),
+              content: Text(authProvider.errorMessage ?? 'Verification failed'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFFEF4444),
-            content: Text(authProvider.errorMessage ?? 'Verification failed'),
+            content: Text(e.toString().replaceAll('Exception: ', '')),
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isVerifying = false;
+        });
       }
     }
   }
@@ -404,24 +419,33 @@ class _DeviceVerificationPageState extends State<DeviceVerificationPage> {
               // Verify Button
               SizedBox(
                 width: double.infinity,
-                height: 52,
+                height: 56,
                 child: ElevatedButton(
                   onPressed: authProvider.isLoading ? null : _submitVerification,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF10B981),
                     foregroundColor: Colors.white,
                     elevation: 4,
+                    padding: EdgeInsets.zero,
                     shadowColor: const Color(0xFF10B981).withOpacity(0.4),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                   child: authProvider.isLoading
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                      ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
                       : const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Text('Approve & Sign In', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                            Text(
+                              'Approve & Sign In',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                height: 1.2,
+                              ),
+                            ),
                             SizedBox(width: 8),
-                            Icon(Icons.verified_user_rounded, size: 18),
+                            Icon(Icons.verified_user_rounded, size: 20),
                           ],
                         ),
                 ),

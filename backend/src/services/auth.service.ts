@@ -384,15 +384,13 @@ export class AuthService {
     await user.save();
   }
 
-  static async verifyPin(userId: string, pin: string): Promise<boolean> {
+  static async verifyPin(userId: string, pin: string | number): Promise<boolean> {
     const user = await User.findById(userId).select('+transactionPin');
-    if (!user) {
-      throw new CustomError('User not found', 404);
-    }
-    if (!user.transactionPin) {
+    if (!user || !user.transactionPin) {
       return false;
     }
-    return user.comparePin(pin);
+    const cleanPin = String(pin).trim();
+    return user.comparePin(cleanPin);
   }
 
   static async getMe(userId: string) {

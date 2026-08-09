@@ -182,9 +182,10 @@ userSchema.methods.comparePassword = async function (password: string): Promise<
 };
 
 // Method to compare transaction PIN
-userSchema.methods.comparePin = async function (pin: string): Promise<boolean> {
+userSchema.methods.comparePin = async function (pin: string | number): Promise<boolean> {
   if (!this.transactionPin) return false;
-  return bcryptjs.compare(pin, this.transactionPin);
+  const strPin = String(pin).trim();
+  return bcryptjs.compare(strPin, this.transactionPin);
 };
 
 export const User = model<IUser>('User', userSchema);

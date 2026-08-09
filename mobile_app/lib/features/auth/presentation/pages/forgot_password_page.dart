@@ -471,13 +471,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       const SizedBox(height: 36),
                       SizedBox(
                         width: double.infinity,
-                        height: 52,
+                        height: 56,
                         child: ElevatedButton(
                           onPressed: authProvider.isLoading ? null : _sendCode,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF10B981),
                             foregroundColor: Colors.white,
                             elevation: 4,
+                            padding: EdgeInsets.zero,
                             shadowColor: const Color(0xFF10B981).withOpacity(0.4),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
@@ -489,10 +490,18 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                                 )
                               : const Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    Text('Send Verification Code', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                                    Text(
+                                      'Send Verification Code',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        height: 1.2,
+                                      ),
+                                    ),
                                     SizedBox(width: 8),
-                                    Icon(Icons.send_rounded, size: 18),
+                                    Icon(Icons.send_rounded, size: 20),
                                   ],
                                 ),
                         ),
@@ -571,28 +580,37 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         Expanded(
                           flex: 2,
                           child: SizedBox(
-                            height: 52,
+                            height: 56,
                             child: ElevatedButton(
                               onPressed: authProvider.isLoading ? null : _verifyOtpCode,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF10B981),
                                 foregroundColor: Colors.white,
                                 elevation: 4,
+                                padding: EdgeInsets.zero,
                                 shadowColor: const Color(0xFF10B981).withOpacity(0.4),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                               ),
                               child: authProvider.isLoading
                                   ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                      height: 22,
+                                      width: 22,
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                                     )
                                   : const Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
-                                        Text('Verify Code', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                                        Text(
+                                          'Verify Code',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            height: 1.2,
+                                          ),
+                                        ),
                                         SizedBox(width: 6),
-                                        Icon(Icons.arrow_forward_rounded, size: 18),
+                                        Icon(Icons.arrow_forward_rounded, size: 20),
                                       ],
                                     ),
                             ),

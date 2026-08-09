@@ -60,24 +60,38 @@ class _PinCodeDialogState extends State<PinCodeDialog> {
   }
 
   Future<void> _verifyPin() async {
+    if (_isVerifying) return;
+
     setState(() {
       _isVerifying = true;
+      _error = null;
     });
 
-    final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
-    final isValid = await securityProvider.verifyTransactionPin(_pin);
+    try {
+      final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
+      final isValid = await securityProvider.verifyTransactionPin(_pin.trim());
 
-    if (mounted) {
-      setState(() {
-        _isVerifying = false;
-      });
-
-      if (isValid) {
-        Navigator.of(context).pop(_pin); // Success: returns the correct plain/hashed PIN
-      } else {
+      if (mounted) {
+        if (isValid) {
+          Navigator.of(context).pop(_pin.trim());
+        } else {
+          setState(() {
+            _pin = '';
+            _error = 'Invalid PIN. Please try again.';
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         setState(() {
           _pin = '';
-          _error = 'Invalid PIN. Please try again.';
+          _error = 'PIN verification failed. Please try again.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isVerifying = false;
         });
       }
     }
