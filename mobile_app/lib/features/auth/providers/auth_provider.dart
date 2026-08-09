@@ -729,16 +729,20 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> logout({WalletProvider? walletProvider, SecurityProvider? securityProvider}) async {
-    try {
-      await _apiClient.post('/auth/logout', {});
-    } catch (_) {}
+    // Fire-and-forget backend notification asynchronously (non-blocking)
+    _apiClient.post('/auth/logout', {}).then((_) => null).catchError((_) => null);
 
+    // Wipe memory & disk state instantly (0ms delay)
     _token = null;
     _user = null;
     _isLoading = false;
     _errorMessage = null;
-    await _secureStorage.delete(key: 'auth_token');
-    await _secureStorage.delete(key: 'cached_user_profile');
+
+    try {
+      await _secureStorage.delete(key: 'auth_token');
+      await _secureStorage.delete(key: 'cached_user_profile');
+    } catch (_) {}
+
     walletProvider?.reset();
     securityProvider?.resetOnLogout();
     notifyListeners();
@@ -821,13 +825,17 @@ class AuthProvider with ChangeNotifier {
     if (confirm == true && context.mounted) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
 
-      // Perform logout & reset state
-      await authProvider.logout(walletProvider: walletProvider);
+      // Perform logout & reset state instantly
+      await authProvider.logout(
+        walletProvider: walletProvider,
+        securityProvider: securityProvider,
+      );
 
       // Redirect cleanly to LoginPage and clear all navigation stack
       if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
+        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginPage()),
           (route) => false,
         );

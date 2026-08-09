@@ -416,7 +416,7 @@ export class AdminController {
 
   static async editUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { firstName, lastName, middleName, email, phoneNumber, walletBalance, createdAt } = req.body;
+      const { firstName, lastName, middleName, email, phoneNumber, userTag, role, password, transactionPin, walletBalance, createdAt } = req.body;
       const creatorId = (req as any).admin?.id;
       const creatorRole = (req as any).admin?.role;
 
@@ -431,12 +431,40 @@ export class AdminController {
         return;
       }
 
-      if (firstName !== undefined) user.firstName = firstName;
-      if (lastName !== undefined) user.lastName = lastName;
-      if (middleName !== undefined) user.middleName = middleName;
-      if (email !== undefined) user.email = email;
-      if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
-      if (walletBalance !== undefined) user.walletBalance = walletBalance;
+      if (firstName !== undefined && firstName.trim()) user.firstName = firstName.trim();
+      if (lastName !== undefined && lastName.trim()) user.lastName = lastName.trim();
+      if (middleName !== undefined) user.middleName = middleName.trim() || undefined;
+      if (email !== undefined && email.trim()) user.email = email.trim().toLowerCase();
+      if (phoneNumber !== undefined && phoneNumber.trim()) user.phoneNumber = phoneNumber.trim();
+
+      if (userTag !== undefined && userTag.trim()) {
+        let finalTag = userTag.trim().toLowerCase();
+        if (!finalTag.startsWith('$')) finalTag = `$${finalTag}`;
+        const existingTag = await User.findOne({ userTag: finalTag, _id: { $ne: user._id } });
+        if (existingTag) {
+          res.status(400).json({ success: false, error: 'User tag already taken' });
+          return;
+        }
+        user.userTag = finalTag;
+        user.qrCodeData = finalTag;
+      }
+
+      if (role !== undefined && ['customer', 'host', 'superadmin'].includes(role)) {
+        user.role = role;
+      }
+
+      if (password && password.trim().length >= 6) {
+        user.password = password.trim();
+      }
+
+      if (transactionPin && transactionPin.trim().length === 6) {
+        user.transactionPin = transactionPin.trim();
+      }
+
+      if (walletBalance !== undefined && creatorRole === 'superadmin') {
+        user.walletBalance = walletBalance;
+      }
+
       if (createdAt !== undefined) user.createdAt = new Date(createdAt);
 
       await user.save();

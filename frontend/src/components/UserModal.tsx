@@ -42,7 +42,7 @@ export default function UserModal({ isOpen, user, onClose, onSuccess }: UserModa
   const [userTag, setUserTag] = useState('');
   const [role, setRole] = useState<'customer' | 'host' | 'superadmin'>('customer');
   const [password, setPassword] = useState('');
-  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [transactionPin, setTransactionPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -55,12 +55,12 @@ export default function UserModal({ isOpen, user, onClose, onSuccess }: UserModa
       setPhone(user.phoneNumber || '');
       setUserTag(user.userTag || '');
       setRole((user.role === 'user' || user.role === 'customer') ? 'customer' : (user.role === 'admin' || user.role === 'host') ? 'host' : 'superadmin');
-      setWalletBalance(user.walletBalance || 0);
       setPassword('');
+      setTransactionPin('');
     } else {
       setFirstName(''); setLastName(''); setMiddleName('');
       setEmail(''); setPhone(''); setUserTag('');
-      setRole('customer'); setWalletBalance(0); setPassword('');
+      setRole('customer'); setPassword(''); setTransactionPin('');
     }
     setError('');
   }, [user, isOpen]);
@@ -82,8 +82,8 @@ export default function UserModal({ isOpen, user, onClose, onSuccess }: UserModa
     setLoading(true);
     setError('');
     const body: any = { firstName, lastName, middleName, email, phoneNumber: phone, userTag, role };
-    if (!user) body.password = password;
-    else body.walletBalance = walletBalance;
+    if (password && password.trim()) body.password = password.trim();
+    if (transactionPin && transactionPin.trim()) body.transactionPin = transactionPin.trim();
     const endpoint = user ? `/admin/users/${user._id}` : '/admin/users';
     const method = user ? 'PUT' : 'POST';
     const res = await apiRequest(endpoint, method, body);
@@ -187,20 +187,36 @@ export default function UserModal({ isOpen, user, onClose, onSuccess }: UserModa
             </select>
           </div>
 
-          {!user ? (
-            <div>
-              <label style={labelStyle}>Password *</label>
-              <input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)}
-                style={glassInput} {...inputFocusHandlers} placeholder="••••••••" />
-            </div>
-          ) : (
-            <div>
-              <label style={labelStyle}>Wallet Balance ($)</label>
-              <input type="number" step="0.01" min="0" value={walletBalance}
-                onChange={(e) => setWalletBalance(parseFloat(e.target.value) || 0)}
-                style={glassInput} {...inputFocusHandlers} />
-            </div>
-          )}
+          <div>
+            <label style={labelStyle}>
+              {user ? 'New Password (Optional)' : 'Password *'}
+            </label>
+            <input
+              type="password"
+              required={!user}
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={glassInput}
+              {...inputFocusHandlers}
+              placeholder={user ? 'Leave blank to keep current password' : '••••••••'}
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>
+              {user ? 'New Transaction PIN (Optional)' : 'Transaction PIN (Optional)'}
+            </label>
+            <input
+              type="password"
+              maxLength={6}
+              value={transactionPin}
+              onChange={(e) => setTransactionPin(e.target.value.replace(/[^0-9]/g, ''))}
+              style={{ ...glassInput, fontFamily: 'monospace', letterSpacing: '2px' }}
+              {...inputFocusHandlers}
+              placeholder={user ? '6-digit PIN (leave blank to keep current)' : '6-digit PIN (e.g. 123456)'}
+            />
+          </div>
 
           <div className="flex justify-end gap-3 pt-4" style={{ borderTop: '1px solid rgba(92,124,137,0.15)' }}>
             <button type="button" onClick={onClose}
