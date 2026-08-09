@@ -973,11 +973,7 @@ class _DepositPageState extends State<DepositPage> {
                                     ],
                                   ),
                                 ] else ...[
-                                  SizedBox(
-                                    width: double.infinity,
-                                    height: 52,
-                                    child: ElevatedButton(
-                                 Align(
+                                  Align(
                                    alignment: Alignment.centerRight,
                                    child: GestureDetector(
                                      onTap: walletProvider.isLoading ? null : _submitInAppDeposit,

@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../../auth/providers/security_provider.dart';
-import '../../../auth/presentation/widgets/pin_code_dialog.dart';
+import '../../providers/wallet_provider.dart';
 import '../widgets/review_bottom_sheet.dart';
 import '../widgets/full_page_loading_overlay.dart';
 import 'receipt_page.dart';
@@ -152,7 +152,6 @@ class _WithdrawPageState extends State<WithdrawPage> {
     final loadingOverlay = FullPageLoadingOverlay.show(context, message: 'Processing cash out...');
 
     bool success = false;
-    final String customRemarks = _remarksController.text.trim();
     String remarksText = '';
     String receiverName = '';
 
