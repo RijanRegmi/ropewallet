@@ -39,17 +39,9 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
     }
 
     // Single Device Security Check:
-    // If account was bound to a new device or session, terminate access for older devices
     const incomingDeviceId = req.headers['x-device-id'] as string;
-    if (user.activeSessionToken && decoded.sessionToken && decoded.sessionToken !== user.activeSessionToken) {
-      res.status(401).json({
-        success: false,
-        error: 'Session terminated: Your account was logged into on another device.',
-        isDeviceRevoked: true,
-      });
-      return;
-    }
 
+    // 1. If a DIFFERENT device tries to access, block it immediately
     if (user.activeDeviceId && incomingDeviceId && incomingDeviceId !== user.activeDeviceId) {
       res.status(401).json({
         success: false,
@@ -59,10 +51,23 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
       return;
     }
 
+    // 2. Session Token check: Only block if session token belongs to a DIFFERENT active device
+    if (user.activeSessionToken && decoded.sessionToken && decoded.sessionToken !== user.activeSessionToken) {
+      if (incomingDeviceId && user.activeDeviceId && incomingDeviceId !== user.activeDeviceId) {
+        res.status(401).json({
+          success: false,
+          error: 'Session terminated: Your account was logged into on another device.',
+          isDeviceRevoked: true,
+        });
+        return;
+      }
+    }
+
     // Attach decoded user information to request
     (req as any).user = { id: decoded.id };
     next();
-  } catch (error) {
+  } catch (error: any) {
+    console.error('[AUTH MIDDLEWARE EXCEPTION]:', error?.message || error);
     next(new CustomError('Not authorized to access this resource', 401));
   }
 };

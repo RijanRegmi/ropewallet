@@ -615,12 +615,36 @@ class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerif
         );
         _otpFocusNodes[0].requestFocus();
       } else {
+        final err = authProvider.errorMessage ?? 'Failed to send verification code';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFFEF4444),
-            content: Text(authProvider.errorMessage ?? 'Failed to send verification code'),
+            content: Text(err),
           ),
         );
+
+        if (err.toLowerCase().contains('not authorized') || err.toLowerCase().contains('session terminated')) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Session Relogin Required'),
+              content: const Text('Your active login session needs to be refreshed. Please log out and log in again to request a PIN change verification code.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    AuthProvider.confirmAndLogout(context);
+                  },
+                  child: const Text('Log Out & Relogin'),
+                ),
+              ],
+            ),
+          );
+        }
       }
     }
   }
