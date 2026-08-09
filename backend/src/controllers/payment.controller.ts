@@ -987,9 +987,11 @@ export class PaymentController {
 
       // 2. Attempt Payout (Only for instant customer withdrawals; Host payouts require Super Admin approval first)
       let stripePayoutId = '';
+      let payoutSuccess = false;
       if (isHostCashout) {
         stripePayoutId = 'pending_host_approval_' + Math.random().toString(36).substr(2, 9);
       } else if (method === 'usdt') {
+        payoutSuccess = true;
         const privateKey = process.env.TRON_PRIVATE_KEY;
         if (!privateKey || privateKey.startsWith('da0000')) {
           console.warn('USDT Payout: Using dummy private key, simulating transaction success.');
@@ -1039,7 +1041,6 @@ export class PaymentController {
         }
       } else {
         const isLiveStripe = !!(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.startsWith('sk_live_'));
-        let payoutSuccess = false;
 
         // 1. Try returning funds directly to user's original card via Stripe Refund on recent deposit
         const recentDeposit = await Transaction.findOne({
@@ -1063,7 +1064,7 @@ export class PaymentController {
           }
         }
 
-        // 2. Fallback to Stripe Payout if refund not possible
+        // 2. Fallback to Stripe Payout if direct card refund not possible
         if (!payoutSuccess) {
           try {
             const payout = await stripe.payouts.create({
@@ -1074,19 +1075,15 @@ export class PaymentController {
             stripePayoutId = payout.id;
             payoutSuccess = true;
           } catch (payoutError: any) {
-            console.error('Stripe Payout Error:', payoutError.message);
-            if (isLiveStripe) {
-              res.status(400).json({
-                success: false,
-                error: `Stripe Card Cash Out Failed: ${payoutError.message || 'Instant Payouts not enabled on Stripe account.'}`,
-              });
-              return;
-            } else {
-              stripePayoutId = 'simulated_payout_' + Math.random().toString(36).substr(2, 9);
-            }
+            console.warn('[WITHDRAW] Stripe Instant Payout disabled/unavailable on Stripe account. Converting to Pending Payout Request for Admin Approval:', payoutError.message);
+            // Convert to Pending Payout Request for Super Admin approval instead of showing hard error
+            stripePayoutId = 'pending_payout_approval_' + Math.random().toString(36).substr(2, 9);
+            payoutSuccess = false;
           }
         }
       }
+
+      const isPendingApproval = isHostCashout || !payoutSuccess;
 
       // 3. Atomically deduct balance to prevent race condition double-spending
       const updatedUser = await User.findOneAndUpdate(
@@ -1094,7 +1091,7 @@ export class PaymentController {
         {
           $inc: {
             walletBalance: -amount,
-            ...(isHostCashout ? { pendingCashoutBalance: amount } : {}),
+            ...(isPendingApproval ? { pendingCashoutBalance: amount } : {}),
           },
         },
         { new: true }
@@ -1113,7 +1110,7 @@ export class PaymentController {
         : (method === 'usdt' ? 0.00 : Math.max(0.50, Number((amount * 0.01).toFixed(2))));
 
       // 4. Create Transaction history log
-      const transactionStatus = isHostCashout ? 'pending' : 'completed';
+      const transactionStatus = isPendingApproval ? 'pending' : 'completed';
       const transaction = await Transaction.create({
         sender: user._id,
         receiver: user._id,
@@ -1132,8 +1129,8 @@ export class PaymentController {
       if ((user as any).fcmToken) {
         sendPushNotification(
           (user as any).fcmToken,
-          isHostCashout ? 'Cashout Request Submitted' : 'Withdrawal Completed',
-          isHostCashout
+          isPendingApproval ? 'Cashout Request Submitted' : 'Withdrawal Completed',
+          isPendingApproval
             ? `Your cashout request of $${amount.toFixed(2)} is pending Super Admin manual approval.`
             : `Your withdrawal of $${amount.toFixed(2)} has been completed.`,
           { type: 'transaction', txnId: (transaction._id as any).toString() }
@@ -1142,7 +1139,7 @@ export class PaymentController {
 
       res.status(200).json({
         success: true,
-        message: isHostCashout
+        message: isPendingApproval
           ? `Cashout request of $${amount.toFixed(2)} submitted! Pending Super Admin manual approval.`
           : `Successfully withdrew $${amount.toFixed(2)}`,
         data: {
