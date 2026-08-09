@@ -19,7 +19,6 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   Future<bool> _verifyUserCredentialToEnableBiometrics(BuildContext context, {required bool isPasswordOnly}) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
 
     final TextEditingController inputController = TextEditingController();
@@ -132,13 +131,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                 bool isValid = false;
                                 if (isPasswordOnly) {
                                   try {
-                                    final userEmail = authProvider.user?['email'] ?? '';
-                                    final res = await ApiClient().post('/auth/login', {
-                                      'email': userEmail,
+                                    final res = await ApiClient().post('/auth/verify-password', {
                                       'password': text,
                                     });
                                     final data = jsonDecode(res.body);
-                                    isValid = res.statusCode == 200 && data['success'] == true;
+                                    isValid = res.statusCode == 200 && data['success'] == true && data['valid'] == true;
                                   } catch (_) {
                                     isValid = false;
                                   }

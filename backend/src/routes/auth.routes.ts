@@ -17,6 +17,7 @@ router.post('/verify-forgot-password-otp', AuthController.verifyForgotPasswordOt
 router.post('/reset-password', AuthController.resetPassword);
 router.post('/set-pin', protect, AuthController.setPin);
 router.post('/verify-pin', protect, AuthController.verifyPin);
+router.post('/verify-password', protect, AuthController.verifyPassword);
 router.get('/me', protect, AuthController.getMe);
 router.post('/update-profile-image', protect, AuthController.updateProfileImage);
 router.post('/send-update-otp', protect, AuthController.sendUpdateOtp);

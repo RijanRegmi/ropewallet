@@ -223,6 +223,30 @@ export class AuthController {
     }
   }
 
+  static async verifyPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id;
+      const { password } = req.body;
+      if (!userId) {
+        res.status(401).json({ success: false, error: 'Not authorized to access this route' });
+        return;
+      }
+      if (!password) {
+        res.status(400).json({ success: false, error: 'Password is required' });
+        return;
+      }
+      const user = await User.findById(userId).select('+password');
+      if (!user) {
+        res.status(404).json({ success: false, error: 'User not found' });
+        return;
+      }
+      const isValid = await user.comparePassword(password);
+      res.status(200).json({ success: true, valid: isValid });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async verifyPin(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = (req as any).user?.id;
