@@ -727,6 +727,10 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> logout({WalletProvider? walletProvider, SecurityProvider? securityProvider}) async {
+    try {
+      await _apiClient.post('/auth/logout', {});
+    } catch (_) {}
+
     _token = null;
     _user = null;
     _isLoading = false;

@@ -476,11 +476,36 @@ export class AuthController {
         return;
       }
 
-      await User.findByIdAndUpdate(userId, { fcmToken: fcmToken || '' });
+      if (fcmToken && fcmToken.trim().length > 0) {
+        const cleanToken = fcmToken.trim();
+        // Remove this token from all other user accounts so only the active user on this device receives push notifications
+        await User.updateMany(
+          { fcmToken: cleanToken, _id: { $ne: userId } },
+          { $set: { fcmToken: '' } }
+        );
+        await User.findByIdAndUpdate(userId, { fcmToken: cleanToken });
+      } else {
+        await User.findByIdAndUpdate(userId, { fcmToken: '' });
+      }
 
       res.status(200).json({
         success: true,
         message: 'FCM push token updated successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id || (req as any).user?._id;
+      if (userId) {
+        await User.findByIdAndUpdate(userId, { fcmToken: '' });
+      }
+      res.status(200).json({
+        success: true,
+        message: 'Logged out successfully',
       });
     } catch (error) {
       next(error);

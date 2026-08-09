@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@vercel/node": "^5.1.10",
+    "firebase-admin": "^14.2.0",
     "typescript": "^5.9.3"
   },
   "devDependencies": {

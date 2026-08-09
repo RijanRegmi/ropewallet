@@ -1,12 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getMessaging } from 'firebase-admin/messaging';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let isFirebaseInitialized = false;
-let firebaseAdminModule: any = null;
 
 const initFirebase = async () => {
   if (isFirebaseInitialized) return;
@@ -44,14 +45,9 @@ const initFirebase = async () => {
     }
 
     if (serviceAccount) {
-      // Dynamic import to prevent build failure on Vercel
-      // @ts-ignore
-      const adminModule = await (import('firebase-admin') as any);
-      firebaseAdminModule = adminModule.default || adminModule;
-
-      if (firebaseAdminModule && !firebaseAdminModule.apps?.length) {
-        firebaseAdminModule.initializeApp({
-          credential: firebaseAdminModule.credential.cert(serviceAccount),
+      if (getApps().length === 0) {
+        initializeApp({
+          credential: cert(serviceAccount),
         });
       }
       isFirebaseInitialized = true;
@@ -74,10 +70,10 @@ export const sendPushNotification = async (
 ): Promise<boolean> => {
   if (!fcmToken) return false;
   await initFirebase();
-  if (!isFirebaseInitialized || !firebaseAdminModule) return false;
+  if (!isFirebaseInitialized) return false;
 
   try {
-    await firebaseAdminModule.messaging().send({
+    await getMessaging().send({
       token: fcmToken,
       notification: { title, body },
       data: data || {},
