@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:ropewallet/core/theme/theme_provider.dart';
 import 'package:ropewallet/features/auth/providers/auth_provider.dart';
+import '../../../../core/network/api_client.dart';
 import 'create_user_page.dart';
 import '../../../admin/presentation/pages/admin_portal_page.dart';
 import '../../providers/security_provider.dart';
@@ -15,6 +17,167 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  Future<bool> _verifyUserCredentialToEnableBiometrics(BuildContext context, {required bool isPasswordOnly}) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
+
+    final TextEditingController inputController = TextEditingController();
+    bool isVerifying = false;
+    String? errorText;
+
+    final verified = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.shield_rounded, color: Color(0xFF10B981), size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    isPasswordOnly ? 'Verify Password' : 'Verify Transaction PIN',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isPasswordOnly
+                        ? 'To enable Biometric Login, please enter your account password.'
+                        : 'To enable Biometric Transaction Authorization, please enter your 6-digit Transaction PIN.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.4,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  TextField(
+                    controller: inputController,
+                    obscureText: true,
+                    keyboardType: isPasswordOnly ? TextInputType.visiblePassword : TextInputType.number,
+                    maxLength: isPasswordOnly ? null : 6,
+                    inputFormatters: isPasswordOnly ? null : [FilteringTextInputFormatter.digitsOnly],
+                    decoration: InputDecoration(
+                      labelText: isPasswordOnly ? 'Account Password' : '6-Digit Transaction PIN',
+                      prefixIcon: Icon(
+                        isPasswordOnly ? Icons.lock_outline_rounded : Icons.dialpad_rounded,
+                        color: const Color(0xFF10B981),
+                      ),
+                      counterText: '',
+                      errorText: errorText,
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: isVerifying ? null : () => Navigator.of(ctx).pop(false),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          side: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                        ),
+                        child: Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.grey[700])),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: isVerifying
+                            ? null
+                            : () async {
+                                final text = inputController.text.trim();
+                                if (text.isEmpty) {
+                                  setDialogState(() {
+                                    errorText = isPasswordOnly ? 'Password is required' : 'PIN is required';
+                                  });
+                                  return;
+                                }
+
+                                setDialogState(() {
+                                  isVerifying = true;
+                                  errorText = null;
+                                });
+
+                                bool isValid = false;
+                                if (isPasswordOnly) {
+                                  try {
+                                    final userEmail = authProvider.user?['email'] ?? '';
+                                    final res = await ApiClient().post('/auth/login', {
+                                      'email': userEmail,
+                                      'password': text,
+                                    });
+                                    final data = jsonDecode(res.body);
+                                    isValid = res.statusCode == 200 && data['success'] == true;
+                                  } catch (_) {
+                                    isValid = false;
+                                  }
+                                } else {
+                                  isValid = await securityProvider.verifyTransactionPin(text);
+                                }
+
+                                if (isValid) {
+                                  Navigator.of(ctx).pop(true);
+                                } else {
+                                  setDialogState(() {
+                                    isVerifying = false;
+                                    errorText = isPasswordOnly ? 'Incorrect password. Try again.' : 'Incorrect PIN. Try again.';
+                                  });
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        child: isVerifying
+                            ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            : const Text('Verify', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    return verified == true;
+  }
+
   Future<void> _toggleBiometricsForLogin(bool enable, SecurityProvider securityProvider) async {
     if (!securityProvider.isBiometricSupported) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -27,14 +190,27 @@ class _SettingsPageState extends State<SettingsPage> {
     }
 
     if (enable) {
-      final success = await securityProvider.authenticateBiometrically();
-      if (success) {
+      final credentialVerified = await _verifyUserCredentialToEnableBiometrics(context, isPasswordOnly: true);
+      if (!credentialVerified) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Color(0xFFEF4444),
+              content: Text('Password verification failed. Biometric login not enabled.'),
+            ),
+          );
+        }
+        return;
+      }
+
+      final bioSuccess = await securityProvider.authenticateBiometrically();
+      if (bioSuccess) {
         await securityProvider.setUseBiometricsForLogin(true);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               backgroundColor: Color(0xFF10B981),
-              content: Text('Biometric login enabled!'),
+              content: Text('Password verified! Biometric login enabled.'),
             ),
           );
         }
@@ -43,7 +219,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               backgroundColor: Color(0xFFEF4444),
-              content: Text('Biometric authentication failed. Could not enable.'),
+              content: Text('Biometric sensor scan failed. Could not enable.'),
             ),
           );
         }
@@ -72,14 +248,27 @@ class _SettingsPageState extends State<SettingsPage> {
     }
 
     if (enable) {
-      final success = await securityProvider.authenticateBiometrically();
-      if (success) {
+      final credentialVerified = await _verifyUserCredentialToEnableBiometrics(context, isPasswordOnly: false);
+      if (!credentialVerified) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Color(0xFFEF4444),
+              content: Text('PIN verification failed. Biometrics not enabled.'),
+            ),
+          );
+        }
+        return;
+      }
+
+      final bioSuccess = await securityProvider.authenticateBiometrically();
+      if (bioSuccess) {
         await securityProvider.setUseBiometricsForPin(true);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               backgroundColor: Color(0xFF10B981),
-              content: Text('Biometric for transactions enabled!'),
+              content: Text('Transaction PIN verified! Biometric for transactions enabled.'),
             ),
           );
         }
@@ -88,7 +277,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               backgroundColor: Color(0xFFEF4444),
-              content: Text('Biometric authentication failed. Could not enable.'),
+              content: Text('Biometric sensor scan failed. Could not enable.'),
             ),
           );
         }
@@ -411,7 +600,9 @@ class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerif
     });
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final success = await authProvider.sendUpdateOtp();
+    final success = await authProvider.sendUpdateOtp(
+      type: widget.isPinChange ? 'pin' : 'password',
+    );
 
     if (mounted) {
       setState(() {
@@ -420,9 +611,9 @@ class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerif
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Color(0xFF10B981),
-            content: Text('Verification code sent to your registered email.'),
+          SnackBar(
+            backgroundColor: const Color(0xFF10B981),
+            content: Text('Verification code sent to your email for ${widget.isPinChange ? "Transaction PIN" : "Password"} change.'),
           ),
         );
         _otpFocusNodes[0].requestFocus();

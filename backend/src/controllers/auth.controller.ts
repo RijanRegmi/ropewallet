@@ -282,11 +282,12 @@ export class AuthController {
   static async sendUpdateOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = (req as any).user?.id;
+      const { type } = req.body || {};
       if (!userId) {
         res.status(401).json({ success: false, error: 'Not authorized' });
         return;
       }
-      await AuthService.sendUpdateOtp(userId);
+      await AuthService.sendUpdateOtp(userId, type);
       res.status(200).json({ success: true, message: 'Verification OTP sent to your registered email' });
     } catch (error) {
       next(error);

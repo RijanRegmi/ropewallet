@@ -48,7 +48,6 @@ class _HomePageState extends State<HomePage> {
       Provider.of<WalletProvider>(context, listen: false).fetchTransactions();
       _fetchActiveP2pAccounts();
       _fetchUnreadNoticesCount();
-      _checkBiometricsPrompt();
     }
   }
 
@@ -73,123 +72,6 @@ class _HomePageState extends State<HomePage> {
         }
       }
     } catch (_) {}
-  }
-
-  void _checkBiometricsPrompt() {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final user = authProvider.user;
-      final userId = user?['_id']?.toString() ?? user?['email']?.toString();
-
-      await securityProvider.loadUserSecuritySettings(userId);
-
-      if (securityProvider.isBiometricSupported &&
-          !securityProvider.useBiometricsForLogin &&
-          !securityProvider.useBiometricsForPin &&
-          !securityProvider.hasPromptedBiometrics) {
-        _showBiometricSetupBottomSheet(securityProvider);
-      }
-    });
-  }
-
-  void _showBiometricSetupBottomSheet(SecurityProvider securityProvider) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.fingerprint_rounded, color: Color(0xFF10B981), size: 30),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Enable Biometric Security',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Would you like to enable Face ID or Fingerprint authentication for faster sign-ins and PIN verification?',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isDark ? Colors.white70 : Colors.black54,
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    Navigator.pop(context);
-                    await securityProvider.setHasPromptedBiometrics(true);
-                    final authenticated = await securityProvider.authenticateBiometrically();
-                    if (authenticated) {
-                      await securityProvider.setUseBiometricsForLogin(true);
-                      await securityProvider.setUseBiometricsForPin(true);
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('Biometrics enabled for login and transactions!'),
-                            backgroundColor: const Color(0xFF10B981),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
-                  child: const Text('Enable Biometrics', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                height: 46,
-                child: TextButton(
-                  onPressed: () async {
-                    Navigator.pop(context);
-                    await securityProvider.setHasPromptedBiometrics(true);
-                  },
-                  child: Text(
-                    'Not Now',
-                    style: TextStyle(
-                      color: isDark ? Colors.white60 : Colors.black54,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   Future<void> _fetchActiveP2pAccounts() async {

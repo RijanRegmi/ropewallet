@@ -427,7 +427,7 @@ export class AuthService {
     await user.save();
   }
 
-  static async sendUpdateOtp(userId: string): Promise<void> {
+  static async sendUpdateOtp(userId: string, type?: string): Promise<void> {
     const user = await User.findById(userId);
     if (!user) {
       throw new CustomError('User not found', 404);
@@ -442,7 +442,13 @@ export class AuthService {
     );
 
     try {
-      await EmailService.sendOtpEmail(user.email, code);
+      if (type === 'pin') {
+        await EmailService.sendPinChangeOtpEmail(user.email, code);
+      } else if (type === 'password') {
+        await EmailService.sendPasswordChangeOtpEmail(user.email, code);
+      } else {
+        await EmailService.sendPinChangeOtpEmail(user.email, code);
+      }
     } catch (err: any) {
       console.error('SMTP Delivery error:', err);
       throw new CustomError(`Failed to send verification email: ${err.message}`, 500);

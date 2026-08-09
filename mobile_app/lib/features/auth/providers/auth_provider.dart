@@ -542,13 +542,15 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> sendUpdateOtp() async {
+  Future<bool> sendUpdateOtp({String? type}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final response = await _apiClient.post('/auth/send-update-otp', {});
+      final response = await _apiClient.post('/auth/send-update-otp', {
+        if (type != null) 'type': type,
+      });
       final responseData = jsonDecode(response.body);
       _isLoading = false;
 
