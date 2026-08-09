@@ -68,8 +68,9 @@ export class AuthController {
 
   static async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { firstName, middleName, lastName, userTag, email, password, phoneNumber, otpCode, transactionPin } = req.body;
-      
+      const { firstName, middleName, lastName, userTag, email, password, phoneNumber, otpCode, transactionPin, deviceId } = req.body;
+      const headerDeviceId = (req.headers['x-device-id'] as string) || deviceId;
+
       if (!firstName || !lastName || !email || !password || !phoneNumber || !otpCode || !transactionPin) {
         res.status(400).json({ success: false, error: 'Please provide all required fields, including the OTP code and Transaction PIN' });
         return;
@@ -90,6 +91,7 @@ export class AuthController {
         phoneNumber,
         otpCode,
         transactionPin,
+        deviceId: headerDeviceId,
       });
 
       res.status(201).json({

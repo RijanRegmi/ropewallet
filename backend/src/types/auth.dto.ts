@@ -8,6 +8,7 @@ export interface RegisterDTO {
   phoneNumber: string;
   otpCode: string;
   transactionPin: string;
+  deviceId?: string;
 }
 
 export interface LoginDTO {

@@ -104,7 +104,8 @@ export class AuthService {
     // 5. Generate unique wallet QR data using this tag!
     const qrCodeData = generatedTag;
 
-    // 6. Create user
+    // 6. Create user with activeDeviceId bound upon registration
+    const deviceIdNorm = data.deviceId?.trim();
     const newUser = await User.create({
       firstName: data.firstName.trim(),
       middleName: data.middleName?.trim() || undefined,
@@ -116,7 +117,16 @@ export class AuthService {
       transactionPin: data.transactionPin.trim(),
       qrCodeData,
       walletBalance: 0.00, // Initial balance set to 0.00 for live accounts
+      activeDeviceId: deviceIdNorm || undefined,
     });
+
+    if (deviceIdNorm) {
+      // 1 Device = 1 Account: Unbind this deviceId from any previous accounts
+      await User.updateMany(
+        { activeDeviceId: deviceIdNorm, _id: { $ne: newUser._id } },
+        { $set: { activeDeviceId: null } }
+      );
+    }
 
     const token = generateToken(newUser._id.toString());
 
@@ -174,9 +184,12 @@ export class AuthService {
 
     const deviceId = data.deviceId?.trim();
 
-    // Check if logging in from a new device (and activeDeviceId was already set for a previous device)
-    if (user.activeDeviceId && deviceId && user.activeDeviceId !== deviceId) {
-      // Trigger Email OTP Verification for New Device Sign-In
+    // 1 Device = 1 Account Security Guard:
+    // Check if this device is NOT currently bound to this user
+    const isDeviceAlreadyBoundToUser = deviceId && user.activeDeviceId === deviceId;
+
+    if (deviceId && !isDeviceAlreadyBoundToUser) {
+      // Trigger Email OTP Verification for New Device Sign-In / Account Switching
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       const tempToken = crypto.randomBytes(32).toString('hex');
 
@@ -198,13 +211,18 @@ export class AuthService {
       return {
         requiresDeviceVerification: true,
         tempToken,
-        message: 'New device detected. A 6-digit verification code has been sent to your email.',
+        message: 'Device verification required. A 6-digit verification code has been sent to your email.',
       };
     }
 
-    // First login or same device login: Bind activeDeviceId & activeSessionToken
+    // Same device login: Bind activeDeviceId & activeSessionToken
     const newSessionToken = crypto.randomBytes(32).toString('hex');
     if (deviceId) {
+      // Unbind this device from any other user accounts so 1 device = 1 account at a time
+      await User.updateMany(
+        { activeDeviceId: deviceId, _id: { $ne: user._id } },
+        { $set: { activeDeviceId: null } }
+      );
       user.activeDeviceId = deviceId;
     }
     user.activeSessionToken = newSessionToken;
@@ -250,10 +268,19 @@ export class AuthService {
       throw new CustomError('Invalid verification code. Please check your email and try again.', 400);
     }
 
-    // OTP Verified! Bind new device and invalidate all previous device sessions!
-    const boundDeviceId = deviceId || user.newDeviceOtp.deviceId || 'DEV-VERIFIED';
+    // OTP Verified! Bind new device exclusively to this user and invalidate all previous device sessions!
+    const boundDeviceId = deviceId || user.newDeviceOtp.deviceId;
     const newSessionToken = crypto.randomBytes(32).toString('hex');
-    user.activeDeviceId = boundDeviceId;
+
+    if (boundDeviceId) {
+      // 1 Device = 1 Account: Unlink this deviceId from all other accounts
+      await User.updateMany(
+        { activeDeviceId: boundDeviceId, _id: { $ne: user._id } },
+        { $set: { activeDeviceId: null } }
+      );
+      user.activeDeviceId = boundDeviceId;
+    }
+
     user.activeSessionToken = newSessionToken;
     user.newDeviceOtp = undefined;
     await user.save();
