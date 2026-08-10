@@ -24,9 +24,14 @@ export class EmailService {
         html,
         text,
       });
+      if (response.error) {
+        console.error('[EmailService] Resend API error:', response.error);
+        throw new Error(response.error.message || 'Email delivery failed');
+      }
       console.log(`[EmailService] Delivered email via Resend to ${to}:`, response);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[EmailService] Resend delivery error:', error);
+      throw error;
     }
   }
 
