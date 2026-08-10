@@ -5,7 +5,7 @@ const resendClient = resendApiKey ? new Resend(resendApiKey) : null;
 
 export class EmailService {
   private static getFromAddress(): string {
-    return process.env.EMAIL_FROM || process.env.SMTP_FROM || '"RopeWallet No-Reply" <noreply@ropewallet.com>';
+    return process.env.EMAIL_FROM || 'noreply@ropewallet.com';
   }
 
   private static async sendMail({ to, subject, html, text }: { to: string; subject: string; html: string; text: string }): Promise<void> {
