@@ -423,16 +423,17 @@ class _DeviceVerificationPageState extends State<DeviceVerificationPage> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: authProvider.isLoading ? null : _submitVerification,
+                  onPressed: (_isVerifying || authProvider.isLoading) ? null : _submitVerification,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF10B981),
+                    disabledBackgroundColor: const Color(0xFF10B981).withOpacity(0.6),
                     foregroundColor: Colors.white,
                     elevation: 4,
                     padding: EdgeInsets.zero,
                     shadowColor: const Color(0xFF10B981).withOpacity(0.4),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  child: authProvider.isLoading
+                  child: (_isVerifying || authProvider.isLoading)
                       ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
                       : const Row(
                           mainAxisAlignment: MainAxisAlignment.center,

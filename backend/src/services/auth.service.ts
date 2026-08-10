@@ -50,13 +50,13 @@ export class AuthService {
       { upsert: true, new: true }
     );
 
-    // 4. Send email via SMTP
-    try {
-      await EmailService.sendOtpEmail(email.toLowerCase().trim(), code);
-    } catch (err: any) {
-      console.error('SMTP Delivery error:', err);
-      throw new CustomError(`Failed to send verification email: ${err.message}`, 500);
-    }
+    // 4. Send email asynchronously in background so response is instant
+    const targetEmail = email.toLowerCase().trim();
+    setImmediate(() => {
+      EmailService.sendOtpEmail(targetEmail, code).catch((err) => {
+        console.error('[EmailService] Async delivery error:', err);
+      });
+    });
   }
 
   static async register(data: RegisterDTO): Promise<AuthResponse> {
@@ -201,12 +201,12 @@ export class AuthService {
       };
       await user.save();
 
-      // Send OTP code to user's registered email
-      try {
-        await EmailService.sendNewDeviceOtpEmail(user.email, code);
-      } catch (err) {
-        console.error('Failed to send new device OTP email:', err);
-      }
+      // Send OTP code to user's registered email asynchronously
+      setImmediate(() => {
+        EmailService.sendNewDeviceOtpEmail(user.email, code).catch((err) => {
+          console.error('[EmailService] Async new device OTP error:', err);
+        });
+      });
 
       return {
         requiresDeviceVerification: true,
@@ -321,7 +321,11 @@ export class AuthService {
     user.newDeviceOtp.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
-    await EmailService.sendNewDeviceOtpEmail(user.email, code);
+    setImmediate(() => {
+      EmailService.sendNewDeviceOtpEmail(user.email, code).catch((err) => {
+        console.error('[EmailService] Async resend new device OTP error:', err);
+      });
+    });
   }
 
   static async sendForgotPasswordOtp(email: string): Promise<void> {
@@ -343,13 +347,12 @@ export class AuthService {
       { upsert: true, new: true }
     );
 
-    // 4. Send email
-    try {
-      await EmailService.sendForgotPasswordEmail(emailNorm, code);
-    } catch (err: any) {
-      console.error('SMTP Delivery error:', err);
-      throw new CustomError(`Failed to send verification email: ${err.message}`, 500);
-    }
+    // 4. Send email asynchronously in background
+    setImmediate(() => {
+      EmailService.sendForgotPasswordEmail(emailNorm, code).catch((err) => {
+        console.error('[EmailService] Async forgot password OTP error:', err);
+      });
+    });
   }
 
   static async resetPassword(email: string, otpCode: string, newPassword: string): Promise<void> {
@@ -441,18 +444,15 @@ export class AuthService {
       { upsert: true, new: true }
     );
 
-    try {
+    setImmediate(() => {
       if (type === 'pin') {
-        await EmailService.sendPinChangeOtpEmail(user.email, code);
+        EmailService.sendPinChangeOtpEmail(user.email, code).catch((err) => console.error(err));
       } else if (type === 'password') {
-        await EmailService.sendPasswordChangeOtpEmail(user.email, code);
+        EmailService.sendPasswordChangeOtpEmail(user.email, code).catch((err) => console.error(err));
       } else {
-        await EmailService.sendPinChangeOtpEmail(user.email, code);
+        EmailService.sendPinChangeOtpEmail(user.email, code).catch((err) => console.error(err));
       }
-    } catch (err: any) {
-      console.error('SMTP Delivery error:', err);
-      throw new CustomError(`Failed to send verification email: ${err.message}`, 500);
-    }
+    });
   }
 
   static async changePassword(userId: string, otpCode: string, newPassword: string): Promise<void> {
