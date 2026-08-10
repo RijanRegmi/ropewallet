@@ -72,8 +72,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
           );
 
-          final hasPin = authProvider.user?['hasPin'] == true;
-          final targetPage = hasPin ? const HomePage() : const SetPinPage();
+          final targetPage = authProvider.hasPin ? const HomePage() : const SetPinPage();
 
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => targetPage),
@@ -203,8 +202,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
           );
 
-          final hasPin = authProvider.user?['hasPin'] == true;
-          final targetPage = hasPin ? const HomePage() : const SetPinPage();
+          final targetPage = authProvider.hasPin ? const HomePage() : const SetPinPage();
 
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => targetPage),

@@ -66,10 +66,21 @@ export class PaymentController {
 
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
-      const todayDeposits = await Transaction.aggregate([
-        { $match: { receiver: user._id, type: 'deposit', status: 'completed', createdAt: { $gte: startOfDay } } },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const [todayDeposits, monthDeposits] = await Promise.all([
+        Transaction.aggregate([
+          { $match: { receiver: user._id, type: 'deposit', status: 'completed', createdAt: { $gte: startOfDay } } },
+          { $group: { _id: null, total: { $sum: '$amount' } } },
+        ]),
+        Transaction.aggregate([
+          { $match: { receiver: user._id, type: 'deposit', status: 'completed', createdAt: { $gte: startOfMonth } } },
+          { $group: { _id: null, total: { $sum: '$amount' } } },
+        ]),
       ]);
+
       const currentDailySum = todayDeposits[0]?.total || 0;
       const maxDailyDeposit = isAdminOrHost ? 5000.00 : 1000.00;
       if (currentDailySum + amount > maxDailyDeposit) {
@@ -80,13 +91,6 @@ export class PaymentController {
         return;
       }
 
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
-      const monthDeposits = await Transaction.aggregate([
-        { $match: { receiver: user._id, type: 'deposit', status: 'completed', createdAt: { $gte: startOfMonth } } },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
-      ]);
       const currentMonthlySum = monthDeposits[0]?.total || 0;
       const maxMonthlyDeposit = isAdminOrHost ? 10000.00 : 3000.00;
       if (currentMonthlySum + amount > maxMonthlyDeposit) {
@@ -475,17 +479,33 @@ export class PaymentController {
       if (senderRole === 'customer') {
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
 
-        const todayTransfers = await Transaction.aggregate([
-          {
-            $match: {
-              sender: sender._id,
-              type: 'transfer',
-              status: { $ne: 'declined' },
-              createdAt: { $gte: startOfDay },
+        const [todayTransfers, monthTransfers] = await Promise.all([
+          Transaction.aggregate([
+            {
+              $match: {
+                sender: sender._id,
+                type: 'transfer',
+                status: { $ne: 'declined' },
+                createdAt: { $gte: startOfDay },
+              },
             },
-          },
-          { $group: { _id: null, total: { $sum: '$amount' } } },
+            { $group: { _id: null, total: { $sum: '$amount' } } },
+          ]),
+          Transaction.aggregate([
+            {
+              $match: {
+                sender: sender._id,
+                type: 'transfer',
+                status: { $ne: 'declined' },
+                createdAt: { $gte: startOfMonth },
+              },
+            },
+            { $group: { _id: null, total: { $sum: '$amount' } } },
+          ]),
         ]);
 
         const currentDailyTransferSum = todayTransfers[0]?.total || 0;
@@ -496,22 +516,6 @@ export class PaymentController {
           });
           return;
         }
-
-        const startOfMonth = new Date();
-        startOfMonth.setDate(1);
-        startOfMonth.setHours(0, 0, 0, 0);
-
-        const monthTransfers = await Transaction.aggregate([
-          {
-            $match: {
-              sender: sender._id,
-              type: 'transfer',
-              status: { $ne: 'declined' },
-              createdAt: { $gte: startOfMonth },
-            },
-          },
-          { $group: { _id: null, total: { $sum: '$amount' } } },
-        ]);
 
         const currentMonthlyTransferSum = monthTransfers[0]?.total || 0;
         if (currentMonthlyTransferSum + amount > 2000.00) {
@@ -642,30 +646,32 @@ export class PaymentController {
       });
 
       // ─── Push Notifications for Transfer (Sender & Receiver) ───
-      try {
-        const senderName = `${sender.firstName || ''} ${sender.lastName || ''}`.trim() || 'A user';
-        const receiverName = `${receiver.firstName || ''} ${receiver.lastName || ''}`.trim() || 'A user';
+      setImmediate(() => {
+        try {
+          const senderName = `${sender.firstName || ''} ${sender.lastName || ''}`.trim() || 'A user';
+          const receiverName = `${receiver.firstName || ''} ${receiver.lastName || ''}`.trim() || 'A user';
 
-        if (sender.fcmToken) {
-          sendPushNotification(
-            sender.fcmToken,
-            '💸 Transfer Sent',
-            `You sent $${amount.toFixed(2)} to ${receiverName}.`,
-            { type: 'transfer_sent', amount: amount.toString(), transactionId: transaction._id.toString() }
-          );
-        }
+          if (sender.fcmToken) {
+            sendPushNotification(
+              sender.fcmToken,
+              '💸 Transfer Sent',
+              `You sent $${amount.toFixed(2)} to ${receiverName}.`,
+              { type: 'transfer_sent', amount: amount.toString(), transactionId: transaction._id.toString() }
+            ).catch((pushErr) => console.error('[PaymentController] Push notification error on transfer (sender):', pushErr));
+          }
 
-        if (receiver.fcmToken) {
-          sendPushNotification(
-            receiver.fcmToken,
-            '💰 Money Received',
-            `You received +$${creditToReceiver.toFixed(2)} from ${senderName}.`,
-            { type: 'transfer_received', amount: creditToReceiver.toString(), transactionId: transaction._id.toString() }
-          );
+          if (receiver.fcmToken) {
+            sendPushNotification(
+              receiver.fcmToken,
+              '💰 Money Received',
+              `You received +$${creditToReceiver.toFixed(2)} from ${senderName}.`,
+              { type: 'transfer_received', amount: creditToReceiver.toString(), transactionId: transaction._id.toString() }
+            ).catch((pushErr) => console.error('[PaymentController] Push notification error on transfer (receiver):', pushErr));
+          }
+        } catch (pushErr) {
+          console.error('[PaymentController] Push notification error on transfer:', pushErr);
         }
-      } catch (pushErr) {
-        console.error('[PaymentController] Push notification error on transfer:', pushErr);
-      }
+      });
 
       // Don't expose fee details to customer senders
       const message = senderRole === 'customer'
@@ -861,17 +867,33 @@ export class PaymentController {
       // Enforce daily withdrawal limit ($1,000.00 for customers, $10,000.00 for hosts/admin)
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
 
-      const todayWithdrawals = await Transaction.aggregate([
-        {
-          $match: {
-            sender: user._id,
-            type: 'withdrawal',
-            status: { $ne: 'declined' },
-            createdAt: { $gte: startOfDay },
+      const [todayWithdrawals, monthWithdrawals] = await Promise.all([
+        Transaction.aggregate([
+          {
+            $match: {
+              sender: user._id,
+              type: 'withdrawal',
+              status: { $ne: 'declined' },
+              createdAt: { $gte: startOfDay },
+            },
           },
-        },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
+          { $group: { _id: null, total: { $sum: '$amount' } } },
+        ]),
+        Transaction.aggregate([
+          {
+            $match: {
+              sender: user._id,
+              type: 'withdrawal',
+              status: { $ne: 'declined' },
+              createdAt: { $gte: startOfMonth },
+            },
+          },
+          { $group: { _id: null, total: { $sum: '$amount' } } },
+        ]),
       ]);
 
       const currentDailyWithdrawalSum = todayWithdrawals[0]?.total || 0;
@@ -883,23 +905,6 @@ export class PaymentController {
         });
         return;
       }
-
-      // Enforce Monthly withdrawal limit ($3,000 for standard users, $10,000 for admin/host)
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
-
-      const monthWithdrawals = await Transaction.aggregate([
-        {
-          $match: {
-            sender: user._id,
-            type: 'withdrawal',
-            status: { $ne: 'declined' },
-            createdAt: { $gte: startOfMonth },
-          },
-        },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
-      ]);
 
       const currentMonthlyWithdrawalSum = monthWithdrawals[0]?.total || 0;
       const maxMonthlyWithdrawal = isAdminOrHost ? 10000.00 : 3000.00;

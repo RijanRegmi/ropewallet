@@ -24,6 +24,7 @@ class AuthProvider with ChangeNotifier {
   bool get isAutoLoggingIn => _isAutoLoggingIn;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _token != null;
+  bool get hasPin => _user != null && _user!['hasPin'] == true;
   String get role => _user?['role'] ?? 'customer';
   bool get isAdmin => role == 'host' || role == 'admin' || role == 'superadmin';
   bool get isHost => role == 'host' || role == 'admin';

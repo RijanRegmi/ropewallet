@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../core/network/api_client.dart';
@@ -135,10 +136,11 @@ class WalletProvider with ChangeNotifier {
         final currentBal = (authProvider.user?['walletBalance'] as num?)?.toDouble() ?? 0.0;
         final currentPending = (authProvider.user?['pendingCashoutBalance'] as num?)?.toDouble() ?? 0.0;
         authProvider.updateWalletBalance(newBalance ?? (currentBal + amount), newPending ?? currentPending);
-        authProvider.tryAutoLogin();
-        fetchTransactions();
         _isLoading = false;
         notifyListeners();
+        // Sync profile & transaction list asynchronously in background
+        unawaited(authProvider.tryAutoLogin());
+        unawaited(fetchTransactions());
         return true;
       } else {
         _errorMessage = responseData['error'] ?? 'Deposit confirmation failed';
@@ -192,10 +194,11 @@ class WalletProvider with ChangeNotifier {
         final currentBal = (authProvider.user?['walletBalance'] as num?)?.toDouble() ?? 0.0;
         final currentPending = (authProvider.user?['pendingCashoutBalance'] as num?)?.toDouble() ?? 0.0;
         authProvider.updateWalletBalance(newBalance ?? (currentBal + amount), newPending ?? currentPending);
-        authProvider.tryAutoLogin();
-        fetchTransactions();
         _isLoading = false;
         notifyListeners();
+        // Sync profile & transaction list asynchronously in background
+        unawaited(authProvider.tryAutoLogin());
+        unawaited(fetchTransactions());
         return true;
       } else {
         _errorMessage = responseData['error'] ?? 'Bank deposit failed';
@@ -296,10 +299,11 @@ class WalletProvider with ChangeNotifier {
           newBalance ?? ((currentBal - amount).clamp(0.0, double.infinity)),
           newPending ?? (currentPending + amount),
         );
-        authProvider.tryAutoLogin();
-        fetchTransactions();
         _isLoading = false;
         notifyListeners();
+        // Sync profile & transaction list asynchronously in background
+        unawaited(authProvider.tryAutoLogin());
+        unawaited(fetchTransactions());
         return true;
       } else {
         _errorMessage = responseData['error'] ?? 'Withdrawal failed';
@@ -349,10 +353,11 @@ class WalletProvider with ChangeNotifier {
         final currentBal = (authProvider.user?['walletBalance'] as num?)?.toDouble() ?? 0.0;
         final currentPending = (authProvider.user?['pendingCashoutBalance'] as num?)?.toDouble() ?? 0.0;
         authProvider.updateWalletBalance(newBalance ?? ((currentBal - amount).clamp(0.0, double.infinity)), newPending ?? currentPending);
-        authProvider.tryAutoLogin();
-        fetchTransactions();
         _isLoading = false;
         notifyListeners();
+        // Sync profile & transaction list asynchronously in background
+        unawaited(authProvider.tryAutoLogin());
+        unawaited(fetchTransactions());
         return true;
       } else {
         _errorMessage = responseData['error'] ?? 'Transfer failed';

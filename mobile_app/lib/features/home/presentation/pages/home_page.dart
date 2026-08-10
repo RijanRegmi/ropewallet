@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:ropewallet/features/auth/providers/auth_provider.dart';
-import 'package:ropewallet/features/auth/providers/security_provider.dart';
 import 'package:ropewallet/features/auth/presentation/pages/profile_page.dart';
+import 'package:ropewallet/features/auth/presentation/pages/set_pin_page.dart';
 import '../../providers/wallet_provider.dart';
 import 'deposit_page.dart';
 import 'scanner_page.dart';
@@ -14,10 +14,6 @@ import 'send_money_page.dart';
 import 'withdraw_page.dart';
 import 'statement_page.dart';
 import 'receipt_page.dart';
-import 'chime_transfer_page.dart';
-import 'cash_app_transfer_page.dart';
-import 'venmo_transfer_page.dart';
-import 'bank_transfer_page.dart';
 import 'usdt_transfer_page.dart';
 import 'p2p_gateway_order_page.dart';
 import '../../../admin/presentation/pages/admin_portal_page.dart';
@@ -33,6 +29,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   bool _isInit = false;
   String? _currentUserId;
+  // ignore: unused_field
   List<dynamic> _activeP2pAccounts = [];
   int _unreadNoticeCount = 0;
 
@@ -97,6 +94,17 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     if (!authProvider.isAuthenticated || authProvider.user == null) {
+      return const SizedBox.shrink();
+    }
+    if (!authProvider.hasPin) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const SetPinPage()),
+            (route) => false,
+          );
+        }
+      });
       return const SizedBox.shrink();
     }
     final walletProvider = Provider.of<WalletProvider>(context);

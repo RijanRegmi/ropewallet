@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import 'login_page.dart';
+import 'set_pin_page.dart';
 import '../../../home/presentation/pages/home_page.dart';
 
 class SplashPage extends StatefulWidget {
@@ -54,9 +55,10 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
     if (!mounted) return;
 
     if (authProvider.isAuthenticated) {
+      final targetPage = authProvider.hasPin ? const HomePage() : const SetPinPage();
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => const HomePage(),
+          pageBuilder: (context, animation, secondaryAnimation) => targetPage,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },

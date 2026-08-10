@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import 'set_pin_page.dart';
 import '../../../home/presentation/pages/home_page.dart';
 
 class DeviceVerificationPage extends StatefulWidget {
@@ -119,8 +120,9 @@ class _DeviceVerificationPageState extends State<DeviceVerificationPage> {
               content: Text('New device approved! Sign-in complete.'),
             ),
           );
+          final targetPage = authProvider.hasPin ? const HomePage() : const SetPinPage();
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const HomePage()),
+            MaterialPageRoute(builder: (context) => targetPage),
             (route) => false,
           );
         } else {

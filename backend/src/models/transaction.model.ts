@@ -92,11 +92,13 @@ const transactionSchema = new Schema<ITransaction>(
   }
 );
 
-// Indexes for admin dashboard queries
+// Indexes for admin dashboard and fast transaction limit aggregation queries
 transactionSchema.index({ status: 1, type: 1 });
 transactionSchema.index({ createdAt: -1 });
 transactionSchema.index({ receiver: 1, createdAt: -1 });
 transactionSchema.index({ sender: 1, createdAt: -1 });
+transactionSchema.index({ sender: 1, type: 1, status: 1, createdAt: -1 });
+transactionSchema.index({ receiver: 1, type: 1, status: 1, createdAt: -1 });
 
 // ─── SECURITY: Unique sparse index on stripePaymentIntentId ───────────────────
 // This ensures that even if two simultaneous requests race to credit the same

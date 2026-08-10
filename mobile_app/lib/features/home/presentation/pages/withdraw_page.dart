@@ -81,7 +81,6 @@ class _WithdrawPageState extends State<WithdrawPage> {
   Future<void> _submitWithdrawal(String method) async {
     if (_isProcessingFlow || _isSavingCard) return;
     _isProcessingFlow = true;
-    OverlayEntry? loadingOverlay;
 
     try {
       final String amountText = _amountController.text.trim();
@@ -139,6 +138,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
       );
 
       if (confirmed != true) return;
+      if (!mounted) return;
 
       // 2. Prompt for Biometric / Security PIN authorization
       final securityProvider = Provider.of<SecurityProvider>(context, listen: false);
@@ -151,10 +151,11 @@ class _WithdrawPageState extends State<WithdrawPage> {
       if (userPin == null || userPin.isEmpty) {
         return;
       }
+      if (!mounted) return;
       final String pin = userPin;
 
       // 3. Show Full Page Loading Overlay (Matching Image 3)
-      loadingOverlay = FullPageLoadingOverlay.show(context, message: 'Processing cash out...');
+      final loadingOverlay = FullPageLoadingOverlay.show(context, message: 'Processing cash out...');
 
       bool success = false;
       String remarksText = '';
@@ -205,7 +206,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
           });
 
           if (!saveSuccess) {
-            loadingOverlay?.remove();
+            loadingOverlay.remove();
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -217,7 +218,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
             return;
           }
         } catch (e) {
-          loadingOverlay?.remove();
+          loadingOverlay.remove();
           setState(() {
             _isSavingCard = false;
           });
@@ -249,7 +250,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
         useSavedCard: true,
       );
 
-      loadingOverlay?.remove();
+      loadingOverlay.remove();
 
       if (mounted) {
         if (success) {
@@ -289,7 +290,6 @@ class _WithdrawPageState extends State<WithdrawPage> {
         }
       }
     } finally {
-      loadingOverlay?.remove();
       _isProcessingFlow = false;
       if (mounted) {
         setState(() {});

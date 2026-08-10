@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../../auth/providers/security_provider.dart';
 import '../../providers/wallet_provider.dart';
-import '../../../auth/presentation/widgets/pin_code_dialog.dart';
 import '../widgets/review_bottom_sheet.dart';
 import '../widgets/full_page_loading_overlay.dart';
 import 'receipt_page.dart';
@@ -57,7 +56,6 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
     if (!_formKey.currentState!.validate()) return;
 
     _isProcessingFlow = true;
-    OverlayEntry? loadingOverlay;
 
     try {
       final walletProvider = Provider.of<WalletProvider>(context, listen: false);
@@ -93,31 +91,13 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
         return;
       }
 
-      if (mounted) {
-        setState(() {
-          _isSubmitting = true;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _isSubmitting = true;
+      });
 
       // 3. Show Full Page Loading Overlay (Matching Image 3)
-      loadingOverlay = FullPageLoadingOverlay.show(context, message: 'Processing money transfer...');
-
-      // 4. Validate recipient
-      final validationResult = await walletProvider.validateRecipient(receiverQrData: receiverQr);
-      if (validationResult['success'] != true) {
-        loadingOverlay?.remove();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFFEF4444),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              content: Text(validationResult['error'] ?? 'Customer to customer payments are not allowed. You can only send money to Host accounts.'),
-            ),
-          );
-        }
-        return;
-      }
+      final loadingOverlay = FullPageLoadingOverlay.show(context, message: 'Processing money transfer...');
 
       try {
         final success = await walletProvider.transfer(
@@ -128,7 +108,7 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
           pin: pin,
         );
 
-        loadingOverlay?.remove();
+        loadingOverlay.remove();
 
         if (mounted) {
           if (success) {
@@ -171,7 +151,7 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
           }
         }
       } catch (e) {
-        loadingOverlay?.remove();
+        loadingOverlay.remove();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
