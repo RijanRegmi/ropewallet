@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
 const resendApiKey = process.env.RESEND_API_KEY;
 const resendClient = resendApiKey ? new Resend(resendApiKey) : null;
@@ -8,30 +9,63 @@ export class EmailService {
     return process.env.EMAIL_FROM || 'noreply@ropewallet.com';
   }
 
+  private static getSmtpTransporter() {
+    const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+    const port = parseInt(process.env.SMTP_PORT || '465');
+    const user = process.env.SMTP_USER || 'ropewallet.official@gmail.com';
+    const pass = process.env.SMTP_PASS || 'rcxovqiwdilxmkxh';
+
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user,
+        pass,
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    });
+  }
+
   private static async sendMail({ to, subject, html, text }: { to: string; subject: string; html: string; text: string }): Promise<void> {
     const from = this.getFromAddress();
 
-    if (!resendClient) {
-      console.warn('[EmailService] RESEND_API_KEY is not configured in environment variables.');
-      return;
+    // 1. Primary Engine: Resend API
+    if (resendClient) {
+      try {
+        const response = await resendClient.emails.send({
+          from,
+          to,
+          subject,
+          html,
+          text,
+        });
+
+        if (response.error) {
+          console.warn('[EmailService] Primary Resend API error, switching to backup SMTP:', response.error);
+        } else {
+          console.log(`[EmailService] Delivered email via Resend to ${to}:`, response.data?.id);
+          return;
+        }
+      } catch (error: any) {
+        console.warn('[EmailService] Resend exception, switching to backup SMTP:', error.message || error);
+      }
     }
 
+    // 2. Backup Engine: Nodemailer Gmail SMTP Failsafe
     try {
-      const response = await resendClient.emails.send({
-        from,
+      const transporter = this.getSmtpTransporter();
+      await transporter.sendMail({
+        from: `"RopeWallet" <${process.env.SMTP_USER || 'ropewallet.official@gmail.com'}>`,
         to,
         subject,
-        html,
         text,
+        html,
       });
-      if (response.error) {
-        console.error('[EmailService] Resend API error:', response.error);
-        throw new Error(response.error.message || 'Email delivery failed');
-      }
-      console.log(`[EmailService] Delivered email via Resend to ${to}:`, response);
-    } catch (error: any) {
-      console.error('[EmailService] Resend delivery error:', error);
-      throw error;
+      console.log(`[EmailService] Delivered email via Backup SMTP to ${to}`);
+    } catch (smtpErr: any) {
+      console.error('[EmailService] Backup SMTP error:', smtpErr);
+      throw smtpErr;
     }
   }
 

@@ -1024,31 +1024,38 @@ class _ChangeCredentialVerificationPageState extends State<ChangeCredentialVerif
                       child: SizedBox(
                         height: 56,
                         child: ElevatedButton(
-                          onPressed: _verifyOtp,
+                          onPressed: (_isVerifying || authProvider.isLoading) ? null : _verifyOtp,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF10B981),
+                            disabledBackgroundColor: const Color(0xFF10B981).withOpacity(0.6),
                             foregroundColor: Colors.white,
                             elevation: 4,
                             padding: EdgeInsets.zero,
                             shadowColor: const Color(0xFF10B981).withOpacity(0.4),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Verify Code',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  height: 1.2,
+                          child: (_isVerifying || authProvider.isLoading)
+                              ? const SizedBox(
+                                  height: 22,
+                                  width: 22,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                                )
+                              : const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Verify Code',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        height: 1.2,
+                                      ),
+                                    ),
+                                    SizedBox(width: 6),
+                                    Icon(Icons.arrow_forward_rounded, size: 20),
+                                  ],
                                 ),
-                              ),
-                              SizedBox(width: 6),
-                              Icon(Icons.arrow_forward_rounded, size: 20),
-                            ],
-                          ),
                         ),
                       ),
                     ),

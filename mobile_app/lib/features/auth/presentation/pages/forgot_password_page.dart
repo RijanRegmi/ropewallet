@@ -582,16 +582,17 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                           child: SizedBox(
                             height: 56,
                             child: ElevatedButton(
-                              onPressed: authProvider.isLoading ? null : _verifyOtpCode,
+                              onPressed: (_isVerifying || authProvider.isLoading) ? null : _verifyOtpCode,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF10B981),
+                                disabledBackgroundColor: const Color(0xFF10B981).withOpacity(0.6),
                                 foregroundColor: Colors.white,
                                 elevation: 4,
                                 padding: EdgeInsets.zero,
                                 shadowColor: const Color(0xFF10B981).withOpacity(0.4),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                               ),
-                              child: authProvider.isLoading
+                              child: (_isVerifying || authProvider.isLoading)
                                   ? const SizedBox(
                                       height: 22,
                                       width: 22,
