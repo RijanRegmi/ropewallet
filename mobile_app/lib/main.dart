@@ -8,6 +8,7 @@ import 'core/constants/api_constants.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/home/providers/wallet_provider.dart';
 import 'features/auth/providers/security_provider.dart';
+import 'features/notifications/providers/notice_provider.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/set_pin_page.dart';
 import 'features/home/presentation/pages/home_page.dart';
@@ -50,6 +51,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => WalletProvider()),
         ChangeNotifierProvider(create: (_) => SecurityProvider()),
+        ChangeNotifierProvider(create: (_) => NoticeProvider()),
       ],
       child: const MyApp(),
     ),

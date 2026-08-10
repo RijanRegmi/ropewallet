@@ -18,6 +18,7 @@ import 'usdt_transfer_page.dart';
 import 'p2p_gateway_order_page.dart';
 import '../../../admin/presentation/pages/admin_portal_page.dart';
 import 'package:ropewallet/features/notifications/presentation/pages/notification_center_page.dart';
+import 'package:ropewallet/features/notifications/providers/notice_provider.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -31,7 +32,6 @@ class _HomePageState extends State<HomePage> {
   String? _currentUserId;
   // ignore: unused_field
   List<dynamic> _activeP2pAccounts = [];
-  int _unreadNoticeCount = 0;
 
   @override
   void didChangeDependencies() {
@@ -42,33 +42,14 @@ class _HomePageState extends State<HomePage> {
     if (!_isInit || (userId != null && _currentUserId != userId)) {
       _currentUserId = userId;
       _isInit = true;
-      Provider.of<WalletProvider>(context, listen: false).fetchTransactions();
+      try {
+        Provider.of<WalletProvider>(context, listen: false).fetchTransactions();
+      } catch (_) {}
+      try {
+        Provider.of<NoticeProvider>(context, listen: false).fetchNotices();
+      } catch (_) {}
       _fetchActiveP2pAccounts();
-      _fetchUnreadNoticesCount();
     }
-  }
-
-  Future<void> _fetchUnreadNoticesCount() async {
-    try {
-      final response = await ApiClient().get('/notices');
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['success'] == true && data['data'] != null) {
-          final List notices = data['data'];
-          int unread = 0;
-          for (var n in notices) {
-            if (n['isRead'] != true) {
-              unread++;
-            }
-          }
-          if (mounted) {
-            setState(() {
-              _unreadNoticeCount = unread;
-            });
-          }
-        }
-      }
-    } catch (_) {}
   }
 
   Future<void> _fetchActiveP2pAccounts() async {
@@ -140,6 +121,7 @@ class _HomePageState extends State<HomePage> {
           await Future.wait([
             authProvider.tryAutoLogin(),
             walletProvider.fetchTransactions(),
+            Provider.of<NoticeProvider>(context, listen: false).fetchNotices(),
             _fetchActiveP2pAccounts(),
           ]);
         },
@@ -222,19 +204,27 @@ class _HomePageState extends State<HomePage> {
                           size: 26,
                           color: isDark ? Colors.white : Colors.black87,
                         ),
-                        if (_unreadNoticeCount > 0)
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              width: 9,
-                              height: 9,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFEF4444),
-                                shape: BoxShape.circle,
+                        Builder(
+                          builder: (ctx) {
+                            int unreadCount = 0;
+                            try {
+                              unreadCount = Provider.of<NoticeProvider>(ctx).unreadCount;
+                            } catch (_) {}
+                            if (unreadCount <= 0) return const SizedBox.shrink();
+                            return Positioned(
+                              right: 0,
+                              top: 0,
+                              child: Container(
+                                width: 9,
+                                height: 9,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFEF4444),
+                                  shape: BoxShape.circle,
+                                ),
                               ),
-                            ),
-                          ),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),

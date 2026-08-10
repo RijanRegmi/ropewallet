@@ -63,7 +63,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         _pickAndUploadImage(ImageSource.gallery);
                       },
                     ),
-                    if (profileImage.isNotEmpty)
+                    if (profileImage.isNotEmpty || _selectedLocalFile != null)
                       _buildSourceOption(
                         icon: Icons.delete_outline_rounded,
                         label: 'Remove',
@@ -338,6 +338,20 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       ),
                     ),
+                  if (_selectedLocalFile != null || profileImage.isNotEmpty)
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      child: CircleAvatar(
+                        backgroundColor: const Color(0xFFEF4444),
+                        radius: 20,
+                        child: IconButton(
+                          icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.white),
+                          tooltip: 'Remove Photo',
+                          onPressed: _isUploading ? null : _removeProfileImage,
+                        ),
+                      ),
+                    ),
                   Positioned(
                     bottom: 0,
                     right: 0,
@@ -346,6 +360,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       radius: 20,
                       child: IconButton(
                         icon: const Icon(Icons.camera_alt_rounded, size: 18, color: Colors.white),
+                        tooltip: 'Upload / Change Photo',
                         onPressed: _isUploading ? null : () => _showImageSourceBottomSheet(profileImage),
                       ),
                     ),

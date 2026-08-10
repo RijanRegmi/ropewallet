@@ -845,14 +845,22 @@ class AuthProvider with ChangeNotifier {
   }
 }
 
+final Map<String, MemoryImage> _memoryImageCache = {};
+
 /// Helper function to robustly construct an ImageProvider for URLs, base64 data URIs, or empty strings.
 ImageProvider? getProfileImageProvider(String? urlOrData) {
   if (urlOrData == null || urlOrData.trim().isEmpty) return null;
   final str = urlOrData.trim();
   if (str.startsWith('data:image/')) {
+    if (_memoryImageCache.containsKey(str)) {
+      return _memoryImageCache[str];
+    }
     try {
       final base64Str = str.split(',').last;
-      return MemoryImage(base64Decode(base64Str));
+      final bytes = base64Decode(base64Str);
+      final provider = MemoryImage(bytes);
+      _memoryImageCache[str] = provider;
+      return provider;
     } catch (_) {
       return null;
     }

@@ -1,8 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:ropewallet/core/network/api_client.dart';
 import '../../../auth/providers/auth_provider.dart';
+import '../../../home/providers/wallet_provider.dart';
+import 'package:ropewallet/features/notifications/providers/notice_provider.dart';
 
 class NotificationCenterPage extends StatefulWidget {
   const NotificationCenterPage({super.key});
@@ -13,79 +13,31 @@ class NotificationCenterPage extends StatefulWidget {
 
 class _NotificationCenterPageState extends State<NotificationCenterPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final ApiClient _apiClient = ApiClient();
-
-  // Transactions State
-  bool _isLoadingTxns = true;
-  List<dynamic> _transactions = [];
-
-  // Notices / Alerts State
-  bool _isLoadingNotices = true;
-  List<dynamic> _notices = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _fetchTransactions();
-    _fetchNotices();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        final noticeProvider = Provider.of<NoticeProvider>(context, listen: false);
+        if (!noticeProvider.hasLoadedOnce) {
+          noticeProvider.fetchNotices();
+        }
+      } catch (_) {}
+      try {
+        final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+        if (walletProvider.transactions.isEmpty) {
+          walletProvider.fetchTransactions();
+        }
+      } catch (_) {}
+    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
-  }
-
-  Future<void> _fetchTransactions() async {
-    setState(() => _isLoadingTxns = true);
-    try {
-      final res = await _apiClient.get('/payments/transactions');
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        if (data['success'] == true && data['data'] != null) {
-          setState(() {
-            _transactions = data['data'];
-            _isLoadingTxns = false;
-          });
-          return;
-        }
-      }
-      setState(() => _isLoadingTxns = false);
-    } catch (e) {
-      setState(() => _isLoadingTxns = false);
-    }
-  }
-
-  Future<void> _fetchNotices() async {
-    setState(() => _isLoadingNotices = true);
-    try {
-      final res = await _apiClient.get('/notices');
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        if (data['success'] == true && data['data'] != null) {
-          setState(() {
-            _notices = data['data'];
-            _isLoadingNotices = false;
-          });
-          return;
-        }
-      }
-      setState(() => _isLoadingNotices = false);
-    } catch (e) {
-      setState(() => _isLoadingNotices = false);
-    }
-  }
-
-  Future<void> _markNoticeAsRead(String noticeId, int index) async {
-    try {
-      await _apiClient.post('/notices/$noticeId/read', {});
-      setState(() {
-        _notices[index]['isRead'] = true;
-      });
-    } catch (e) {
-      // Ignore fallback
-    }
   }
 
   Widget _getCategoryIcon(String cat) {
@@ -119,7 +71,19 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> with Si
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final unreadNoticesCount = _notices.where((n) => n['isRead'] != true).length;
+    NoticeProvider? noticeProvider;
+    try {
+      noticeProvider = Provider.of<NoticeProvider>(context);
+    } catch (_) {}
+    final walletProvider = Provider.of<WalletProvider>(context);
+
+    final notices = noticeProvider?.notices ?? [];
+    final transactions = walletProvider.transactions;
+
+    final bool isLoadingNotices = (noticeProvider?.isLoading ?? false) && !(noticeProvider?.hasLoadedOnce ?? false);
+    final bool isLoadingTxns = walletProvider.isLoading && transactions.isEmpty;
+
+    final unreadNoticesCount = noticeProvider?.unreadCount ?? 0;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
@@ -178,10 +142,12 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> with Si
         children: [
           // ─── TAB 1: Transactions Section ───────────────────────────
           RefreshIndicator(
-            onRefresh: _fetchTransactions,
-            child: _isLoadingTxns
+            onRefresh: () async {
+              await walletProvider.fetchTransactions();
+            },
+            child: isLoadingTxns
                 ? const Center(child: CircularProgressIndicator())
-                : _transactions.isEmpty
+                : transactions.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -196,13 +162,13 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> with Si
                       )
                     : ListView.builder(
                         padding: const EdgeInsets.all(16),
-                        itemCount: _transactions.length,
+                        itemCount: transactions.length,
                         itemBuilder: (context, index) {
                           final authProvider = Provider.of<AuthProvider>(context, listen: false);
                           final user = authProvider.user ?? {};
                           final userId = user['id'] ?? '';
 
-                          final txn = _transactions[index];
+                          final txn = transactions[index];
                           final String type = txn['type'] ?? 'transfer';
                           final double amount = (txn['amount'] as num?)?.toDouble() ?? 0.0;
                           final double netAmount = (txn['netAmount'] as num?)?.toDouble() ?? amount;
@@ -374,10 +340,14 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> with Si
 
           // ─── TAB 2: Alerts & Notices Section ────────────────────────
           RefreshIndicator(
-            onRefresh: _fetchNotices,
-            child: _isLoadingNotices
+            onRefresh: () async {
+              try {
+                await noticeProvider?.fetchNotices();
+              } catch (_) {}
+            },
+            child: isLoadingNotices
                 ? const Center(child: CircularProgressIndicator())
-                : _notices.isEmpty
+                : notices.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -392,9 +362,9 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> with Si
                       )
                     : ListView.builder(
                         padding: const EdgeInsets.all(16),
-                        itemCount: _notices.length,
+                        itemCount: notices.length,
                         itemBuilder: (context, index) {
-                          final n = _notices[index];
+                          final n = notices[index];
                           final isRead = n['isRead'] == true;
                           final cat = n['category'] ?? 'info';
                           final dateStr = n['createdAt'] != null
@@ -403,8 +373,8 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> with Si
 
                           return GestureDetector(
                             onTap: () {
-                              if (!isRead) {
-                                _markNoticeAsRead(n['_id'], index);
+                              if (!isRead && n['_id'] != null) {
+                                noticeProvider?.markNoticeAsRead(n['_id']);
                               }
                             },
                             child: Container(

@@ -292,8 +292,8 @@ export class AuthController {
         res.status(401).json({ success: false, error: 'Not authorized' });
         return;
       }
-      if (!profileImage) {
-        res.status(400).json({ success: false, error: 'Please provide profileImage URL' });
+      if (profileImage === undefined || profileImage === null) {
+        res.status(400).json({ success: false, error: 'Please provide profileImage string' });
         return;
       }
       await AuthService.updateProfileImage(userId, profileImage);
