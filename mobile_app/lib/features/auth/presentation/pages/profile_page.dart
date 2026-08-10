@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
@@ -21,6 +22,36 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isUploading = false;
   File? _selectedLocalFile;
   final ImagePicker _picker = ImagePicker();
+
+  void _copyUserTag(String userTag) {
+    if (userTag.trim().isEmpty) return;
+    final formattedTag = userTag.startsWith('\$') ? userTag.trim() : '\$${userTag.trim()}';
+    Clipboard.setData(ClipboardData(text: formattedTag));
+    HapticFeedback.lightImpact();
+    if (mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF10B981),
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Copied "$formattedTag" to clipboard!',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
   Future<void> _showImageSourceBottomSheet(String profileImage) async {
     showModalBottomSheet(
@@ -338,20 +369,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       ),
                     ),
-                  if (_selectedLocalFile != null || profileImage.isNotEmpty)
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      child: CircleAvatar(
-                        backgroundColor: const Color(0xFFEF4444),
-                        radius: 20,
-                        child: IconButton(
-                          icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.white),
-                          tooltip: 'Remove Photo',
-                          onPressed: _isUploading ? null : _removeProfileImage,
-                        ),
-                      ),
-                    ),
                   Positioned(
                     bottom: 0,
                     right: 0,
@@ -360,7 +377,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       radius: 20,
                       child: IconButton(
                         icon: const Icon(Icons.camera_alt_rounded, size: 18, color: Colors.white),
-                        tooltip: 'Upload / Change Photo',
+                        tooltip: 'Profile Photo Options',
                         onPressed: _isUploading ? null : () => _showImageSourceBottomSheet(profileImage),
                       ),
                     ),
@@ -379,12 +396,19 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              userTag.startsWith('\$') ? userTag : '\$$userTag',
-              style: TextStyle(
-                fontSize: 15,
-                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                fontWeight: FontWeight.w500,
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _copyUserTag(userTag),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                child: Text(
+                  userTag.startsWith('\$') ? userTag : '\$$userTag',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 36),
@@ -411,8 +435,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   _buildProfileRow(
                     Icons.alternate_email_rounded,
                     'User Tag',
-                    userTag,
+                    userTag.startsWith('\$') ? userTag : '\$$userTag',
                     isDark,
+                    onTap: () => _copyUserTag(userTag),
                   ),
                   const SizedBox(height: 16),
                   _buildProfileRow(
@@ -482,8 +507,8 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildProfileRow(IconData icon, String label, String value, bool isDark) {
-    return Row(
+  Widget _buildProfileRow(IconData icon, String label, String value, bool isDark, {VoidCallback? onTap}) {
+    final rowChild = Row(
       children: [
         Container(
           padding: const EdgeInsets.all(10),
@@ -518,5 +543,14 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ],
     );
+
+    if (onTap != null) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: rowChild,
+      );
+    }
+    return rowChild;
   }
 }

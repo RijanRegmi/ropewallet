@@ -1,50 +1,40 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
+
+const resendApiKey = process.env.RESEND_API_KEY;
+const resendClient = resendApiKey ? new Resend(resendApiKey) : null;
 
 export class EmailService {
-  private static getTransporter() {
-    const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-    const port = parseInt(process.env.SMTP_PORT || '465');
-    const user = process.env.SMTP_USER || '';
-    const pass = process.env.SMTP_PASS || '';
+  private static getFromAddress(): string {
+    return process.env.EMAIL_FROM || process.env.SMTP_FROM || '"RopeWallet No-Reply" <noreply@ropewallet.com>';
+  }
 
-    const isGmail = host.toLowerCase().includes('gmail') || user.toLowerCase().includes('gmail');
-    const secure = port === 465;
+  private static async sendMail({ to, subject, html, text }: { to: string; subject: string; html: string; text: string }): Promise<void> {
+    const from = this.getFromAddress();
 
-    return nodemailer.createTransport(
-      isGmail
-        ? {
-            service: 'gmail',
-            auth: {
-              user,
-              pass,
-            },
-            tls: {
-              rejectUnauthorized: false,
-            },
-          }
-        : {
-            host,
-            port,
-            secure,
-            auth: {
-              user,
-              pass,
-            },
-            tls: {
-              rejectUnauthorized: false,
-            },
-          }
-    );
+    if (!resendClient) {
+      console.warn('[EmailService] RESEND_API_KEY is not configured in environment variables.');
+      return;
+    }
+
+    try {
+      const response = await resendClient.emails.send({
+        from,
+        to,
+        subject,
+        html,
+        text,
+      });
+      console.log(`[EmailService] Delivered email via Resend to ${to}:`, response);
+    } catch (error) {
+      console.error('[EmailService] Resend delivery error:', error);
+    }
   }
 
   static async sendOtpEmail(email: string, code: string): Promise<void> {
-    const transporter = this.getTransporter();
-    const from = process.env.SMTP_FROM || 'RopeWallet <noreply@ropewallet.com>';
-
-    const mailOptions = {
-      from,
+    await this.sendMail({
       to: email,
       subject: 'RopeWallet OTP Verification Code',
+      text: `Welcome to RopeWallet!\n\nYour 6-digit OTP verification code is: ${code}\n\nThis code will expire in 5 minutes. If you did not request this code, please ignore this email.`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
           <h2 style="color: #4F46E5; text-align: center; margin-bottom: 24px;">Welcome to RopeWallet</h2>
@@ -55,19 +45,14 @@ export class EmailService {
           <p style="font-size: 13px; color: #64748b; text-align: center; margin-top: 24px;">This code will expire in 5 minutes. If you did not request this code, you can safely ignore this email.</p>
         </div>
       `,
-    };
-
-    await transporter.sendMail(mailOptions);
+    });
   }
 
   static async sendForgotPasswordEmail(email: string, code: string): Promise<void> {
-    const transporter = this.getTransporter();
-    const from = process.env.SMTP_FROM || 'RopeWallet <noreply@ropewallet.com>';
-
-    const mailOptions = {
-      from,
+    await this.sendMail({
       to: email,
       subject: 'RopeWallet Password Reset Request',
+      text: `RopeWallet Password Reset Request\n\nYour 6-digit OTP code to reset your password is: ${code}\n\nThis code will expire in 5 minutes. If you did not make this request, please ignore this email.`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
           <h2 style="color: #4F46E5; text-align: center; margin-bottom: 24px;">Reset Password</h2>
@@ -78,19 +63,14 @@ export class EmailService {
           <p style="font-size: 13px; color: #64748b; text-align: center; margin-top: 24px;">This code will expire in 5 minutes. If you did not make this request, please ignore this email.</p>
         </div>
       `,
-    };
-
-    await transporter.sendMail(mailOptions);
+    });
   }
 
   static async sendNewDeviceOtpEmail(email: string, code: string): Promise<void> {
-    const transporter = this.getTransporter();
-    const from = process.env.SMTP_FROM || 'RopeWallet Security <noreply@ropewallet.com>';
-
-    const mailOptions = {
-      from,
+    await this.sendMail({
       to: email,
       subject: 'Security Alert: New Device Verification Code - RopeWallet',
+      text: `Security Alert: New Device Sign-In Attempt on RopeWallet\n\nYour 6-digit verification code is: ${code}\n\nThis code will expire in 10 minutes. If you did NOT attempt to log in from a new device, please change your password immediately.`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
           <div style="text-align: center; margin-bottom: 20px;">
@@ -107,19 +87,14 @@ export class EmailService {
           <p style="font-size: 12px; color: #64748B; text-align: center; line-height: 1.5;">This code will expire in 10 minutes. If you did NOT attempt to log in from a new device, please change your password immediately to secure your account.</p>
         </div>
       `,
-    };
-
-    await transporter.sendMail(mailOptions);
+    });
   }
 
   static async sendPinChangeOtpEmail(email: string, code: string): Promise<void> {
-    const transporter = this.getTransporter();
-    const from = process.env.SMTP_FROM || 'RopeWallet Security <noreply@ropewallet.com>';
-
-    const mailOptions = {
-      from,
+    await this.sendMail({
       to: email,
       subject: 'Security Alert: Transaction PIN Change OTP - RopeWallet',
+      text: `RopeWallet Transaction PIN Change Request\n\nYour 6-digit OTP code is: ${code}\n\nThis code will expire in 5 minutes. If you did not request this PIN change, please secure your account immediately.`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
           <div style="text-align: center; margin-bottom: 20px;">
@@ -136,19 +111,14 @@ export class EmailService {
           <p style="font-size: 12px; color: #64748B; text-align: center; line-height: 1.5;">This code will expire in 5 minutes. If you did not request this PIN change, please secure your account immediately.</p>
         </div>
       `,
-    };
-
-    await transporter.sendMail(mailOptions);
+    });
   }
 
   static async sendPasswordChangeOtpEmail(email: string, code: string): Promise<void> {
-    const transporter = this.getTransporter();
-    const from = process.env.SMTP_FROM || 'RopeWallet Security <noreply@ropewallet.com>';
-
-    const mailOptions = {
-      from,
+    await this.sendMail({
       to: email,
       subject: 'Security Alert: Password Change OTP - RopeWallet',
+      text: `RopeWallet Password Change Request\n\nYour 6-digit OTP code is: ${code}\n\nThis code will expire in 5 minutes. If you did not request this password change, please contact support immediately.`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
           <div style="text-align: center; margin-bottom: 20px;">
@@ -165,8 +135,6 @@ export class EmailService {
           <p style="font-size: 12px; color: #64748B; text-align: center; line-height: 1.5;">This code will expire in 5 minutes. If you did not request this password change, please contact support immediately.</p>
         </div>
       `,
-    };
-
-    await transporter.sendMail(mailOptions);
+    });
   }
 }
