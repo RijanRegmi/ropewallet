@@ -155,6 +155,12 @@ export default function ProfessionalWhiteLandingPage() {
           </a>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
+            <Link href="/download" className="text-emerald-600 font-bold hover:text-emerald-700 transition-colors flex items-center gap-1.5">
+              <span>Download App</span>
+              <span className="px-1.5 py-0.5 text-[10px] uppercase font-bold bg-emerald-100 text-emerald-700 rounded-full border border-emerald-300">
+                APK
+              </span>
+            </Link>
             <a href="#gateways" onClick={(e) => handleSmoothScroll(e, 'gateways')} className="hover:text-slate-900 transition-colors">
               Supported Gateways
             </a>

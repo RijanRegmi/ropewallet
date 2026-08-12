@@ -246,7 +246,7 @@ class _ExternalTransferPageState extends State<ExternalTransferPage> {
                     Icon(Icons.security_rounded, size: 16, color: Colors.grey),
                     SizedBox(width: 6),
                     Text(
-                      'Secured instantly via Stripe payout networks',
+                      'Secured instantly via bank payout networks',
                       style: TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                   ],

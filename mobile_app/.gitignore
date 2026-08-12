@@ -49,5 +49,8 @@ google-services.json
 GoogleService-Info.plist
 *firebase-adminsdk*.json
 *service-account*.json
-/android/build/
-**/build/
+# Keystore & Signing Secrets
+key.properties
+*.jks
+*.keystore
+

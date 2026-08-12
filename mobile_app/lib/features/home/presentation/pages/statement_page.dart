@@ -275,7 +275,7 @@ class _StatementPageState extends State<StatementPage> {
                       if (type == 'deposit') {
                         txIcon = Icons.add_circle_outline_rounded;
                         txIconColor = const Color(0xFF3B82F6);
-                        txTitle = remarks.isNotEmpty ? remarks : 'Deposit via Stripe';
+                        txTitle = remarks.isNotEmpty ? remarks : 'Card Deposit';
                         txAmountText = '+\$${amount.toStringAsFixed(2)}';
                         txAmountColor = const Color(0xFF3B82F6);
                       } else if (type == 'withdrawal') {

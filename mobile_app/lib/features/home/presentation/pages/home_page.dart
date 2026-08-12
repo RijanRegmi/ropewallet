@@ -661,7 +661,7 @@ class _HomePageState extends State<HomePage> {
                             if (type == 'deposit') {
                               txIcon = Icons.add_circle_outline_rounded;
                               txIconColor = const Color(0xFF3B82F6);
-                              txTitle = 'Deposit via Stripe';
+                              txTitle = 'Card Deposit';
                               txAmountText = '+\$${amount.toStringAsFixed(2)}';
                               txAmountColor = const Color(0xFF3B82F6);
                             } else if (type == 'withdrawal') {
