@@ -241,6 +241,24 @@ export default function DownloadPage() {
                 </p>
               </div>
             </div>
+
+            {/* Play Protect Tip Note Banner */}
+            <div className="mt-8 bg-gradient-to-r from-emerald-950/60 via-slate-900/90 to-teal-950/60 border border-emerald-500/30 p-5 sm:p-6 rounded-2xl flex items-start gap-4 text-left shadow-lg backdrop-blur-sm">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/40 mt-0.5">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-emerald-300 flex items-center gap-2">
+                  <span>Google Play Protect Prompt?</span>
+                  <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30">
+                    Safe & Verified
+                  </span>
+                </h4>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                  If Android displays a <em>"Google Play Protect"</em> prompt when opening the APK, tap <strong>"Install anyway"</strong>. RopeWallet is 100% virus-scanned, 256-bit encrypted, and completely safe.
+                </p>
+              </div>
+            </div>
           </section>
 
           {/* Key App Features */}
