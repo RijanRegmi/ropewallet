@@ -34,42 +34,60 @@ export class EmailService {
     const from = this.getFromAddress();
     const resendClient = this.getResendClient();
 
-    // 1. Primary Engine: Resend API
-    if (resendClient) {
-      try {
-        const response = await resendClient.emails.send({
-          from,
-          to,
-          subject,
-          html,
-          text,
-        });
-
-        if (response.error) {
-          console.warn('[EmailService] Primary Resend API error, switching to backup SMTP:', response.error);
-        } else {
-          console.log(`[EmailService] Delivered email via Resend to ${to}:`, response.data?.id);
-          return;
-        }
-      } catch (error: any) {
-        console.warn('[EmailService] Resend exception, switching to backup SMTP:', error.message || error);
+    const sendViaResend = async () => {
+      if (!resendClient) throw new Error('Resend client not configured');
+      const response = await resendClient.emails.send({
+        from,
+        to,
+        subject,
+        html,
+        text,
+        headers: {
+          'X-Priority': '1',
+          'Importance': 'high',
+        },
+      });
+      if (response.error) {
+        throw new Error(JSON.stringify(response.error));
       }
-    }
+      console.log(`[EmailService] Delivered email via Resend API to ${to}:`, response.data?.id);
+      return response;
+    };
 
-    // 2. Backup Engine: Nodemailer Gmail SMTP Failsafe
-    try {
+    const sendViaSmtp = async () => {
       const transporter = this.getSmtpTransporter();
-      await transporter.sendMail({
-        from: `"RopeWallet" <${process.env.SMTP_USER || 'ropewallet.official@gmail.com'}>`,
+      const result = await transporter.sendMail({
+        from: `"RopeWallet Security" <${process.env.SMTP_USER || 'ropewallet.official@gmail.com'}>`,
         to,
         subject,
         text,
         html,
+        headers: {
+          'X-Priority': '1',
+          'X-MSMail-Priority': 'High',
+          'Importance': 'High',
+        },
       });
-      console.log(`[EmailService] Delivered email via Backup SMTP to ${to}`);
-    } catch (smtpErr: any) {
-      console.error('[EmailService] Backup SMTP error:', smtpErr);
-      throw smtpErr;
+      console.log(`[EmailService] Delivered email via High-Speed SMTP to ${to}`);
+      return result;
+    };
+
+    // Parallel Racing Strategy: Run both Resend API and Gmail SMTP simultaneously.
+    // Whichever completes first delivers the email instantly to the user!
+    try {
+      if (resendClient) {
+        await Promise.any([sendViaResend(), sendViaSmtp()]);
+      } else {
+        await sendViaSmtp();
+      }
+    } catch (err: any) {
+      console.error('[EmailService] All email delivery engines failed:', err);
+      // Fallback try SMTP directly if Promise.any fails
+      try {
+        await sendViaSmtp();
+      } catch (finalErr) {
+        throw finalErr;
+      }
     }
   }
 
