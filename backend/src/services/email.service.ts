@@ -1,10 +1,13 @@
 import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
 
-const resendApiKey = process.env.RESEND_API_KEY;
-const resendClient = resendApiKey ? new Resend(resendApiKey) : null;
-
 export class EmailService {
+  private static getResendClient(): Resend | null {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) return null;
+    return new Resend(apiKey);
+  }
+
   private static getFromAddress(): string {
     return process.env.EMAIL_FROM || 'noreply@ropewallet.com';
   }
@@ -29,6 +32,7 @@ export class EmailService {
 
   private static async sendMail({ to, subject, html, text }: { to: string; subject: string; html: string; text: string }): Promise<void> {
     const from = this.getFromAddress();
+    const resendClient = this.getResendClient();
 
     // 1. Primary Engine: Resend API
     if (resendClient) {
