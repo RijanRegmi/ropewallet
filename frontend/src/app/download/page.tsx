@@ -51,9 +51,6 @@ export default function DownloadPage() {
           </Link>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
-            <Link href="/" className="hover:text-emerald-400 transition-colors">
-              Home
-            </Link>
             <Link
               href="/download"
               className="text-emerald-400 font-semibold flex items-center gap-1.5"
@@ -63,18 +60,6 @@ export default function DownloadPage() {
                 APK
               </span>
             </Link>
-            <a
-              href="https://ropewallet.com/#features"
-              className="hover:text-emerald-400 transition-colors"
-            >
-              Features
-            </a>
-            <a
-              href="https://ropewallet.com/#security"
-              className="hover:text-emerald-400 transition-colors"
-            >
-              Security
-            </a>
           </nav>
 
           <div className="flex items-center gap-4">
@@ -129,20 +114,8 @@ export default function DownloadPage() {
                   <Download className="w-6 h-6 group-hover:bounce" />
                   <span>Download APK Now</span>
                   <span className="text-xs px-2.5 py-1 bg-slate-950/20 text-slate-950 font-extrabold rounded-lg ml-1">
-                    98 MB
+                    42 MB
                   </span>
-                </a>
-
-                {/* Google Play Beta Tester Link */}
-                <a
-                  href="https://play.google.com/apps/testing/com.wallet.app.rope_wallet"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-slate-200 font-semibold text-base transition-all duration-200 hover:border-slate-600"
-                >
-                  <Smartphone className="w-5 h-5 text-emerald-400" />
-                  <span>Join Google Play Beta</span>
-                  <ExternalLink className="w-4 h-4 text-slate-400" />
                 </a>
               </div>
 
@@ -157,7 +130,7 @@ export default function DownloadPage() {
                 <div className="bg-slate-900/40 border border-slate-800/60 p-3.5 rounded-xl">
                   <div className="text-xs text-slate-400 font-medium">File Size</div>
                   <div className="text-sm font-semibold text-slate-100 mt-0.5">
-                    98.0 MB
+                    42.0 MB
                   </div>
                 </div>
                 <div className="bg-slate-900/40 border border-slate-800/60 p-3.5 rounded-xl">
@@ -347,7 +320,7 @@ export default function DownloadPage() {
                 className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-lg shadow-xl shadow-emerald-500/25 transition-all duration-300 transform hover:-translate-y-1"
               >
                 <Download className="w-6 h-6" />
-                <span>Download APK (98 MB)</span>
+                <span>Download APK (42 MB)</span>
               </a>
             </div>
           </div>
