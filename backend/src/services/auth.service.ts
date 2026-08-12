@@ -50,13 +50,13 @@ export class AuthService {
       { upsert: true, new: true }
     );
 
-    // 4. Send email asynchronously in background so response is instant
+    // 4. Send email synchronously so Vercel Serverless Function waits for completion
     const targetEmail = email.toLowerCase().trim();
-    setImmediate(() => {
-      EmailService.sendOtpEmail(targetEmail, code).catch((err) => {
-        console.error('[EmailService] Async delivery error:', err);
-      });
-    });
+    try {
+      await EmailService.sendOtpEmail(targetEmail, code);
+    } catch (err) {
+      console.error('[EmailService] Registration OTP delivery error:', err);
+    }
   }
 
   static async register(data: RegisterDTO): Promise<AuthResponse> {
@@ -201,12 +201,12 @@ export class AuthService {
       };
       await user.save();
 
-      // Send OTP code to user's registered email asynchronously
-      setImmediate(() => {
-        EmailService.sendNewDeviceOtpEmail(user.email, code).catch((err) => {
-          console.error('[EmailService] Async new device OTP error:', err);
-        });
-      });
+      // Send OTP code to user's registered email synchronously
+      try {
+        await EmailService.sendNewDeviceOtpEmail(user.email, code);
+      } catch (err) {
+        console.error('[EmailService] New device OTP error:', err);
+      }
 
       return {
         requiresDeviceVerification: true,
@@ -321,11 +321,11 @@ export class AuthService {
     user.newDeviceOtp.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
-    setImmediate(() => {
-      EmailService.sendNewDeviceOtpEmail(user.email, code).catch((err) => {
-        console.error('[EmailService] Async resend new device OTP error:', err);
-      });
-    });
+    try {
+      await EmailService.sendNewDeviceOtpEmail(user.email, code);
+    } catch (err) {
+      console.error('[EmailService] Resend new device OTP error:', err);
+    }
   }
 
   static async sendForgotPasswordOtp(email: string): Promise<void> {
@@ -347,12 +347,12 @@ export class AuthService {
       { upsert: true, new: true }
     );
 
-    // 4. Send email asynchronously in background
-    setImmediate(() => {
-      EmailService.sendForgotPasswordEmail(emailNorm, code).catch((err) => {
-        console.error('[EmailService] Async forgot password OTP error:', err);
-      });
-    });
+    // 4. Send email synchronously
+    try {
+      await EmailService.sendForgotPasswordEmail(emailNorm, code);
+    } catch (err) {
+      console.error('[EmailService] Forgot password OTP error:', err);
+    }
   }
 
   static async resetPassword(email: string, otpCode: string, newPassword: string): Promise<void> {
@@ -444,15 +444,17 @@ export class AuthService {
       { upsert: true, new: true }
     );
 
-    setImmediate(() => {
+    try {
       if (type === 'pin') {
-        EmailService.sendPinChangeOtpEmail(user.email, code).catch((err) => console.error(err));
+        await EmailService.sendPinChangeOtpEmail(user.email, code);
       } else if (type === 'password') {
-        EmailService.sendPasswordChangeOtpEmail(user.email, code).catch((err) => console.error(err));
+        await EmailService.sendPasswordChangeOtpEmail(user.email, code);
       } else {
-        EmailService.sendPinChangeOtpEmail(user.email, code).catch((err) => console.error(err));
+        await EmailService.sendPinChangeOtpEmail(user.email, code);
       }
-    });
+    } catch (err) {
+      console.error('[EmailService] Send update OTP error:', err);
+    }
   }
 
   static async changePassword(userId: string, otpCode: string, newPassword: string): Promise<void> {
