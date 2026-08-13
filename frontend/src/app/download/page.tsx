@@ -33,10 +33,10 @@ export default function DownloadPage() {
       </div>
 
       {/* Navigation Header */}
-      <header className="relative z-10 border-b border-slate-800/60 bg-[#070A12]/80 backdrop-blur-xl sticky top-0">
+      <header className="sticky top-0 z-50 bg-[#070A12]/90 backdrop-blur-md border-b border-slate-800/80 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-emerald-500/10 group-hover:scale-105 transition-transform duration-300">
+            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-emerald-500/10 group-hover:scale-105 transition-transform duration-300 border border-slate-800">
               <Image
                 src="/ropewallet.png"
                 alt="RopeWallet Logo"
@@ -45,28 +45,33 @@ export default function DownloadPage() {
                 className="object-cover"
               />
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-white via-slate-200 to-emerald-400 bg-clip-text text-transparent">
-              RopeWallet
-            </span>
+            <div className="flex flex-col justify-center">
+              <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-emerald-400 bg-clip-text text-transparent leading-none">
+                RopeWallet
+              </span>
+              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mt-1">
+                ENTERPRISE WALLET
+              </span>
+            </div>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
+          <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-300">
             <Link
               href="/download"
-              className="text-emerald-400 font-semibold flex items-center gap-1.5"
+              className="text-emerald-400 font-bold flex items-center gap-1.5"
             >
-              <span>Download</span>
-              <span className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full">
+              <span>Download App</span>
+              <span className="px-1.5 py-0.5 text-[10px] uppercase font-bold tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full">
                 APK
               </span>
             </Link>
           </nav>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <a
               href="/ropewallet.apk"
               download="RopeWallet.apk"
-              className="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-semibold shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all duration-200 hover:-translate-y-0.5"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
             >
               <Download className="w-4 h-4" />
               <span>Get APK</span>
@@ -149,31 +154,49 @@ export default function DownloadPage() {
               </div>
             </div>
 
-            {/* Right Hero Image / App Preview */}
-            <div className="lg:col-span-5 flex justify-center">
-              <div className="relative w-full max-w-md">
-                <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/20 to-teal-500/20 rounded-3xl blur-2xl transform scale-95"></div>
-                <div className="relative bg-slate-900/80 border border-slate-800/90 rounded-3xl p-4 shadow-2xl backdrop-blur-xl">
-                  <Image
-                    src="/app_hero_mockup.png"
-                    alt="RopeWallet Mobile App Interface"
-                    width={450}
-                    height={900}
-                    className="w-full h-auto rounded-2xl object-cover shadow-lg"
-                    priority
-                  />
-                  <div className="absolute -bottom-4 -left-4 bg-slate-900/95 border border-slate-800 text-white p-4 rounded-2xl shadow-xl flex items-center gap-3 backdrop-blur-md">
-                    <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-                      <Zap className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="text-xs text-slate-400 font-medium">
-                        Transfer Speed
-                      </div>
-                      <div className="text-sm font-bold text-emerald-400">
-                        Instant (0.4 sec)
-                      </div>
-                    </div>
+            {/* Right Mobile Phone Device Mockup Column (Matches Home Page UI/UX) */}
+            <div className="lg:col-span-5 relative flex justify-center items-center mt-10 lg:mt-0">
+              <div className="relative animate-float">
+                {/* Background Glow */}
+                <div className="absolute -inset-4 bg-gradient-to-tr from-emerald-500/20 via-teal-500/20 to-indigo-500/20 rounded-[60px] blur-2xl pointer-events-none" />
+
+                {/* Floating Badge 1 (Top Left) */}
+                <div className="absolute -left-6 top-8 bg-slate-900/95 backdrop-blur-md border border-slate-800 px-3.5 py-2 rounded-2xl shadow-xl z-20 hidden sm:flex items-center gap-2.5 text-xs font-extrabold text-white">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
+                    ⚡
+                  </div>
+                  <div>
+                    <span className="block text-[9px] text-slate-400 font-semibold uppercase">Verification</span>
+                    <span className="text-xs text-emerald-400">Instant &lt;3s Settlement</span>
+                  </div>
+                </div>
+
+                {/* Floating Badge 2 (Bottom Right) */}
+                <div className="absolute -right-6 bottom-10 bg-slate-900/95 backdrop-blur-md border border-slate-800 px-3.5 py-2 rounded-2xl shadow-xl z-20 hidden sm:flex items-center gap-2.5 text-xs font-extrabold text-white">
+                  <div className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-xs">
+                    🛡️
+                  </div>
+                  <div>
+                    <span className="block text-[9px] text-slate-400 font-semibold uppercase">Security Split</span>
+                    <span className="text-xs text-indigo-300">80% Host / 20% Fee</span>
+                  </div>
+                </div>
+
+                {/* Android Smartphone Frame (Compact & Sleek matching Home Page) */}
+                <div className="w-[215px] sm:w-[260px] lg:w-[290px] bg-slate-950 border-[7px] sm:border-[8px] border-slate-900 rounded-[40px] sm:rounded-[44px] shadow-2xl shadow-slate-950/80 overflow-hidden relative border-t-[9px] border-b-[9px]">
+                  {/* Android Camera Punch Hole */}
+                  <div className="w-3 h-3 bg-[#0B0F1A] border border-slate-800 rounded-full mx-auto absolute top-1.5 left-1/2 -translate-x-1/2 z-30 shadow-inner" />
+
+                  {/* Phone Screen Display with App Screenshot */}
+                  <div className="bg-[#0B0F1A] rounded-[32px] sm:rounded-[36px] overflow-hidden">
+                    <Image
+                      src="/app_hero_mockup.png"
+                      alt="RopeWallet Android Mobile App UI"
+                      width={290}
+                      height={600}
+                      priority
+                      className="w-full h-auto object-cover rounded-[32px] sm:rounded-[36px]"
+                    />
                   </div>
                 </div>
               </div>
