@@ -1001,6 +1001,30 @@ export default function ProfessionalWhiteLandingPage() {
 
             <p>© 2026 RopeWallet Digital Wallet & Payment Gateway Engine. All rights reserved.</p>
           </div>
+
+          {/* Legal Links */}
+          <div className="flex items-center justify-center gap-6 pt-4 border-t border-slate-200 mt-2">
+            <a
+              href="/terms"
+              className="text-xs text-slate-400 hover:text-slate-700 transition-colors"
+            >
+              Terms & Conditions
+            </a>
+            <span className="text-slate-200">•</span>
+            <a
+              href="/privacy"
+              className="text-xs text-slate-400 hover:text-slate-700 transition-colors"
+            >
+              Privacy Policy
+            </a>
+            <span className="text-slate-200">•</span>
+            <a
+              href="mailto:support@ropewallet.com"
+              className="text-xs text-slate-400 hover:text-slate-700 transition-colors"
+            >
+              Contact Us
+            </a>
+          </div>
         </div>
       </footer>
     </div>
