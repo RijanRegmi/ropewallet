@@ -308,7 +308,17 @@ export default function FloatingNavbar({
                           : navTextClass
                         }`}
                     >
-                      <span className={`whitespace-nowrap inline-block transition-colors duration-200 ${isHovered || isClicked ? 'animate-nav-pulse text-slate-950' : isActive ? 'text-slate-950 font-medium' : ''}`}>
+                      <span
+                        className={`whitespace-nowrap inline-block transition-colors duration-200 ${
+                          isClicked
+                            ? 'animate-nav-click-zoom text-slate-950'
+                            : isHovered
+                              ? 'animate-nav-pulse text-slate-950'
+                              : isActive
+                                ? 'text-slate-950 font-medium'
+                                : ''
+                        }`}
+                      >
                         {item.label}
                       </span>
                       {item.badge && (
@@ -330,7 +340,17 @@ export default function FloatingNavbar({
                           : navTextClass
                         }`}
                     >
-                      <span className={`whitespace-nowrap inline-block transition-colors duration-200 ${isHovered || isClicked ? 'animate-nav-pulse text-slate-950' : isActive ? 'text-slate-950 font-medium' : ''}`}>
+                      <span
+                        className={`whitespace-nowrap inline-block transition-colors duration-200 ${
+                          isClicked
+                            ? 'animate-nav-click-zoom text-slate-950'
+                            : isHovered
+                              ? 'animate-nav-pulse text-slate-950'
+                              : isActive
+                                ? 'text-slate-950 font-medium'
+                                : ''
+                        }`}
+                      >
                         {item.label}
                       </span>
                       {item.badge && (
