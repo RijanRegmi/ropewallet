@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+    ],
+  },
   async rewrites() {
     // In production (Vercel), the API serverless function lives at /api/* on the same origin.
     // Only proxy to localhost:5000 during local development.

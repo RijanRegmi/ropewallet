@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import FloatingNavbar from "@/components/FloatingNavbar";
 
 export const metadata: Metadata = {
@@ -98,41 +99,35 @@ If we become aware that we have collected information from a minor, we will prom
 
 • Right to Know: Request the categories and specific pieces of personal information we have collected about you.
 • Right to Delete: Request deletion of your personal information, subject to legal exceptions.
-• Right to Opt-Out of Sale: RopeWallet does not sell your personal information.
-• Right to Non-Discrimination: We will not discriminate against you for exercising your privacy rights.
+• Right to Opt-Out: We do not sell your personal information, so no opt-out is necessary.
+• Non-Discrimination: We will not discriminate against you for exercising your CCPA rights.
 
-To submit a CCPA request, email support@ropewallet.com with the subject line "CCPA Request."`,
+To exercise these rights, email us at privacy@ropewallet.com with "CCPA Request" in the subject line.`,
   },
   {
     id: "changes",
-    title: "10. Changes to This Policy",
-    content: `We may update this Privacy Policy from time to time. We will notify you of material changes by email or via a notice in your account dashboard. The "Last Updated" date at the top of this page reflects the most recent revision.
+    title: "10. Changes to This Privacy Policy",
+    content: `We may update this Privacy Policy periodically. We will notify you of material changes by posting the new policy on this page with an updated "Last Updated" date, and via email or in-app notification when appropriate.
 
-Your continued use of the Service after any changes to this Privacy Policy constitutes your acceptance of the updated policy.`,
+Your continued use of RopeWallet after changes are posted constitutes your acceptance of the updated Privacy Policy.`,
   },
   {
     id: "contact",
     title: "11. Contact Us",
-    content: `If you have questions about this Privacy Policy or how we handle your data, please contact us:
+    content: `For questions, concerns, or requests regarding this Privacy Policy:
 
-• Email: support@ropewallet.com
+• Email: privacy@ropewallet.com
+• Support: support@ropewallet.com
 • Website: ropewallet.com
 
-We will make reasonable efforts to respond to your inquiries within 5 business days.`,
+We will respond to all inquiries within 5 business days.`,
   },
 ];
 
 export default function PrivacyPage() {
-  const lastUpdated = "August 26, 2026";
+  const lastUpdated = "August 28, 2026";
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#059669] via-[#047857] to-[#064E3B] text-white selection:bg-emerald-300 selection:text-slate-950 relative">
-      {/* Background Ambient Glows (Isolated in fixed overflow container) */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-emerald-300/25 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/3 -right-40 w-[30rem] h-[30rem] bg-teal-300/20 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 left-1/4 w-[32rem] h-[32rem] bg-emerald-400/20 rounded-full blur-3xl"></div>
-      </div>
-
+    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-emerald-300 selection:text-slate-950">
       {/* Floating White Glass Navbar */}
       <FloatingNavbar
         accentColor="emerald"
@@ -148,51 +143,123 @@ export default function PrivacyPage() {
         ]}
       />
 
-      <div className="pt-32 pb-16 px-4 text-center relative overflow-hidden z-10">
-        <div className="relative">
-          <span className="inline-block text-xs font-black tracking-widest uppercase text-white bg-white/20 border border-white/30 px-4 py-1.5 rounded-full mb-6 shadow-md backdrop-blur-md">Legal</span>
-          <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tight mb-4 drop-shadow-md">Privacy Policy</h1>
-          <p className="text-emerald-50 text-base max-w-xl mx-auto font-medium drop-shadow-xs">We are committed to protecting your privacy. This policy explains how RopeWallet collects, uses, and safeguards your personal information.</p>
-          <p className="mt-4 text-sm text-emerald-100 font-medium">Last updated: {lastUpdated}</p>
-        </div>
-      </div>
+      {/* SECTION 1 (WHITE): Header Hero */}
+      <section className="bg-white text-slate-900 pt-36 pb-16 px-4 text-center relative overflow-hidden">
+        {/* Subtle Background Pattern & Glow */}
+        <div className="absolute inset-0 bg-[radial-gradient(#059669_1px,transparent_1px)] [background-size:24px_24px] opacity-[0.04] pointer-events-none" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[32rem] h-[32rem] bg-emerald-100/40 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-24 relative z-10">
-        {/* Table of Contents (Transparent White Glass Box with Dark Text) */}
-        <div className="bg-white/45 backdrop-blur-2xl border border-white/60 text-slate-950 rounded-3xl p-6 sm:p-8 mb-10 shadow-2xl">
-          <h2 className="text-sm font-black text-emerald-950 uppercase tracking-widest mb-4">Table of Contents</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {sections.map((s) => (
-              <a key={s.id} href={`#${s.id}`} className="text-sm text-slate-900 hover:text-emerald-800 font-bold transition-colors flex items-center gap-2 group">
-                <span className="w-2 h-2 rounded-full bg-emerald-700 group-hover:scale-125 transition-transform" />
-                {s.title}
-              </a>
+        <div className="max-w-4xl mx-auto relative z-10">
+          <span className="inline-block text-xs font-black tracking-widest uppercase text-emerald-800 bg-emerald-50 border border-emerald-200 px-4 py-1.5 rounded-full mb-6 shadow-xs">
+            Privacy &amp; Data Protection
+          </span>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-950 tracking-tight mb-4">
+            Privacy Policy
+          </h1>
+          <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto font-medium">
+            We value your trust and are committed to protecting your personal information. Read our privacy practices below.
+          </p>
+          <p className="mt-4 text-sm text-emerald-700 font-bold">
+            Last updated: {lastUpdated}
+          </p>
+        </div>
+      </section>
+
+      {/* SECTION 2 (WHITE): Table of Contents & Policy Sections */}
+      <section className="py-20 bg-white text-slate-900 border-t border-slate-100">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          {/* Table of Contents */}
+          <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 sm:p-8 mb-12 shadow-sm">
+            <h2 className="text-xs font-black text-emerald-700 uppercase tracking-widest mb-4">
+              Table of Contents
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {sections.map((s) => (
+                <a
+                  key={s.id}
+                  href={`#${s.id}`}
+                  className="text-sm text-slate-900 hover:text-emerald-700 font-bold transition-colors flex items-center gap-2.5 group"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-600 group-hover:scale-125 transition-transform shrink-0" />
+                  <span>{s.title}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Policy Sections */}
+          <div className="space-y-8">
+            {sections.map((section) => (
+              <div
+                key={section.id}
+                id={section.id}
+                className="bg-slate-50/60 border border-slate-200 rounded-3xl p-6 sm:p-8 scroll-mt-24 shadow-sm hover:shadow-md transition-all"
+              >
+                <h2 className="text-xl sm:text-2xl font-black mb-4 text-slate-950">
+                  {section.title}
+                </h2>
+                <div className="text-slate-700 text-sm sm:text-base leading-relaxed whitespace-pre-line font-medium">
+                  {section.content}
+                </div>
+              </div>
             ))}
           </div>
         </div>
+      </section>
 
-        {/* Legal Sections (Transparent White Glass Boxes with Dark Text) */}
-        <div className="space-y-8">
-          {sections.map((section) => (
-            <div key={section.id} id={section.id} className="bg-white/45 backdrop-blur-2xl border border-white/60 text-slate-950 rounded-3xl p-6 sm:p-8 scroll-mt-24 shadow-xl">
-              <h2 className="text-xl sm:text-2xl font-black mb-4 text-slate-950">{section.title}</h2>
-              <div className="text-slate-800 text-sm sm:text-base leading-relaxed whitespace-pre-line font-medium">{section.content}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Bottom Callout */}
-        <div className="mt-12 text-center bg-white/20 backdrop-blur-md rounded-3xl p-8 border border-white/30 shadow-lg">
-          <p className="text-emerald-50 text-sm font-bold">Your privacy matters to us. If you have any concerns, please do not hesitate to reach out.</p>
-          <div className="mt-6 flex items-center justify-center gap-6 text-sm flex-wrap font-bold">
-            <Link href="/terms" className="text-white hover:text-emerald-200 underline transition-colors">Terms & Conditions</Link>
+      {/* SECTION 3 (GREEN): Summary & Quick Links */}
+      <section className="bg-gradient-to-r from-[#064E3B] via-[#047857] to-[#064E3B] text-white py-16 text-center border-t border-emerald-600/50 relative overflow-hidden">
+        <div className="max-w-3xl mx-auto px-4 relative z-10">
+          <p className="text-emerald-50 text-base font-bold leading-relaxed mb-6">
+            If you have questions about how RopeWallet collects or uses your information, reach out to our privacy team.
+          </p>
+          <div className="flex items-center justify-center gap-6 text-sm flex-wrap font-bold text-white">
+            <Link href="/terms" className="hover:text-emerald-200 underline transition-colors">
+              Terms &amp; Conditions
+            </Link>
             <span className="text-white/40">•</span>
-            <Link href="/" className="text-emerald-100 hover:text-white transition-colors">Back to Home</Link>
+            <Link href="/" className="text-emerald-100 hover:text-white transition-colors">
+              Back to Home
+            </Link>
             <span className="text-white/40">•</span>
-            <a href="mailto:support@ropewallet.com" className="text-emerald-100 hover:text-white transition-colors">Contact Us</a>
+            <a href="mailto:privacy@ropewallet.com" className="text-emerald-100 hover:text-white transition-colors">
+              Contact Privacy Team
+            </a>
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* SECTION 4 (FOOTER - DARK FOREST GREEN) */}
+      <footer className="border-t border-emerald-800/60 bg-[#022c22] py-12 text-sm text-emerald-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-3">
+            <Image
+              src="/ropewallet.png"
+              alt="RopeWallet"
+              width={24}
+              height={24}
+              className="rounded-md"
+            />
+            <span className="font-black text-white">
+              RopeWallet Enterprise &bull; RJN Tech
+            </span>
+          </div>
+          <div className="flex items-center gap-6 text-emerald-100 font-bold">
+            <Link href="/" className="hover:text-white transition-colors">
+              Home
+            </Link>
+            <Link href="/download" className="hover:text-white transition-colors">
+              Download APK
+            </Link>
+            <a href="https://ropewallet.com" className="hover:text-white transition-colors">
+              Official Site
+            </a>
+          </div>
+          <p className="text-xs text-emerald-300/80 font-medium">
+            &copy; 2026 RopeWallet &amp; RJN Tech. All rights reserved.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

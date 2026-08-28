@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ShieldCheck,
   CreditCard,
@@ -305,7 +306,7 @@ export default function ProfessionalWhiteLandingPage() {
                     Enterprise Host Infrastructure
                   </h3>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    Automated 80% host credit settlement, live IMAP receipt engine, and zero chargeback protection.
+                    Automated 80% host profit settlement, real-time receipt verification, and complete chargeback protection.
                   </p>
                 </div>
               </div>
@@ -555,13 +556,13 @@ export default function ProfessionalWhiteLandingPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider block">Active Gateways</span>
+                    <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider block">Active Card Gateways</span>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="bg-emerald-950/80 p-3 rounded-lg border border-emerald-500/30 text-xs font-bold text-white flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Chime Active
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Debit Card Active
                       </div>
                       <div className="bg-emerald-950/80 p-3 rounded-lg border border-emerald-500/30 text-xs font-bold text-white flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Cash App Active
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Credit Card Active
                       </div>
                     </div>
                   </div>
@@ -571,29 +572,58 @@ export default function ProfessionalWhiteLandingPage() {
           </div>
         </section>
 
-        {/* Stats Section */}
-        <section className="py-12 bg-emerald-900 text-white border-t border-b border-emerald-700/60 relative overflow-hidden">
-          <div className="max-w-7xl mx-auto px-6 relative z-10">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-              <div>
-                <div className="text-3xl sm:text-4xl font-black text-white mb-1">$10M+</div>
-                <div className="text-xs text-emerald-200 font-bold uppercase tracking-wider">Processed Volume</div>
+        {/* Infinite Rotating Stats Marquee Section */}
+        <section className="py-8 bg-gradient-to-r from-[#064E3B] via-[#047857] to-[#064E3B] text-white border-t border-b border-emerald-600/40 relative overflow-hidden">
+          {/* Subtle Side Fade Overlays for seamless infinite appearance */}
+          <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#064E3B] to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#064E3B] to-transparent z-10 pointer-events-none" />
+
+          <div className="animate-marquee flex items-center gap-6">
+            {[
+              { value: "$10M+", label: "Processed Volume", tag: "FINANCIALS" },
+              { value: "99.99%", label: "System Uptime", tag: "RELIABILITY" },
+              { value: "< 3 Sec", label: "Verification Speed", tag: "LATENCY" },
+              { value: "100%", label: "Audit Trail Guarantee", tag: "COMPLIANCE" },
+              { value: "50,000+", label: "Active Hosts & Users", tag: "SCALE" },
+              { value: "100%", label: "Safe & Encrypted", tag: "SECURITY" },
+              { value: "0%", label: "Pre-Crediting Risk", tag: "FRAUD SHIELD" },
+              { value: "12+", label: "Integrated Gateways", tag: "P2P CHANNELS" },
+              { value: "24/7/365", label: "Instant Auto-Settlement", tag: "REAL-TIME" },
+              { value: "4.9 / 5.0", label: "Customer Trust Score", tag: "RATING" },
+              // Duplicate set for seamless continuous infinite scroll
+              { value: "$10M+", label: "Processed Volume", tag: "FINANCIALS" },
+              { value: "99.99%", label: "System Uptime", tag: "RELIABILITY" },
+              { value: "< 3 Sec", label: "Verification Speed", tag: "LATENCY" },
+              { value: "100%", label: "Audit Trail Guarantee", tag: "COMPLIANCE" },
+              { value: "50,000+", label: "Active Hosts & Users", tag: "SCALE" },
+              { value: "100%", label: "Safe & Encrypted", tag: "SECURITY" },
+              { value: "0%", label: "Pre-Crediting Risk", tag: "FRAUD SHIELD" },
+              { value: "12+", label: "Integrated Gateways", tag: "P2P CHANNELS" },
+              { value: "24/7/365", label: "Instant Auto-Settlement", tag: "REAL-TIME" },
+              { value: "4.9 / 5.0", label: "Customer Trust Score", tag: "RATING" },
+            ].map((stat, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3.5 px-6 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 transition-all shrink-0 shadow-lg group cursor-pointer"
+              >
+                <div className="text-left">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl sm:text-3xl font-black text-white group-hover:text-emerald-200 transition-colors tracking-tight">
+                      {stat.value}
+                    </span>
+                    <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-200 border border-emerald-400/30">
+                      {stat.tag}
+                    </span>
+                  </div>
+                  <div className="text-xs text-emerald-100/90 font-bold uppercase tracking-wider mt-0.5">
+                    {stat.label}
+                  </div>
+                </div>
               </div>
-              <div>
-                <div className="text-3xl sm:text-4xl font-black text-white mb-1">99.99%</div>
-                <div className="text-xs text-emerald-200 font-bold uppercase tracking-wider">System Uptime</div>
-              </div>
-              <div>
-                <div className="text-3xl sm:text-4xl font-black text-white mb-1">&lt; 3 Sec</div>
-                <div className="text-xs text-emerald-200 font-bold uppercase tracking-wider">Verification Speed</div>
-              </div>
-              <div>
-                <div className="text-3xl sm:text-4xl font-black text-white mb-1">100%</div>
-                <div className="text-xs text-emerald-200 font-bold uppercase tracking-wider">Audit Trail Guarantee</div>
-              </div>
-            </div>
+            ))}
           </div>
         </section>
+
         {/* Features Grid Section */}
         <section id="features" className="py-24 bg-slate-50/50">
           <div className="max-w-7xl mx-auto px-6">
@@ -616,7 +646,7 @@ export default function ProfessionalWhiteLandingPage() {
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 mb-3">20-Min Live Countdown</h3>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  Every payment session is locked with a precise 20-minute expiry timer and 3-second live auto-polling engine for instantaneous verification.
+                  Every payment session is protected with a precise 20-minute expiry timer and live instant auto-polling for rapid transaction verification.
                 </p>
               </div>
 
@@ -624,9 +654,9 @@ export default function ProfessionalWhiteLandingPage() {
                 <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-6 font-bold">
                   <ShieldCheck className="w-6 h-6" />
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-3">100% Security Verification</h3>
+                <h3 className="text-xl font-bold text-slate-900 mb-3">100% Verified Transactions</h3>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  Zero pre-crediting risk. Host wallet balances are credited ONLY after IMAP verifies actual cash receipt in your official bank emails.
+                  Zero pre-crediting risk. Host wallet balances are credited automatically only after official payment confirmation is fully verified.
                 </p>
               </div>
 
@@ -669,15 +699,15 @@ export default function ProfessionalWhiteLandingPage() {
                   2
                 </div>
                 <h3 className="font-bold text-slate-900 mb-2">Customer Pays</h3>
-                <p className="text-xs text-slate-600">Customer opens gateway link and sends payment via Chime/Cash App/Venmo.</p>
+                <p className="text-xs text-slate-600">Customer opens gateway link and completes payment using Debit, Credit, or Virtual Cards.</p>
               </div>
 
               <div className="relative text-center p-6 bg-slate-50 rounded-2xl border border-slate-200">
                 <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-extrabold text-sm flex items-center justify-center mx-auto mb-4">
                   3
                 </div>
-                <h3 className="font-bold text-slate-900 mb-2">IMAP Verification</h3>
-                <p className="text-xs text-slate-600">Engine automatically matches official bank email receipt in under 3 seconds.</p>
+                <h3 className="font-bold text-slate-900 mb-2">Auto-Verification</h3>
+                <p className="text-xs text-slate-600">System instantly verifies the payment confirmation and credits balances in under 3 seconds.</p>
               </div>
 
               <div className="relative text-center p-6 bg-slate-50 rounded-2xl border border-slate-200">
@@ -691,70 +721,114 @@ export default function ProfessionalWhiteLandingPage() {
           </div>
         </section>
 
-        {/* Enterprise Security Specifications & Compliance Section */}
+        {/* Enterprise-Grade Protection & User Benefits Section */}
         <section id="security" className="py-24 bg-gradient-to-b from-[#065F46] via-[#047857] to-[#064E3B] text-white relative border-t border-emerald-600/50 overflow-hidden">
           {/* Ambient Glows */}
           <div className="absolute top-1/2 left-1/3 w-[30rem] h-[30rem] bg-emerald-400/20 rounded-full blur-3xl pointer-events-none" />
           <div className="max-w-7xl mx-auto px-6 relative z-10">
             <div className="text-center max-w-3xl mx-auto mb-16">
               <span className="text-xs font-black text-emerald-200 uppercase tracking-widest block mb-3">
-                Bank-Grade Infrastructure
+                Enterprise-Grade Protection
               </span>
               <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight mb-4 drop-shadow-sm">
-                Enterprise Payment Gateway & Security Specifications
+                Built For Complete Peace of Mind & Safety
               </h2>
               <p className="text-emerald-100 text-base sm:text-lg font-medium">
-                RopeWallet complies with global financial security protocols to ensure zero-fraud digital wallet transactions.
+                RopeWallet delivers bank-grade safety, guaranteed fraud protection, and instant settlements for every transaction.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 space-y-3 hover:border-emerald-300 hover:bg-white/15 transition-all shadow-xl">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/30 text-emerald-200 flex items-center justify-center font-bold text-sm border border-emerald-400/40">
-                  🛡️
+              {/* Card 1: 100% Zero-Fraud Guarantee */}
+              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 hover:border-emerald-300 hover:bg-white/15 transition-all duration-300 shadow-2xl flex flex-col justify-between">
+                <div>
+                  <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/20 shadow-md">
+                    <Image
+                      src="https://images.unsplash.com/photo-1563013544-824ae1b704d3?auto=format&fit=crop&w=800&q=80"
+                      alt="Secure Contactless Mobile Payment in Real Life"
+                      fill
+                      unoptimized
+                      className="object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
+                    <span className="absolute top-3 right-3 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-950/85 text-emerald-300 border border-emerald-400/40 backdrop-blur-md">
+                      100% Safe
+                    </span>
+                  </div>
+                  <h3 className="font-black text-white text-lg mb-2">Instant Fraud Shield</h3>
+                  <p className="text-xs text-emerald-100/90 leading-relaxed font-medium">
+                    Every transaction is protected with end-to-end encryption and real-time fraud monitoring so your money is always 100% safe.
+                  </p>
                 </div>
-                <h3 className="font-extrabold text-white text-base">AES 256-Bit Storage</h3>
-                <p className="text-xs text-emerald-100/90 leading-relaxed">
-                  All host credentials, bank tokens, and customer deposit records are encrypted at rest using military-grade AES-256 GCM hardware encryption.
-                </p>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 space-y-3 hover:border-emerald-300 hover:bg-white/15 transition-all shadow-xl">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/30 text-emerald-200 flex items-center justify-center font-bold text-sm border border-emerald-400/40">
-                  ⚡
+              {/* Card 2: Lightning-Fast Auto-Verification */}
+              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 hover:border-emerald-300 hover:bg-white/15 transition-all duration-300 shadow-2xl flex flex-col justify-between">
+                <div>
+                  <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/20 shadow-md">
+                    <Image
+                      src="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=800&q=80"
+                      alt="Instant Digital Payment Confirmation on Smartphone"
+                      fill
+                      unoptimized
+                      className="object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
+                    <span className="absolute top-3 right-3 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-950/85 text-emerald-300 border border-emerald-400/40 backdrop-blur-md">
+                      &lt; 3s Speed
+                    </span>
+                  </div>
+                  <h3 className="font-black text-white text-lg mb-2">Instant Receipt Confirmation</h3>
+                  <p className="text-xs text-emerald-100/90 leading-relaxed font-medium">
+                    No waiting or manual approvals. Payments and receipts are automatically matched and credited directly to your balance in under 3 seconds.
+                  </p>
                 </div>
-                <h3 className="font-extrabold text-white text-base">Real-Time IMAP Engine</h3>
-                <p className="text-xs text-emerald-100/90 leading-relaxed">
-                  Automated email parsing verifies official bank notification headers, deposit reference tags, and currency amounts in under 3 seconds.
-                </p>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 space-y-3 hover:border-emerald-300 hover:bg-white/15 transition-all shadow-xl">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/30 text-emerald-200 flex items-center justify-center font-bold text-sm border border-emerald-400/40">
-                  🔐
+              {/* Card 3: Universal Payment Hub */}
+              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 hover:border-emerald-300 hover:bg-white/15 transition-all duration-300 shadow-2xl flex flex-col justify-between">
+                <div>
+                  <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/20 shadow-md">
+                    <Image
+                      src="https://images.unsplash.com/photo-1559526324-593bc073d938?auto=format&fit=crop&w=800&q=80"
+                      alt="Multi-Channel Card and Wallet Payment Gateway"
+                      fill
+                      unoptimized
+                      className="object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
+                    <span className="absolute top-3 right-3 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-950/85 text-emerald-300 border border-emerald-400/40 backdrop-blur-md">
+                      Card Gateways
+                    </span>
+                  </div>
+                  <h3 className="font-black text-white text-lg mb-2">All-in-One Card Hub</h3>
+                  <p className="text-xs text-emerald-100/90 leading-relaxed font-medium">
+                    Deposit and manage funds effortlessly using Debit, Credit, and Virtual Cards with instant verification and zero transaction delays.
+                  </p>
                 </div>
-                <h3 className="font-extrabold text-white text-base">PCI-DSS Security Standard</h3>
-                <p className="text-xs text-emerald-100/90 leading-relaxed">
-                  Designed according to global payment security requirements. Learn more at the official{' '}
-                  <a
-                    href="https://www.pcisecuritystandards.org/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-emerald-200 underline hover:text-white font-bold"
-                  >
-                    PCI Security Standards Council
-                  </a>.
-                </p>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 space-y-3 hover:border-emerald-300 hover:bg-white/15 transition-all shadow-xl">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/30 text-emerald-200 flex items-center justify-center font-bold text-sm border border-emerald-400/40">
-                  📊
+              {/* Card 4: Automated 24/7 Host Earnings */}
+              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 hover:border-emerald-300 hover:bg-white/15 transition-all duration-300 shadow-2xl flex flex-col justify-between">
+                <div>
+                  <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/20 shadow-md">
+                    <Image
+                      src="https://images.unsplash.com/photo-1553729459-efe14ef6055d?auto=format&fit=crop&w=800&q=80"
+                      alt="Happy Entrepreneur Managing Financial Growth and Payouts"
+                      fill
+                      unoptimized
+                      className="object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
+                    <span className="absolute top-3 right-3 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-950/85 text-emerald-300 border border-emerald-400/40 backdrop-blur-md">
+                      24/7 Payouts
+                    </span>
+                  </div>
+                  <h3 className="font-black text-white text-lg mb-2">Automated Host Settlements</h3>
+                  <p className="text-xs text-emerald-100/90 leading-relaxed font-medium">
+                    Transparent 80/20 earnings split with zero hidden fees. Withdraw your funds instantly to your linked bank account anytime, day or night.
+                  </p>
                 </div>
-                <h3 className="font-extrabold text-white text-base">Multi-Tenant Isolation</h3>
-                <p className="text-xs text-emerald-100/90 leading-relaxed">
-                  Strict database tenant isolation prevents cross-account data leakage, ensuring host ledger integrity and real-time auditability.
-                </p>
               </div>
             </div>
           </div>
@@ -781,7 +855,7 @@ export default function ProfessionalWhiteLandingPage() {
                   How does automated receipt verification work for instant deposit settlements?
                 </h3>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  When a customer completes a deposit via Chime, Cash App, Venmo, or Apple Pay, the host receives an official notification email. RopeWallet’s IMAP engine matches the amount and customer tag in under 3 seconds to trigger real-time balance settlement.
+                  When a customer completes a card deposit via Debit, Credit, or Virtual Card, the transaction is verified automatically in under 3 seconds to trigger real-time balance settlement.
                 </p>
               </div>
 
@@ -790,7 +864,7 @@ export default function ProfessionalWhiteLandingPage() {
                   What security measures protect user funds and balance updates?
                 </h3>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  RopeWallet utilizes 256-bit AES database encryption, biometric authentication, and strict multi-tenant isolation. No balance is credited until verified by automated receipt parsing.
+                  RopeWallet utilizes bank-grade encryption, biometric Face/Fingerprint authentication, and advanced fraud shields. Funds are credited instantly upon verified payment receipt.
                 </p>
               </div>
 
@@ -805,10 +879,10 @@ export default function ProfessionalWhiteLandingPage() {
 
               <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 space-y-3">
                 <h3 className="font-extrabold text-slate-900 text-lg">
-                  Is RopeWallet compatible with mobile applications on iOS and Android?
+                  What payment methods and card gateways are currently supported?
                 </h3>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  Yes! The official RopeWallet Mobile Application is available for both Android devices and iOS App Store platforms, supporting 1-tap clipboard link sharing and instant push notifications.
+                  RopeWallet supports Debit Cards, Credit Cards, Virtual Cards, Apple Pay, and secure card deposits with real-time receipt verification and automated settlement.
                 </p>
               </div>
             </div>

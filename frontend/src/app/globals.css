@@ -123,6 +123,19 @@ input, select { color-scheme: dark; }
 }
 .animate-float { animation: float 5s ease-in-out infinite; }
 
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 28s linear infinite;
+}
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
 /* ─── Selection ─────────────────────────────────────────────── */
 [title] { cursor: pointer; }
 ::selection { background: #1F4959; color: white; }
