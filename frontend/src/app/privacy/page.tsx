@@ -134,7 +134,6 @@ export default function PrivacyPage() {
         ctaLabel="Become a Host"
         ctaHref="/#become-host"
         navItems={[
-          { label: 'Gateways', href: '/#gateways' },
           { label: 'Become a Host', href: '/#become-host' },
           { label: 'Mobile App', href: '/#mobile-app' },
           { label: 'Features', href: '/#features' },

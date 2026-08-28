@@ -80,6 +80,17 @@ summary:focus-visible {
   border-radius: 8px;
 }
 
+header a,
+header button,
+header a:focus,
+header a:focus-visible,
+header button:focus,
+header button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+
 input:focus, input:focus-visible,
 select:focus, select:focus-visible,
 textarea:focus, textarea:focus-visible {
@@ -199,50 +210,54 @@ input, select { color-scheme: dark; }
   100% { background-position: 200% center; }
 }
 
-/* ─── Navbar Smooth Center Horizontal Expansion Animation (Page Open & Reload) ─── */
-@keyframes navbarCenterExpand {
+/* ─── GPU-Accelerated Smooth Center Mask Expansion (Page Open & Reload) ─── */
+@keyframes navbarGlassReveal {
   0% {
+    clip-path: inset(0 48% round 9999px);
     opacity: 0;
-    transform: translateY(-16px) scaleX(0.12) scaleY(0.9);
-    filter: blur(8px);
+    transform: translateY(-6px) scale(0.98);
   }
-  20% {
+  25% {
     opacity: 1;
-    filter: blur(2px);
   }
   100% {
+    clip-path: inset(0 0% round 9999px);
     opacity: 1;
-    transform: translateY(0px) scaleX(1) scaleY(1);
-    filter: blur(0px);
+    transform: translateY(0px) scale(1);
   }
 }
 
-@keyframes navbarContentReveal {
-  0%, 30% {
-    opacity: 0;
-    transform: scale(0.96);
-    filter: blur(4px);
-    pointer-events: none;
-  }
-  70% {
-    opacity: 0.85;
-    transform: scale(0.99);
-    filter: blur(1px);
-  }
-  100% {
-    opacity: 1;
+.animate-navbar-glass-reveal {
+  animation: navbarGlassReveal 1.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ─── Smooth Outward Spring Zoom Pulse (No Shaking) ──────────── */
+@keyframes navPulseZoom {
+  0% {
     transform: scale(1);
-    filter: blur(0px);
-    pointer-events: auto;
+  }
+  45% {
+    transform: scale(1.14);
+  }
+  75% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1.08);
   }
 }
 
-.animate-navbar-center-expand {
+.animate-nav-pulse {
+  animation: navPulseZoom 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   transform-origin: center center;
-  animation: navbarCenterExpand 1.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  display: inline-block;
+  will-change: transform;
 }
 
-.animate-navbar-content-reveal {
-  animation: navbarContentReveal 1.4s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
+
+
+
+
+
+
 

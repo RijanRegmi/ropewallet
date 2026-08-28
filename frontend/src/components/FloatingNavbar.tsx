@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Menu, X, ChevronRight, UserPlus, Download } from 'lucide-react';
 
 export interface NavItem {
@@ -25,7 +26,6 @@ interface FloatingNavbarProps {
 }
 
 const defaultNavItems: NavItem[] = [
-  { label: 'Gateways', href: '#gateways' },
   { label: 'Become a Host', href: '#become-host' },
   { label: 'Mobile App', href: '#mobile-app' },
   { label: 'Features', href: '#features' },
@@ -44,18 +44,71 @@ export default function FloatingNavbar({
   accentColor = 'emerald',
   theme = 'light',
 }: FloatingNavbarProps) {
+  const pathname = usePathname();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [activeHref, setActiveHref] = useState<string>('');
+  const [clickedItem, setClickedItem] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
+
+  const lastClickTimeRef = React.useRef<number>(0);
 
   useEffect(() => {
-    // Immediate activation for fluid entrance physics
-    const timer = setTimeout(() => {
-      setIsLoaded(true);
-    }, 60);
+    if (!pathname || pathname !== '/') {
+      // On subpages like /download, /terms, /privacy:
+      setActiveHref(pathname || '');
+      return;
+    }
 
+    // Check on landing page if initial hash exists on mount
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const initialHash = window.location.hash;
+      setActiveHref(initialHash);
+      lastClickTimeRef.current = Date.now();
+      const hashId = initialHash.replace('#', '');
+      setTimeout(() => {
+        const el = document.getElementById(hashId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 150);
+    }
+
+    // On Landing Page ('/'): Real-time scroll spy that tracks the active section dynamically
+    const handleActiveSection = () => {
+      // If user recently clicked a nav item, preserve the clicked mark during smooth scroll
+      if (Date.now() - lastClickTimeRef.current < 900) {
+        return;
+      }
+
+      const becomeHostEl = document.getElementById('become-host');
+      const mobileAppEl = document.getElementById('mobile-app');
+      const featuresEl = document.getElementById('features');
+      const howItWorksEl = document.getElementById('how-it-works');
+
+      const scrollPos = window.scrollY + 220;
+
+      if (howItWorksEl && scrollPos >= howItWorksEl.offsetTop - 120) {
+        setActiveHref('#how-it-works');
+      } else if (featuresEl && scrollPos >= featuresEl.offsetTop - 120) {
+        setActiveHref('#features');
+      } else if (mobileAppEl && scrollPos >= mobileAppEl.offsetTop - 120) {
+        setActiveHref('#mobile-app');
+      } else if (becomeHostEl && scrollPos >= becomeHostEl.offsetTop - 120) {
+        setActiveHref('#become-host');
+      } else {
+        setActiveHref('');
+      }
+    };
+
+    handleActiveSection();
+    window.addEventListener('scroll', handleActiveSection, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleActiveSection);
+    };
+  }, [pathname]);
+
+  useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 25) {
         setIsScrolled(true);
@@ -66,7 +119,6 @@ export default function FloatingNavbar({
     handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
-      clearTimeout(timer);
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
@@ -76,16 +128,23 @@ export default function FloatingNavbar({
       return; // Let Link navigate to '/'
     }
     e.preventDefault();
-    setActiveIndex(null);
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: 'smooth',
-    });
+    setActiveHref('');
+    lastClickTimeRef.current = Date.now();
+    if (typeof window !== 'undefined') {
+      history.replaceState(null, '', '/');
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: 'smooth',
+      });
+    }
   };
 
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string, index?: number) => {
-    if (index !== undefined) setActiveIndex(index);
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    setActiveHref(href);
+    setClickedItem(href);
+    setTimeout(() => setClickedItem(null), 450);
+    lastClickTimeRef.current = Date.now();
     setMobileMenuOpen(false);
 
     // If it's a direct route without hash (e.g. '/download')
@@ -93,7 +152,7 @@ export default function FloatingNavbar({
       return; // Let standard link navigation proceed
     }
 
-    // It is a hash target like '#gateways' or '/#gateways'
+    // It is a hash target like '#features' or '/#features'
     const hashPart = href.includes('#') ? href.split('#')[1] : '';
     if (!hashPart) return;
 
@@ -101,13 +160,10 @@ export default function FloatingNavbar({
       const isHomePage = window.location.pathname === '/' || window.location.pathname === '';
       if (isHomePage) {
         e.preventDefault();
-        if (hashPart === 'hero' || hashPart === 'top') {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else {
-          const elem = document.getElementById(hashPart);
-          if (elem) {
-            elem.scrollIntoView({ behavior: 'smooth' });
-          }
+        const elem = document.getElementById(hashPart);
+        if (elem) {
+          elem.scrollIntoView({ behavior: 'smooth' });
+          history.replaceState(null, '', `#${hashPart}`);
         }
       } else {
         // We are on /download, /terms, /privacy etc -> navigate to home with hash
@@ -118,77 +174,74 @@ export default function FloatingNavbar({
 
   const isDark = theme === 'dark';
 
-  // Theme styling definitions
+  // Theme styling definitions (Clean, compact, non-bold typography)
   const themeStyles = {
     emerald: {
       textAccent: 'text-emerald-500',
       subTitle: 'text-emerald-500',
       hoverPillBg: isDark
-        ? 'bg-emerald-500/20 text-emerald-300 shadow-md shadow-emerald-500/10 border border-emerald-500/30'
-        : 'bg-emerald-500/15 text-emerald-950 shadow-md shadow-emerald-500/10 border border-emerald-500/25',
+        ? 'bg-emerald-500/20 text-emerald-300'
+        : 'bg-emerald-500/15 text-emerald-950',
       activePillBg: isDark
-        ? 'bg-emerald-500/30 text-emerald-200 font-bold border border-emerald-500/40'
-        : 'bg-emerald-500/20 text-emerald-950 font-bold border border-emerald-500/30',
-      ctaBtn: 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-lg shadow-emerald-600/30 hover:shadow-emerald-600/50',
-      badge: isDark
-        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-        : 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30',
+        ? 'bg-emerald-500/20 text-emerald-200'
+        : 'bg-emerald-500/15 text-emerald-950',
+      ctaBtn: 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold',
+      badge: isDark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-500/15 text-emerald-700',
     },
     purple: {
       textAccent: 'text-[#7C3AED]',
       subTitle: 'text-[#7C3AED]',
       hoverPillBg: isDark
-        ? 'bg-purple-500/20 text-purple-300 shadow-md shadow-purple-500/10 border border-purple-500/30'
-        : 'bg-[#EDE9FE]/95 text-[#5B21B6] shadow-md shadow-purple-500/10 border border-purple-200/80',
+        ? 'bg-purple-500/20 text-purple-300'
+        : 'bg-[#EDE9FE] text-[#5B21B6]',
       activePillBg: isDark
-        ? 'bg-purple-500/30 text-purple-200 font-bold border border-purple-500/40'
-        : 'bg-[#EDE9FE] text-[#5B21B6] font-bold border border-purple-300',
-      ctaBtn: 'bg-[#6D28D9] hover:bg-[#5B21B6] text-white font-bold shadow-lg shadow-[#6D28D9]/30 hover:shadow-[#6D28D9]/50',
-      badge: isDark ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-purple-100 text-purple-700 border-purple-200',
+        ? 'bg-purple-500/20 text-purple-200'
+        : 'bg-[#EDE9FE]/80 text-[#5B21B6]',
+      ctaBtn: 'bg-[#6D28D9] hover:bg-[#5B21B6] text-white font-semibold',
+      badge: isDark ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-100 text-purple-700',
     },
     indigo: {
       textAccent: 'text-indigo-500',
       subTitle: 'text-indigo-500',
       hoverPillBg: isDark
-        ? 'bg-indigo-500/20 text-indigo-300 shadow-md shadow-indigo-500/10 border border-indigo-500/30'
-        : 'bg-indigo-50/90 text-indigo-900 shadow-md shadow-indigo-500/10 border border-indigo-200/80',
+        ? 'bg-indigo-500/20 text-indigo-300'
+        : 'bg-indigo-100 text-indigo-950',
       activePillBg: isDark
-        ? 'bg-indigo-500/30 text-indigo-200 font-bold border border-indigo-500/40'
-        : 'bg-indigo-100 text-indigo-900 font-bold border border-indigo-300',
-      ctaBtn: 'bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/50',
-      badge: isDark ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : 'bg-indigo-100 text-indigo-700 border-indigo-200',
+        ? 'bg-indigo-500/20 text-indigo-200'
+        : 'bg-indigo-100/80 text-indigo-900',
+      ctaBtn: 'bg-indigo-600 hover:bg-indigo-700 text-white font-semibold',
+      badge: isDark ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-100 text-indigo-700',
     },
     blue: {
       textAccent: 'text-blue-500',
       subTitle: 'text-blue-500',
       hoverPillBg: isDark
-        ? 'bg-blue-500/20 text-blue-300 shadow-md shadow-blue-500/10 border border-blue-500/30'
-        : 'bg-blue-50/90 text-blue-900 shadow-md shadow-blue-500/10 border border-blue-200/80',
+        ? 'bg-blue-500/20 text-blue-300'
+        : 'bg-blue-100 text-blue-950',
       activePillBg: isDark
-        ? 'bg-blue-500/30 text-blue-200 font-bold border border-blue-500/40'
-        : 'bg-blue-100 text-blue-900 font-bold border border-blue-300',
-      ctaBtn: 'bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-600/30 hover:shadow-blue-600/50',
-      badge: isDark ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' : 'bg-blue-100 text-blue-700 border-blue-200',
+        ? 'bg-blue-500/20 text-blue-200'
+        : 'bg-blue-100/80 text-blue-900',
+      ctaBtn: 'bg-blue-600 hover:bg-blue-700 text-white font-semibold',
+      badge: isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700',
     },
   }[accentColor];
 
-  // Nav item text color
-  const navTextClass = 'text-slate-800 hover:text-slate-950';
+  // Nav item text color (Non-bold, clean font-medium)
+  const navTextClass = 'text-slate-700 hover:text-slate-950 font-medium';
   const brandFirstClass = 'text-slate-950';
 
   return (
     <header className="sticky top-2.5 sm:top-4 z-50 w-full px-2 sm:px-4 md:px-6 pointer-events-none transition-all duration-500">
-      {/* Container smoothly expands at top and remains comfortably spacious on scroll */}
+      {/* Centered spacious container */}
       <div
         className={`mx-auto flex flex-col items-center pointer-events-auto transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isScrolled ? 'max-w-[1240px] w-full' : 'max-w-[1380px] w-full'
           }`}
       >
-        {/* Consistent Semi-Transparent White Frosted Glass Floating Pill Container (Expands left & right from center) */}
-        <div
-          className="relative rounded-full px-3 sm:px-5 py-2 sm:py-2.5 flex items-center justify-between transition-all duration-500 gap-2 sm:gap-3 lg:gap-4 bg-white/65 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/75 shadow-[0_12px_36px_-6px_rgba(0,0,0,0.12),inset_0_1px_1.5px_rgba(255,255,255,0.7)] w-full overflow-hidden animate-navbar-center-expand"
-        >
-          {/* Inner Content gracefully revealed as pill expands left and right */}
-          <div className="w-full flex items-center justify-between gap-2 sm:gap-3 lg:gap-4 animate-navbar-content-reveal">
+        {/* Transparent Frosted Glass Floating Pill Container */}
+        <div className="relative rounded-full px-3 sm:px-5 py-2 sm:py-2.5 flex items-center justify-between gap-2 sm:gap-3 lg:gap-4 bg-white/70 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/75 shadow-lg shadow-slate-900/5 w-full overflow-hidden animate-navbar-glass-reveal">
+          
+          {/* Inner Content: Laid out uncompressed and revealed cleanly in place */}
+          <div className="w-full flex items-center justify-between gap-2 sm:gap-3 lg:gap-4">
             {/* 1. Left: Animated Splitting Logo with Smooth Scroll to Very Top */}
             <Link
               href="/"
@@ -196,11 +249,11 @@ export default function FloatingNavbar({
               className="flex items-center group cursor-pointer select-none shrink-0 pl-1 sm:pl-2"
               title="RopeWallet Home"
             >
-              {/* 3D Animated Logo Icon */}
+              {/* 3D Animated Logo Icon (Clean, no dark smudge shadow) */}
               <div
-                className={`relative z-10 w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-slate-900 flex items-center justify-center text-white shrink-0 border border-slate-800 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:rotate-1 ${isScrolled || !isLoaded
-                  ? 'scale-95 shadow-md shadow-slate-950/20'
-                  : 'scale-105 shadow-xl shadow-slate-900/30'
+                className={`relative z-10 w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-slate-900 flex items-center justify-center text-white shrink-0 border border-slate-800/80 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:rotate-1 ${isScrolled
+                  ? 'scale-95'
+                  : 'scale-105'
                   }`}
               >
                 <img
@@ -215,7 +268,7 @@ export default function FloatingNavbar({
 
               {/* Splitting Brand Text: Emerges & splits out from behind the logo icon */}
               <div
-                className={`flex flex-col justify-center overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] origin-left ${isScrolled || !isLoaded
+                className={`flex flex-col justify-center overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] origin-left ${isScrolled
                   ? 'max-w-0 opacity-0 -translate-x-6 scale-90 pointer-events-none'
                   : 'max-w-[260px] opacity-100 translate-x-0 scale-100 ml-3 sm:ml-3.5'
                   }`}
@@ -227,122 +280,132 @@ export default function FloatingNavbar({
               </div>
             </Link>
 
-            {/* 2. Middle: Single-Line Nav Items with 3D Pop-Up Hover Effect */}
-            <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1.5 text-[13px] xl:text-[14.5px] font-bold shrink-0">
-              {navItems.map((item, index) => {
-                const isHovered = hoveredIndex === index;
-                const isActive = activeIndex === index;
+          {/* 2. Middle: Single-Line Nav Items with Clean Font-Medium & Click/Hover Pulse */}
+          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1.5 text-[13.5px] xl:text-[14.5px] font-medium shrink-0">
+            {navItems.map((item, index) => {
+              const isHovered = hoveredIndex === index;
+              const isActive = (item.href.startsWith('/') && pathname === item.href) || activeHref === item.href;
+              const isClicked = clickedItem === item.href;
 
-                return (
-                  <div
-                    key={item.label}
-                    className="relative shrink-0"
-                    onMouseEnter={() => setHoveredIndex(index)}
-                    onMouseLeave={() => setHoveredIndex(null)}
-                  >
-                    {item.href.startsWith('/') && !item.href.includes('#') ? (
-                      <Link
-                        href={item.href}
-                        className={`relative z-10 px-3 xl:px-3.5 py-1.5 xl:py-2 rounded-full flex items-center gap-1.5 select-none transition-all duration-200 ease-out cursor-pointer whitespace-nowrap ${isHovered
-                          ? `${themeStyles.hoverPillBg} -translate-y-0.5 scale-105 font-extrabold`
-                          : isActive
-                            ? `${themeStyles.activePillBg} -translate-y-0.2 scale-[1.02]`
-                            : navTextClass
-                          }`}
-                      >
-                        <span className="whitespace-nowrap">{item.label}</span>
-                        {item.badge && (
-                          <span
-                            className={`text-[9px] font-black uppercase px-1.5 py-0.2 rounded-full border whitespace-nowrap ${themeStyles.badge}`}
-                          >
-                            {item.badge}
-                          </span>
-                        )}
-                      </Link>
-                    ) : (
-                      <a
-                        href={item.href}
-                        onClick={(e) => handleNavClick(e, item.href, index)}
-                        className={`relative z-10 px-3 xl:px-3.5 py-1.5 xl:py-2 rounded-full flex items-center gap-1.5 select-none transition-all duration-200 ease-out cursor-pointer whitespace-nowrap ${isHovered
-                          ? `${themeStyles.hoverPillBg} -translate-y-0.5 scale-105 font-extrabold`
-                          : isActive
-                            ? `${themeStyles.activePillBg} -translate-y-0.2 scale-[1.02]`
-                            : navTextClass
-                          }`}
-                      >
-                        <span className="whitespace-nowrap">{item.label}</span>
-                        {item.badge && (
-                          <span
-                            className={`text-[9px] font-black uppercase px-1.5 py-0.2 rounded-full border whitespace-nowrap ${themeStyles.badge}`}
-                          >
-                            {item.badge}
-                          </span>
-                        )}
-                      </a>
-                    )}
-                  </div>
-                );
-              })}
-            </nav>
-
-            {/* 3. Right: High-Impact Single-Line Pill CTA Button with White Text */}
-            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 pr-1 sm:pr-1.5">
-              {ctaHref.startsWith('/') && !ctaHref.includes('#') ? (
-                <Link
-                  href={ctaHref}
-                  onClick={ctaOnClick}
-                  className={`hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold text-white transition-all duration-200 hover:scale-105 active:scale-95 select-none whitespace-nowrap shrink-0 ${themeStyles.ctaBtn}`}
+              return (
+                <div
+                  key={item.label}
+                  className="relative shrink-0"
+                  onMouseEnter={() => setHoveredIndex(index)}
+                  onMouseLeave={() => setHoveredIndex(null)}
                 >
-                  <UserPlus className="w-4 h-4 shrink-0 text-white" />
-                  <span className="whitespace-nowrap text-white font-bold">{ctaLabel}</span>
-                </Link>
-              ) : (
-                <a
-                  href={ctaHref}
-                  onClick={(e) => {
-                    if (ctaOnClick) {
-                      ctaOnClick();
-                    } else {
-                      handleNavClick(e, ctaHref, 999);
-                    }
-                  }}
-                  className={`hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold text-white transition-all duration-200 hover:scale-105 active:scale-95 select-none cursor-pointer whitespace-nowrap shrink-0 ${themeStyles.ctaBtn}`}
-                >
-                  <UserPlus className="w-4 h-4 shrink-0 text-white" />
-                  <span className="whitespace-nowrap text-white font-bold">{ctaLabel}</span>
-                </a>
-              )}
+                  {item.href.startsWith('/') && !item.href.includes('#') ? (
+                    <Link
+                      href={item.href}
+                      onClick={() => {
+                        setClickedItem(item.href);
+                        setTimeout(() => setClickedItem(null), 450);
+                      }}
+                      className={`relative px-3.5 xl:px-4 py-1.5 xl:py-2 rounded-full flex items-center gap-1.5 select-none transition-all duration-200 ease-out cursor-pointer whitespace-nowrap outline-none focus:outline-none focus:ring-0 focus-visible:outline-none ${isHovered
+                        ? themeStyles.hoverPillBg
+                        : isActive
+                          ? themeStyles.activePillBg
+                          : navTextClass
+                        }`}
+                    >
+                      <span className={`whitespace-nowrap inline-block transition-colors duration-200 ${isHovered || isClicked ? 'animate-nav-pulse text-slate-950' : isActive ? 'text-slate-950 font-medium' : ''}`}>
+                        {item.label}
+                      </span>
+                      {item.badge && (
+                        <span
+                          className={`text-[9px] font-semibold uppercase px-1.5 py-0.2 rounded-full whitespace-nowrap ${themeStyles.badge}`}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  ) : (
+                    <a
+                      href={item.href}
+                      onClick={(e) => handleNavClick(e, item.href)}
+                      className={`relative px-3.5 xl:px-4 py-1.5 xl:py-2 rounded-full flex items-center gap-1.5 select-none transition-all duration-200 ease-out cursor-pointer whitespace-nowrap outline-none focus:outline-none focus:ring-0 focus-visible:outline-none ${isHovered
+                        ? themeStyles.hoverPillBg
+                        : isActive
+                          ? themeStyles.activePillBg
+                          : navTextClass
+                        }`}
+                    >
+                      <span className={`whitespace-nowrap inline-block transition-colors duration-200 ${isHovered || isClicked ? 'animate-nav-pulse text-slate-950' : isActive ? 'text-slate-950 font-medium' : ''}`}>
+                        {item.label}
+                      </span>
+                      {item.badge && (
+                        <span
+                          className={`text-[9px] font-semibold uppercase px-1.5 py-0.2 rounded-full whitespace-nowrap ${themeStyles.badge}`}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </a>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
 
-              {/* Mobile Menu Hamburger Toggle Button */}
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className={`lg:hidden p-2 rounded-full transition-colors cursor-pointer shrink-0 ${isDark ? 'text-white hover:bg-white/10' : 'text-slate-800 hover:bg-slate-100/80'
-                  }`}
-                aria-label="Toggle Navigation Menu"
+          {/* 3. Right: High-Impact Single-Line Pill CTA Button with White Text */}
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 pr-1 sm:pr-1.5">
+            {ctaHref.startsWith('/') && !ctaHref.includes('#') ? (
+              <Link
+                href={ctaHref}
+                onClick={ctaOnClick}
+                className={`hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold text-white transition-all duration-200 hover:scale-105 active:scale-95 select-none whitespace-nowrap shrink-0 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none ${themeStyles.ctaBtn}`}
               >
-                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </button>
-            </div>
+                <UserPlus className="w-4 h-4 shrink-0 text-white" />
+                <span className="whitespace-nowrap text-white font-bold">{ctaLabel}</span>
+              </Link>
+            ) : (
+              <a
+                href={ctaHref}
+                onClick={(e) => {
+                  if (ctaOnClick) {
+                    ctaOnClick();
+                  } else {
+                    handleNavClick(e, ctaHref);
+                  }
+                }}
+                className={`hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold text-white transition-all duration-200 hover:scale-105 active:scale-95 select-none cursor-pointer whitespace-nowrap shrink-0 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none ${themeStyles.ctaBtn}`}
+              >
+                <UserPlus className="w-4 h-4 shrink-0 text-white" />
+                <span className="whitespace-nowrap text-white font-bold">{ctaLabel}</span>
+              </a>
+            )}
+
+            {/* Mobile Menu Hamburger Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className={`lg:hidden p-2.5 rounded-full transition-all duration-300 cursor-pointer shrink-0 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none ${mobileMenuOpen
+                ? 'bg-slate-900 text-white rotate-90 scale-105'
+                : 'text-slate-800 hover:bg-slate-100/90'
+                }`}
+              aria-label="Toggle Navigation Menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* 4. Responsive Mobile Glassmorphic Drawer */}
-        {mobileMenuOpen && (
-          <div
-            className={`lg:hidden mt-2 rounded-3xl p-5 shadow-2xl space-y-2 animate-in fade-in slide-in-from-top-3 duration-200 border ${isDark
-              ? 'bg-[#0B0F1A]/95 backdrop-blur-2xl border-white/15 text-white'
-              : 'bg-white/90 backdrop-blur-2xl border-slate-200/90 text-slate-900'
-              }`}
-          >
+        {/* 4. Responsive Mobile Glassmorphic Drawer (Smooth downward expansion in a clean rounded-3xl card) */}
+        <div
+          className={`lg:hidden w-full transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden ${mobileMenuOpen
+            ? 'max-h-[520px] opacity-100 translate-y-0 mt-2.5'
+            : 'max-h-0 opacity-0 -translate-y-4 pointer-events-none'
+            }`}
+        >
+          <div className="bg-white/90 backdrop-blur-2xl border border-slate-200/90 shadow-2xl rounded-3xl p-5 space-y-1.5">
             {navItems.map((item, index) => (
               <div key={item.label}>
                 {item.href.startsWith('/') && !item.href.includes('#') ? (
                   <Link
                     href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center justify-between px-4 py-3 rounded-2xl text-[15px] font-bold transition-colors whitespace-nowrap ${isDark ? 'text-slate-200 hover:bg-white/10' : 'text-slate-800 hover:bg-emerald-500/10'
-                      }`}
+                    className="flex items-center justify-between px-4 py-3 rounded-2xl text-[15px] font-bold text-slate-800 hover:text-slate-950 hover:bg-emerald-500/15 transition-all whitespace-nowrap"
                   >
                     <span>{item.label}</span>
                     {item.badge && (
@@ -354,9 +417,8 @@ export default function FloatingNavbar({
                 ) : (
                   <a
                     href={item.href}
-                    onClick={(e) => handleNavClick(e, item.href, index)}
-                    className={`flex items-center justify-between px-4 py-3 rounded-2xl text-[15px] font-bold transition-colors cursor-pointer whitespace-nowrap ${isDark ? 'text-slate-200 hover:bg-white/10' : 'text-slate-800 hover:bg-emerald-500/10'
-                      }`}
+                    onClick={(e) => handleNavClick(e, item.href)}
+                    className="flex items-center justify-between px-4 py-3 rounded-2xl text-[15px] font-bold text-slate-800 hover:text-slate-950 hover:bg-emerald-500/15 transition-all cursor-pointer whitespace-nowrap"
                   >
                     <span>{item.label}</span>
                     {item.badge && (
@@ -369,18 +431,18 @@ export default function FloatingNavbar({
               </div>
             ))}
 
-            <div className={`pt-3 border-t ${isDark ? 'border-white/10' : 'border-slate-100/80'}`}>
+            <div className="pt-3 mt-2 border-t border-slate-200/70">
               <a
                 href={ctaHref}
-                onClick={(e) => handleNavClick(e, ctaHref, 999)}
-                className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm text-white shadow-md transition-all whitespace-nowrap ${themeStyles.ctaBtn}`}
+                onClick={(e) => handleNavClick(e, ctaHref)}
+                className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-black text-sm text-white transition-all whitespace-nowrap cursor-pointer ${themeStyles.ctaBtn}`}
               >
                 <UserPlus className="w-4 h-4 shrink-0 text-white" />
                 <span className="text-white font-bold">{ctaLabel}</span>
               </a>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </header>
   );

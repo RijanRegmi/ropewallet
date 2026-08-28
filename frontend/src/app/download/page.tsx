@@ -28,7 +28,6 @@ export default function DownloadPage() {
         ctaLabel="Get APK"
         ctaHref="/ropewallet.apk"
         navItems={[
-          { label: 'Gateways', href: '/#gateways' },
           { label: 'Become a Host', href: '/#become-host' },
           { label: 'Mobile App', href: '/#mobile-app' },
           { label: 'Features', href: '/#features' },
