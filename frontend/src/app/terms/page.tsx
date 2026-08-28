@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import FloatingNavbar from "@/components/FloatingNavbar";
 
 export const metadata: Metadata = {
   title: "Terms & Conditions",
@@ -140,62 +141,71 @@ We will respond to your inquiries within 5 business days.`,
 export default function TermsPage() {
   const lastUpdated = "August 26, 2026";
   return (
-    <div className="min-h-screen bg-[#0B0F1A] text-white">
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0B0F1A]/90 backdrop-blur-md border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <img src="/ropewallet.png" alt="RopeWallet" className="h-8 w-8 rounded-lg" />
-            <span className="font-bold text-lg tracking-tight">RopeWallet</span>
-          </Link>
-          <div className="flex items-center gap-6 text-sm text-white/50">
-            <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-            <Link href="/" className="px-4 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors">Home</Link>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-gradient-to-b from-[#059669] via-[#047857] to-[#064E3B] text-white selection:bg-emerald-300 selection:text-slate-950 relative">
+      {/* Background Ambient Glows (Isolated in fixed overflow container) */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute -top-40 -left-40 w-96 h-96 bg-emerald-300/25 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/3 -right-40 w-[30rem] h-[30rem] bg-teal-300/20 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 left-1/4 w-[32rem] h-[32rem] bg-emerald-400/20 rounded-full blur-3xl"></div>
+      </div>
 
-      <div className="pt-32 pb-16 px-4 text-center relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-blue-500/10 rounded-full blur-3xl" />
-        </div>
+      {/* Floating White Glass Navbar */}
+      <FloatingNavbar
+        accentColor="emerald"
+        ctaLabel="Become a Host"
+        ctaHref="/#become-host"
+        navItems={[
+          { label: 'Gateways', href: '/#gateways' },
+          { label: 'Become a Host', href: '/#become-host' },
+          { label: 'Mobile App', href: '/#mobile-app' },
+          { label: 'Features', href: '/#features' },
+          { label: 'How It Works', href: '/#how-it-works' },
+          { label: 'Download App', href: '/download', badge: 'APK' },
+        ]}
+      />
+
+      <div className="pt-32 pb-16 px-4 text-center relative overflow-hidden z-10">
         <div className="relative">
-          <span className="inline-block text-xs font-semibold tracking-widest uppercase text-blue-400 bg-blue-500/10 border border-blue-500/20 px-4 py-1.5 rounded-full mb-6">Legal</span>
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-4">Terms &amp; Conditions</h1>
-          <p className="text-white/50 text-base max-w-xl mx-auto">Please read these terms carefully before using RopeWallet. By using our service, you agree to be bound by these terms.</p>
-          <p className="mt-4 text-sm text-white/30">Last updated: {lastUpdated}</p>
+          <span className="inline-block text-xs font-black tracking-widest uppercase text-white bg-white/20 border border-white/30 px-4 py-1.5 rounded-full mb-6 shadow-md backdrop-blur-md">Legal</span>
+          <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tight mb-4 drop-shadow-md">Terms &amp; Conditions</h1>
+          <p className="text-emerald-50 text-base max-w-xl mx-auto font-medium drop-shadow-xs">Please read these terms carefully before using RopeWallet. By using our service, you agree to be bound by these terms.</p>
+          <p className="mt-4 text-sm text-emerald-100 font-medium">Last updated: {lastUpdated}</p>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-24">
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-10">
-          <h2 className="text-sm font-semibold text-white/50 uppercase tracking-widest mb-4">Table of Contents</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-24 relative z-10">
+        {/* Table of Contents (Transparent White Glass Box) */}
+        <div className="bg-white/15 backdrop-blur-2xl border border-white/25 text-white rounded-3xl p-6 sm:p-8 mb-10 shadow-2xl">
+          <h2 className="text-sm font-black text-emerald-200 uppercase tracking-widest mb-4">Table of Contents</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {sections.map((s) => (
-              <a key={s.id} href={`#${s.id}`} className="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2 group">
-                <span className="w-1 h-1 rounded-full bg-blue-400/50 group-hover:bg-blue-400 transition-colors" />
+              <a key={s.id} href={`#${s.id}`} className="text-sm text-emerald-100 hover:text-white font-bold transition-colors flex items-center gap-2 group">
+                <span className="w-2 h-2 rounded-full bg-emerald-300 group-hover:scale-125 transition-transform" />
                 {s.title}
               </a>
             ))}
           </div>
         </div>
 
+        {/* Legal Sections (Transparent White Glass Boxes) */}
         <div className="space-y-8">
           {sections.map((section) => (
-            <div key={section.id} id={section.id} className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 sm:p-8 scroll-mt-24">
-              <h2 className="text-lg sm:text-xl font-bold mb-4 text-white">{section.title}</h2>
-              <div className="text-white/60 text-sm sm:text-base leading-relaxed whitespace-pre-line">{section.content}</div>
+            <div key={section.id} id={section.id} className="bg-white/15 backdrop-blur-2xl border border-white/25 text-white rounded-3xl p-6 sm:p-8 scroll-mt-24 shadow-xl">
+              <h2 className="text-xl sm:text-2xl font-black mb-4 text-white drop-shadow-sm">{section.title}</h2>
+              <div className="text-emerald-100/95 text-sm sm:text-base leading-relaxed whitespace-pre-line font-normal">{section.content}</div>
             </div>
           ))}
         </div>
 
-        <div className="mt-12 text-center">
-          <p className="text-white/30 text-sm">By using RopeWallet, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.</p>
-          <div className="mt-6 flex items-center justify-center gap-6 text-sm flex-wrap">
-            <Link href="/privacy" className="text-blue-400 hover:text-blue-300 transition-colors">Privacy Policy</Link>
-            <span className="text-white/20">•</span>
-            <Link href="/" className="text-white/40 hover:text-white transition-colors">Back to Home</Link>
-            <span className="text-white/20">•</span>
-            <a href="mailto:support@ropewallet.com" className="text-white/40 hover:text-white transition-colors">Contact Us</a>
+        {/* Bottom Callout */}
+        <div className="mt-12 text-center bg-white/15 backdrop-blur-md rounded-3xl p-8 border border-white/25 shadow-lg">
+          <p className="text-emerald-50 text-sm font-medium">By using RopeWallet, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.</p>
+          <div className="mt-6 flex items-center justify-center gap-6 text-sm flex-wrap font-bold">
+            <Link href="/privacy" className="text-white hover:text-emerald-200 underline transition-colors">Privacy Policy</Link>
+            <span className="text-white/40">•</span>
+            <Link href="/" className="text-emerald-100 hover:text-white transition-colors">Back to Home</Link>
+            <span className="text-white/40">•</span>
+            <a href="mailto:support@ropewallet.com" className="text-emerald-100 hover:text-white transition-colors">Contact Us</a>
           </div>
         </div>
       </div>
