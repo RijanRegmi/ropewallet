@@ -411,55 +411,64 @@ export default function FloatingNavbar({
         </div>
       </div>
 
-        {/* 4. Responsive Mobile Glassmorphic Drawer (Smooth downward expansion in a clean rounded-3xl card) */}
+        {/* 4. Responsive Mobile Glassmorphic Drawer (Slow, cinematic downward slide animation) */}
         <div
-          className={`lg:hidden w-full transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden ${mobileMenuOpen
-            ? 'max-h-[520px] opacity-100 translate-y-0 mt-2.5'
-            : 'max-h-0 opacity-0 -translate-y-4 pointer-events-none'
+          className={`lg:hidden w-full grid transition-[grid-template-rows,opacity,margin] duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${mobileMenuOpen
+            ? 'grid-rows-[1fr] opacity-100 mt-3 pointer-events-auto'
+            : 'grid-rows-[0fr] opacity-0 mt-0 pointer-events-none'
             }`}
         >
-          <div className="bg-white/90 backdrop-blur-2xl border border-slate-200/90 shadow-2xl rounded-3xl p-5 space-y-1.5">
-            {navItems.map((item, index) => (
-              <div key={item.label}>
-                {item.href.startsWith('/') && !item.href.includes('#') ? (
-                  <Link
-                    href={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-4 py-3 rounded-2xl text-[15px] font-bold text-slate-800 hover:text-slate-950 hover:bg-emerald-500/15 transition-all whitespace-nowrap"
-                  >
-                    <span>{item.label}</span>
-                    {item.badge && (
-                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${themeStyles.badge}`}>
-                        {item.badge}
-                      </span>
+          <div className="overflow-hidden">
+            <div
+              className={`transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${mobileMenuOpen
+                ? 'translate-y-0 opacity-100'
+                : '-translate-y-8 opacity-0'
+                }`}
+            >
+              <div className="bg-white/95 backdrop-blur-3xl border border-slate-200/80 rounded-3xl p-5 space-y-1">
+                {navItems.map((item, index) => (
+                  <div key={item.label}>
+                    {item.href.startsWith('/') && !item.href.includes('#') ? (
+                      <Link
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center justify-between px-4 py-3 rounded-2xl text-[15px] font-medium text-slate-800 hover:text-slate-950 hover:bg-emerald-500/15 transition-all whitespace-nowrap"
+                      >
+                        <span>{item.label}</span>
+                        {item.badge && (
+                          <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border ${themeStyles.badge}`}>
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    ) : (
+                      <a
+                        href={item.href}
+                        onClick={(e) => handleNavClick(e, item.href)}
+                        className="flex items-center justify-between px-4 py-3 rounded-2xl text-[15px] font-medium text-slate-800 hover:text-slate-950 hover:bg-emerald-500/15 transition-all cursor-pointer whitespace-nowrap"
+                      >
+                        <span>{item.label}</span>
+                        {item.badge && (
+                          <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border ${themeStyles.badge}`}>
+                            {item.badge}
+                          </span>
+                        )}
+                      </a>
                     )}
-                  </Link>
-                ) : (
-                  <a
-                    href={item.href}
-                    onClick={(e) => handleNavClick(e, item.href)}
-                    className="flex items-center justify-between px-4 py-3 rounded-2xl text-[15px] font-bold text-slate-800 hover:text-slate-950 hover:bg-emerald-500/15 transition-all cursor-pointer whitespace-nowrap"
-                  >
-                    <span>{item.label}</span>
-                    {item.badge && (
-                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${themeStyles.badge}`}>
-                        {item.badge}
-                      </span>
-                    )}
-                  </a>
-                )}
-              </div>
-            ))}
+                  </div>
+                ))}
 
-            <div className="pt-3 mt-2 border-t border-slate-200/70">
-              <a
-                href={ctaHref}
-                onClick={(e) => handleNavClick(e, ctaHref)}
-                className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-black text-sm text-white transition-all whitespace-nowrap cursor-pointer ${themeStyles.ctaBtn}`}
-              >
-                <UserPlus className="w-4 h-4 shrink-0 text-white" />
-                <span className="text-white font-bold">{ctaLabel}</span>
-              </a>
+                <div className="pt-3 mt-2 border-t border-slate-200/70">
+                  <a
+                    href={ctaHref}
+                    onClick={(e) => handleNavClick(e, ctaHref)}
+                    className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm text-white transition-all whitespace-nowrap cursor-pointer ${themeStyles.ctaBtn}`}
+                  >
+                    <UserPlus className="w-4 h-4 shrink-0 text-white" />
+                    <span className="text-white font-semibold">{ctaLabel}</span>
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
         </div>
