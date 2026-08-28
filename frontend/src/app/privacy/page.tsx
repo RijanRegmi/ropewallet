@@ -158,32 +158,32 @@ export default function PrivacyPage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-24 relative z-10">
-        {/* Table of Contents (Transparent White Glass Box) */}
-        <div className="bg-white/15 backdrop-blur-2xl border border-white/25 text-white rounded-3xl p-6 sm:p-8 mb-10 shadow-2xl">
-          <h2 className="text-sm font-black text-emerald-200 uppercase tracking-widest mb-4">Table of Contents</h2>
+        {/* Table of Contents (Transparent White Glass Box with Dark Text) */}
+        <div className="bg-white/45 backdrop-blur-2xl border border-white/60 text-slate-950 rounded-3xl p-6 sm:p-8 mb-10 shadow-2xl">
+          <h2 className="text-sm font-black text-emerald-950 uppercase tracking-widest mb-4">Table of Contents</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {sections.map((s) => (
-              <a key={s.id} href={`#${s.id}`} className="text-sm text-emerald-100 hover:text-white font-bold transition-colors flex items-center gap-2 group">
-                <span className="w-2 h-2 rounded-full bg-emerald-300 group-hover:scale-125 transition-transform" />
+              <a key={s.id} href={`#${s.id}`} className="text-sm text-slate-900 hover:text-emerald-800 font-bold transition-colors flex items-center gap-2 group">
+                <span className="w-2 h-2 rounded-full bg-emerald-700 group-hover:scale-125 transition-transform" />
                 {s.title}
               </a>
             ))}
           </div>
         </div>
 
-        {/* Legal Sections (Transparent White Glass Boxes) */}
+        {/* Legal Sections (Transparent White Glass Boxes with Dark Text) */}
         <div className="space-y-8">
           {sections.map((section) => (
-            <div key={section.id} id={section.id} className="bg-white/15 backdrop-blur-2xl border border-white/25 text-white rounded-3xl p-6 sm:p-8 scroll-mt-24 shadow-xl">
-              <h2 className="text-xl sm:text-2xl font-black mb-4 text-white drop-shadow-sm">{section.title}</h2>
-              <div className="text-emerald-100/95 text-sm sm:text-base leading-relaxed whitespace-pre-line font-normal">{section.content}</div>
+            <div key={section.id} id={section.id} className="bg-white/45 backdrop-blur-2xl border border-white/60 text-slate-950 rounded-3xl p-6 sm:p-8 scroll-mt-24 shadow-xl">
+              <h2 className="text-xl sm:text-2xl font-black mb-4 text-slate-950">{section.title}</h2>
+              <div className="text-slate-800 text-sm sm:text-base leading-relaxed whitespace-pre-line font-medium">{section.content}</div>
             </div>
           ))}
         </div>
 
         {/* Bottom Callout */}
-        <div className="mt-12 text-center bg-white/15 backdrop-blur-md rounded-3xl p-8 border border-white/25 shadow-lg">
-          <p className="text-emerald-50 text-sm font-medium">Your privacy matters to us. If you have any concerns, please do not hesitate to reach out.</p>
+        <div className="mt-12 text-center bg-white/20 backdrop-blur-md rounded-3xl p-8 border border-white/30 shadow-lg">
+          <p className="text-emerald-50 text-sm font-bold">Your privacy matters to us. If you have any concerns, please do not hesitate to reach out.</p>
           <div className="mt-6 flex items-center justify-center gap-6 text-sm flex-wrap font-bold">
             <Link href="/terms" className="text-white hover:text-emerald-200 underline transition-colors">Terms & Conditions</Link>
             <span className="text-white/40">•</span>

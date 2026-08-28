@@ -171,9 +171,9 @@ export default function FloatingNavbar({
     },
   }[accentColor];
 
-  // Nav item text color based on dark or light background
-  const navTextClass = isDark ? 'text-slate-200 hover:text-white' : 'text-slate-800 hover:text-slate-950';
-  const brandFirstClass = isDark ? 'text-white' : 'text-slate-950';
+  // Nav item text color
+  const navTextClass = 'text-slate-800 hover:text-slate-950';
+  const brandFirstClass = 'text-slate-950';
 
   return (
     <header className="sticky top-2.5 sm:top-4 z-50 w-full px-2 sm:px-4 md:px-6 pointer-events-none transition-all duration-500">
@@ -182,16 +182,9 @@ export default function FloatingNavbar({
         className={`mx-auto pointer-events-auto transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isScrolled ? 'max-w-[1240px] w-full' : 'max-w-[1380px] w-full'
           }`}
       >
-        {/* Crisp White Glassmorphism Pill Container */}
+        {/* Consistent Semi-Transparent White Frosted Glass Floating Pill Container */}
         <div
-          className={`relative rounded-full px-3 sm:px-5 py-2 sm:py-2.5 flex items-center justify-between transition-all duration-500 gap-2 sm:gap-3 lg:gap-4 ${isDark
-            ? isScrolled
-              ? 'bg-[#0B0F1A]/90 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/15 shadow-[0_16px_40px_-6px_rgba(0,0,0,0.5),inset_0_1px_2px_rgba(255,255,255,0.1)]'
-              : 'bg-[#0B0F1A]/75 backdrop-blur-xl border border-white/10 shadow-lg'
-            : isScrolled
-              ? 'bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white shadow-[0_16px_40px_-6px_rgba(0,0,0,0.15),inset_0_1px_2px_rgba(255,255,255,0.9)]'
-              : 'bg-white/90 backdrop-blur-xl sm:backdrop-blur-2xl border border-white/90 shadow-[0_10px_30px_-5px_rgba(0,0,0,0.12),inset_0_1px_2px_rgba(255,255,255,0.8)]'
-            }`}
+          className="relative rounded-full px-3 sm:px-5 py-2 sm:py-2.5 flex items-center justify-between transition-all duration-500 gap-2 sm:gap-3 lg:gap-4 bg-white/65 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/75 shadow-[0_12px_36px_-6px_rgba(0,0,0,0.12),inset_0_1px_1.5px_rgba(255,255,255,0.7)]"
         >
           {/* 1. Left: Animated Splitting Logo with Smooth Scroll to Very Top */}
           <Link
