@@ -36,6 +36,8 @@ export default function ProfessionalWhiteLandingPage() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [clickedStep, setClickedStep] = useState<number | null>(null);
+  const [howItWorksInView, setHowItWorksInView] = useState(false);
 
   useEffect(() => {
     // Trigger smooth initial load split-out animation after 150ms mount delay
@@ -52,9 +54,50 @@ export default function ProfessionalWhiteLandingPage() {
     };
     handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
+
+    // IntersectionObserver to trigger sequential 1 -> Arrow -> 2 -> Arrow -> 3 -> Arrow -> 4 animation when in view
+    const howItWorksSection = document.getElementById('how-it-works');
+    let observer: IntersectionObserver | null = null;
+
+    if (howItWorksSection) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              setHowItWorksInView(true);
+            }
+          });
+        },
+        { threshold: 0.15 }
+      );
+      observer.observe(howItWorksSection);
+    }
+
+    // Universal IntersectionObserver for Staggered Scroll-Reveal Animations on Every Section
+    const revealElements = document.querySelectorAll('.reveal-init');
+    let revealObserver: IntersectionObserver | null = null;
+
+    if (revealElements.length > 0) {
+      revealObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('reveal-visible');
+              revealObserver?.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.08, rootMargin: '0px 0px -30px 0px' }
+      );
+
+      revealElements.forEach((el) => revealObserver?.observe(el));
+    }
+
     return () => {
       clearTimeout(timer);
       window.removeEventListener('scroll', handleScroll);
+      if (observer) observer.disconnect();
+      if (revealObserver) revealObserver.disconnect();
     };
   }, []);
 
@@ -150,25 +193,25 @@ export default function ProfessionalWhiteLandingPage() {
               {/* Left Content Column */}
               <div className="lg:col-span-7 text-center lg:text-left">
                 {/* Badge */}
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold mb-8 shadow-xs">
+                <div className="reveal-init stagger-1 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold mb-8 shadow-xs">
                   <Sparkles className="w-4 h-4 text-emerald-600" />
                   <span>Ultra-Secure Enterprise Payment Gateway Engine</span>
                 </div>
 
                 {/* Headline */}
-                <h1 className="text-4xl sm:text-6xl lg:text-6xl font-black tracking-tight text-slate-900 leading-[1.08] mb-6">
+                <h1 className="reveal-init stagger-2 text-4xl sm:text-6xl lg:text-6xl font-black tracking-tight text-slate-900 leading-[1.08] mb-6">
                   The Ultra-Secure Enterprise Payment Gateway &{' '}
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600">
                     Digital Wallet Engine
                   </span>
                 </h1>
 
-                <p className="text-base sm:text-lg text-slate-600 max-w-2xl mb-10 leading-relaxed font-normal">
-                  As an <strong>Ultra-Secure Enterprise Payment Gateway</strong> and <strong>Digital Wallet Engine</strong>, RopeWallet processes instant Chime, Cash App, Venmo, and Apple Pay deposits with 100% automated receipt verification, real-time balance settlement, and 256-bit encrypted audit security.
+                <p className="reveal-init stagger-3 text-base sm:text-lg text-slate-600 max-w-2xl mb-10 leading-relaxed font-normal">
+                  As an <strong>Ultra-Secure Enterprise Payment Gateway</strong> and <strong>Digital Wallet Engine</strong>, RopeWallet processes instant Card deposits with 100% automated receipt verification, real-time balance settlement, and 256-bit encrypted audit security.
                 </p>
 
                 {/* CTA Action Buttons */}
-                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-12">
+                <div className="reveal-init stagger-4 flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-12">
                   <a
                     href="#become-host"
                     onClick={(e) => handleSmoothScroll(e, 'become-host')}
@@ -189,25 +232,24 @@ export default function ProfessionalWhiteLandingPage() {
                 </div>
 
                 {/* Supported Brands Bar */}
-                <div id="gateways" className="pt-2">
+                <div id="gateways" className="reveal-init stagger-5 pt-2">
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
                     Supported Gateway Platforms
                   </p>
                   <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
                     <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-emerald-500/40 transition-all">
-                      <img src="https://img.icons8.com/color/96/chime.png" alt="Chime" width={24} height={24} loading="lazy" decoding="async" className="h-6 w-auto object-contain" />
-                      <span className="font-extrabold text-xs text-slate-800">Chime</span>
+                      <CreditCard className="w-5 h-5 text-emerald-600" />
+                      <span className="font-extrabold text-xs text-slate-800">Debit Card</span>
                     </div>
 
                     <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-emerald-500/40 transition-all">
-                      <img src="https://img.icons8.com/color/96/cash-app.png" alt="Cash App" width={24} height={24} loading="lazy" decoding="async" className="h-6 w-auto object-contain" />
-                      <span className="font-extrabold text-xs text-slate-800">Cash App</span>
+                      <CreditCard className="w-5 h-5 text-teal-600" />
+                      <span className="font-extrabold text-xs text-slate-800">Credit Card</span>
                     </div>
 
-                    <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-blue-500/40 transition-all">
-                      <div className="bg-[#008CFF]/15 px-3 py-1 rounded-lg border border-[#008CFF]/30">
-                        <span className="font-extrabold text-[#008CFF] text-xs">venmo</span>
-                      </div>
+                    <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-indigo-500/40 transition-all">
+                      <ShieldCheck className="w-5 h-5 text-indigo-600" />
+                      <span className="font-extrabold text-xs text-slate-800">Virtual Cards</span>
                     </div>
 
                     <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-purple-500/40 transition-all">
@@ -218,7 +260,7 @@ export default function ProfessionalWhiteLandingPage() {
               </div>
 
               {/* Right Mobile Phone Device Mockup Column (Below text on Mobile, Right on Desktop) */}
-              <div className="lg:col-span-5 relative flex justify-center items-center mt-10 lg:mt-0">
+              <div className="lg:col-span-5 relative flex justify-center items-center mt-10 lg:mt-0 reveal-init stagger-3">
                 <div className="relative animate-float">
                   {/* Background Glow */}
                   <div className="absolute -inset-4 bg-gradient-to-tr from-emerald-500/20 via-teal-500/20 to-indigo-500/20 rounded-[60px] blur-2xl pointer-events-none" />
@@ -272,7 +314,7 @@ export default function ProfessionalWhiteLandingPage() {
         {/* Become a Host Connection Section (Matches User's UI Screenshot) */}
         <section id="become-host" className="py-20 bg-slate-50/70 border-y border-slate-200/80">
           <div className="max-w-7xl mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-12">
+            <div className="text-center max-w-3xl mx-auto mb-12 reveal-init stagger-1">
               <span className="text-xs font-extrabold text-emerald-600 uppercase tracking-widest block mb-3">
                 Partner With Us
               </span>
@@ -285,7 +327,7 @@ export default function ProfessionalWhiteLandingPage() {
             </div>
 
             {/* 2-Column Inquiry Card Container */}
-            <div className="bg-white border border-slate-200/80 rounded-[32px] shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 max-w-6xl mx-auto">
+            <div className="bg-white border border-slate-200/80 rounded-[32px] shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 max-w-6xl mx-auto reveal-init stagger-2">
               {/* Left Side Beautiful Image Container */}
               <div className="lg:col-span-5 relative min-h-[350px] lg:min-h-[500px] overflow-hidden bg-slate-900">
                 <img
@@ -446,7 +488,7 @@ export default function ProfessionalWhiteLandingPage() {
 
           <div className="max-w-7xl mx-auto px-6 relative z-10">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <div>
+              <div className="reveal-init stagger-1">
                 <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 border border-white/25 text-white text-xs font-bold mb-6 backdrop-blur-sm shadow-xs">
                   <Smartphone className="w-4 h-4 text-emerald-200" />
                   <span>RopeWallet Mobile Ecosystem</span>
@@ -459,7 +501,7 @@ export default function ProfessionalWhiteLandingPage() {
                 </p>
 
                 <div className="space-y-4 mb-10">
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 reveal-init stagger-2">
                     <div className="w-5 h-5 rounded-full bg-white/20 text-white flex items-center justify-center shrink-0 mt-0.5 border border-white/30">
                       <CheckCircle2 className="w-4 h-4 text-white" />
                     </div>
@@ -469,7 +511,7 @@ export default function ProfessionalWhiteLandingPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 reveal-init stagger-3">
                     <div className="w-5 h-5 rounded-full bg-white/20 text-white flex items-center justify-center shrink-0 mt-0.5 border border-white/30">
                       <CheckCircle2 className="w-4 h-4 text-white" />
                     </div>
@@ -479,7 +521,7 @@ export default function ProfessionalWhiteLandingPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 reveal-init stagger-4">
                     <div className="w-5 h-5 rounded-full bg-white/20 text-white flex items-center justify-center shrink-0 mt-0.5 border border-white/30">
                       <CheckCircle2 className="w-4 h-4 text-white" />
                     </div>
@@ -491,7 +533,7 @@ export default function ProfessionalWhiteLandingPage() {
                 </div>
 
                 {/* Download Buttons with Official Logos & Authoritative External Links */}
-                <div className="flex flex-wrap items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4 reveal-init stagger-5">
                   <a
                     href="https://www.apple.com/app-store/"
                     target="_blank"
@@ -531,7 +573,7 @@ export default function ProfessionalWhiteLandingPage() {
               </div>
 
               {/* App Preview Showcase Box */}
-              <div className="bg-emerald-950/70 border border-white/20 rounded-3xl p-8 shadow-2xl shadow-emerald-950/60 relative backdrop-blur-xl">
+              <div className="bg-emerald-950/70 border border-white/20 rounded-3xl p-8 shadow-2xl shadow-emerald-950/60 relative backdrop-blur-xl reveal-init stagger-3">
                 <div className="bg-[#022c22]/90 border border-emerald-400/30 rounded-2xl p-6 text-left space-y-6">
                   <div className="flex items-center justify-between border-b border-emerald-500/30 pb-4">
                     <div className="flex items-center gap-3">
@@ -572,7 +614,7 @@ export default function ProfessionalWhiteLandingPage() {
         </section>
 
         {/* Infinite Rotating Stats Marquee Section */}
-        <section className="py-8 bg-gradient-to-r from-[#064E3B] via-[#047857] to-[#064E3B] text-white border-t border-b border-emerald-600/40 relative overflow-hidden">
+        <section className="py-8 bg-gradient-to-r from-[#064E3B] via-[#047857] to-[#064E3B] text-white border-t border-b border-emerald-600/40 relative overflow-hidden reveal-init stagger-1">
           {/* Subtle Side Fade Overlays for seamless infinite appearance */}
           <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#064E3B] to-transparent z-10 pointer-events-none" />
           <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#064E3B] to-transparent z-10 pointer-events-none" />
@@ -626,7 +668,7 @@ export default function ProfessionalWhiteLandingPage() {
         {/* Features Grid Section */}
         <section id="features" className="py-24 bg-slate-50/50">
           <div className="max-w-7xl mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="text-center max-w-3xl mx-auto mb-16 reveal-init stagger-1">
               <span className="text-xs font-extrabold text-emerald-600 uppercase tracking-widest block mb-3">
                 Why RopeWallet?
               </span>
@@ -639,7 +681,7 @@ export default function ProfessionalWhiteLandingPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 reveal-init stagger-2">
                 <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-6 font-bold">
                   <Clock className="w-6 h-6" />
                 </div>
@@ -649,7 +691,7 @@ export default function ProfessionalWhiteLandingPage() {
                 </p>
               </div>
 
-              <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 reveal-init stagger-3">
                 <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-6 font-bold">
                   <ShieldCheck className="w-6 h-6" />
                 </div>
@@ -659,7 +701,7 @@ export default function ProfessionalWhiteLandingPage() {
                 </p>
               </div>
 
-              <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 reveal-init stagger-4">
                 <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mb-6 font-bold">
                   <TrendingUp className="w-6 h-6" />
                 </div>
@@ -672,50 +714,137 @@ export default function ProfessionalWhiteLandingPage() {
           </div>
         </section>
 
-        {/* How It Works Section */}
-        <section id="how-it-works" className="py-24 bg-white border-t border-slate-100">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <span className="text-xs font-extrabold text-emerald-600 uppercase tracking-widest block mb-3">
-                Simple 4-Step Process
-              </span>
-              <h2 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
+        {/* How It Works Section (Complete Wallet Workflow: Card Deposit -> P2P Transfer -> Balance Management -> Card Payout) */}
+        <section id="how-it-works" className="py-24 bg-white relative overflow-hidden border-t border-slate-100">
+          {/* Subtle Background Pattern */}
+          <div className="absolute inset-0 bg-[radial-gradient(#059669_1px,transparent_1px)] [background-size:24px_24px] opacity-[0.03] pointer-events-none" />
+
+          <div className="max-w-7xl mx-auto px-6 relative z-10">
+            {/* Section Header */}
+            <div className="text-center max-w-3xl mx-auto mb-20 reveal-init stagger-1">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold mb-4 shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Our Process</span>
+              </div>
+              <h2 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight mb-4">
                 How RopeWallet Works
               </h2>
+              <p className="text-slate-600 text-base sm:text-lg font-medium">
+                Deposit funds directly from your card, transfer instantly with customers and hosts within RopeWallet, and withdraw payouts to your card.
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-              <div className="relative text-center p-6 bg-slate-50 rounded-2xl border border-slate-200">
-                <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-extrabold text-sm flex items-center justify-center mx-auto mb-4">
-                  1
-                </div>
-                <h3 className="font-bold text-slate-900 mb-2">Host Generates Link</h3>
-                <p className="text-xs text-slate-600">Host enters requested deposit amount and customer tag in mobile app.</p>
-              </div>
+            {/* 4 Connected Circular Step Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-4 relative">
+              {[
+                {
+                  step: 1,
+                  title: 'Deposit via Card',
+                  description: 'Deposit funds directly into your RopeWallet balance using Debit, Credit, or Virtual Cards with instant verification.',
+                  image: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?auto=format&fit=crop&w=400&q=80',
+                },
+                {
+                  step: 2,
+                  title: 'Transfer with Users & Hosts',
+                  description: 'Transfer funds seamlessly between customers and hosts within RopeWallet in real-time with zero network delay.',
+                  image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=400&q=80',
+                },
+                {
+                  step: 3,
+                  title: 'Hold & Manage Balance',
+                  description: 'Track live available balances, host earnings, split profits, and complete transaction history inside the mobile app.',
+                  image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=400&q=80',
+                },
+                {
+                  step: 4,
+                  title: 'Payout to Your Card',
+                  description: 'Withdraw available wallet funds directly back to your connected debit or credit card anytime with instant settlement.',
+                  image: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&w=400&q=80',
+                },
+              ].map((item, index) => {
+                const stepAnimationClass = howItWorksInView
+                  ? index === 0
+                    ? 'animate-step-bubble-1'
+                    : index === 1
+                      ? 'animate-step-bubble-2'
+                      : index === 2
+                        ? 'animate-step-bubble-3'
+                        : 'animate-step-bubble-4'
+                  : 'opacity-0 scale-75';
 
-              <div className="relative text-center p-6 bg-slate-50 rounded-2xl border border-slate-200">
-                <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-extrabold text-sm flex items-center justify-center mx-auto mb-4">
-                  2
-                </div>
-                <h3 className="font-bold text-slate-900 mb-2">Customer Pays</h3>
-                <p className="text-xs text-slate-600">Customer opens gateway link and completes payment using Debit, Credit, or Virtual Cards.</p>
-              </div>
+                const arrowAnimationClass = howItWorksInView
+                  ? index === 0
+                    ? 'animate-arrow-draw-1'
+                    : index === 1
+                      ? 'animate-arrow-draw-2'
+                      : 'animate-arrow-draw-3'
+                  : 'opacity-0 scale-x-0';
 
-              <div className="relative text-center p-6 bg-slate-50 rounded-2xl border border-slate-200">
-                <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-extrabold text-sm flex items-center justify-center mx-auto mb-4">
-                  3
-                </div>
-                <h3 className="font-bold text-slate-900 mb-2">Auto-Verification</h3>
-                <p className="text-xs text-slate-600">System instantly verifies the payment confirmation and credits balances in under 3 seconds.</p>
-              </div>
+                return (
+                  <div key={item.step} className={`relative flex flex-col items-center text-center group select-none ${stepAnimationClass}`}>
+                    {/* Connecting Arrow to Next Step on Large Screens */}
+                    {index < 3 && (
+                      <div className={`hidden lg:flex items-center justify-center absolute left-[calc(50%+4.5rem)] top-16 -translate-y-1/2 w-[calc(100%-9rem)] z-0 pointer-events-none ${arrowAnimationClass}`}>
+                        <div className="w-full h-[1.5px] bg-slate-200 flex items-center justify-end relative">
+                          <ArrowRight className="w-4 h-4 text-emerald-500 -mr-1.5 shrink-0" />
+                        </div>
+                      </div>
+                    )}
 
-              <div className="relative text-center p-6 bg-slate-50 rounded-2xl border border-slate-200">
-                <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-extrabold text-sm flex items-center justify-center mx-auto mb-4">
-                  4
-                </div>
-                <h3 className="font-bold text-slate-900 mb-2">Instant Settlement</h3>
-                <p className="text-xs text-slate-600">Host receives $80 net balance while system retains 20% platform profit.</p>
-              </div>
+                    {/* Circular Step Node with Image & Top-Right Step Badge */}
+                    <div
+                      onClick={() => {
+                        setClickedStep(item.step);
+                        setTimeout(() => setClickedStep(null), 450);
+                      }}
+                      className="relative z-10 mb-6 cursor-pointer"
+                    >
+                      <div
+                        className={`w-32 h-32 sm:w-36 sm:h-36 rounded-full p-1 bg-gradient-to-tr from-emerald-500 via-teal-400 to-emerald-600 shadow-xl transition-all duration-300 ${
+                          clickedStep === item.step
+                            ? 'animate-nav-click-zoom'
+                            : 'group-hover:animate-nav-pulse group-hover:shadow-emerald-500/30'
+                        }`}
+                      >
+                        <div className="w-full h-full rounded-full overflow-hidden bg-slate-900 border-2 border-white">
+                          <img
+                            src={item.image}
+                            alt={item.title}
+                            width={200}
+                            height={200}
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Number Badge at Top Right */}
+                      <span className="absolute -top-1 -right-1 w-8 h-8 rounded-full bg-white text-emerald-700 font-black text-xs flex items-center justify-center border-2 border-emerald-500 shadow-md">
+                        {item.step}
+                      </span>
+                    </div>
+
+                    {/* Step Title & Description */}
+                    <h3
+                      onClick={() => {
+                        setClickedStep(item.step);
+                        setTimeout(() => setClickedStep(null), 450);
+                      }}
+                      className={`text-lg sm:text-xl font-bold text-slate-900 mb-2 transition-colors duration-200 cursor-pointer ${
+                        clickedStep === item.step
+                          ? 'animate-nav-click-zoom text-emerald-600'
+                          : 'group-hover:text-emerald-600 group-hover:animate-nav-pulse'
+                      }`}
+                    >
+                      {item.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-[230px] font-medium">
+                      {item.description}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -725,7 +854,7 @@ export default function ProfessionalWhiteLandingPage() {
           {/* Ambient Glows */}
           <div className="absolute top-1/2 left-1/3 w-[30rem] h-[30rem] bg-emerald-400/20 rounded-full blur-3xl pointer-events-none" />
           <div className="max-w-7xl mx-auto px-6 relative z-10">
-            <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="text-center max-w-3xl mx-auto mb-16 reveal-init stagger-1">
               <span className="text-xs font-black text-emerald-200 uppercase tracking-widest block mb-3">
                 Enterprise-Grade Protection
               </span>
@@ -739,7 +868,7 @@ export default function ProfessionalWhiteLandingPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Card 1: 100% Zero-Fraud Guarantee */}
-              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 hover:border-emerald-300 hover:bg-white/15 transition-all duration-300 shadow-2xl flex flex-col justify-between">
+              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 hover:border-emerald-300 hover:bg-white/15 transition-all duration-300 shadow-2xl flex flex-col justify-between reveal-init stagger-2">
                 <div>
                   <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/20 shadow-md">
                     <Image
@@ -762,7 +891,7 @@ export default function ProfessionalWhiteLandingPage() {
               </div>
 
               {/* Card 2: Lightning-Fast Auto-Verification */}
-              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 hover:border-emerald-300 hover:bg-white/15 transition-all duration-300 shadow-2xl flex flex-col justify-between">
+              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 hover:border-emerald-300 hover:bg-white/15 transition-all duration-300 shadow-2xl flex flex-col justify-between reveal-init stagger-3">
                 <div>
                   <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/20 shadow-md">
                     <Image
@@ -785,7 +914,7 @@ export default function ProfessionalWhiteLandingPage() {
               </div>
 
               {/* Card 3: Universal Payment Hub */}
-              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 hover:border-emerald-300 hover:bg-white/15 transition-all duration-300 shadow-2xl flex flex-col justify-between">
+              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 hover:border-emerald-300 hover:bg-white/15 transition-all duration-300 shadow-2xl flex flex-col justify-between reveal-init stagger-4">
                 <div>
                   <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/20 shadow-md">
                     <Image
@@ -808,7 +937,7 @@ export default function ProfessionalWhiteLandingPage() {
               </div>
 
               {/* Card 4: Automated 24/7 Host Earnings */}
-              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 hover:border-emerald-300 hover:bg-white/15 transition-all duration-300 shadow-2xl flex flex-col justify-between">
+              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 hover:border-emerald-300 hover:bg-white/15 transition-all duration-300 shadow-2xl flex flex-col justify-between reveal-init stagger-5">
                 <div>
                   <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/20 shadow-md">
                     <Image
@@ -836,7 +965,7 @@ export default function ProfessionalWhiteLandingPage() {
         {/* Frequently Asked Questions (FAQ) Section */}
         <section className="py-24 bg-white border-t border-slate-100">
           <div className="max-w-7xl mx-auto px-6">
-            <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="text-center max-w-3xl mx-auto mb-16 reveal-init stagger-1">
               <span className="text-xs font-extrabold text-emerald-600 uppercase tracking-widest block mb-3">
                 Knowledge Base
               </span>
@@ -849,7 +978,7 @@ export default function ProfessionalWhiteLandingPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-              <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 space-y-3">
+              <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 space-y-3 reveal-init stagger-2">
                 <h3 className="font-extrabold text-slate-900 text-lg">
                   How does automated receipt verification work for instant deposit settlements?
                 </h3>
@@ -858,7 +987,7 @@ export default function ProfessionalWhiteLandingPage() {
                 </p>
               </div>
 
-              <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 space-y-3">
+              <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 space-y-3 reveal-init stagger-3">
                 <h3 className="font-extrabold text-slate-900 text-lg">
                   What security measures protect user funds and balance updates?
                 </h3>
@@ -867,7 +996,7 @@ export default function ProfessionalWhiteLandingPage() {
                 </p>
               </div>
 
-              <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 space-y-3">
+              <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 space-y-3 reveal-init stagger-4">
                 <h3 className="font-extrabold text-slate-900 text-lg">
                   How do hosts apply for access credentials and royalty split management?
                 </h3>
@@ -876,7 +1005,7 @@ export default function ProfessionalWhiteLandingPage() {
                 </p>
               </div>
 
-              <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 space-y-3">
+              <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 space-y-3 reveal-init stagger-5">
                 <h3 className="font-extrabold text-slate-900 text-lg">
                   What payment methods and card gateways are currently supported?
                 </h3>
@@ -890,7 +1019,7 @@ export default function ProfessionalWhiteLandingPage() {
       </main>
 
       {/* Footer with Logo, Social Sharing Options & External Standards Links */}
-      <footer className="border-t border-slate-200 bg-white py-12 text-xs text-slate-500">
+      <footer className="border-t border-slate-200 bg-white py-12 text-xs text-slate-500 reveal-init stagger-1">
         <div className="max-w-7xl mx-auto px-6 space-y-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pb-8 border-b border-slate-100">
             {/* Logo & Tagline */}

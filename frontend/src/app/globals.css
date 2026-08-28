@@ -277,6 +277,92 @@ input, select { color-scheme: dark; }
   will-change: transform;
 }
 
+/* ─── Step Bubble Pop-In Animation (Zoom out & settle back to normal) ─── */
+@keyframes stepBubblePopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+  85% {
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-step-bubble-1 {
+  animation: stepBubblePopIn 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+}
+.animate-step-bubble-2 {
+  animation: stepBubblePopIn 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) 0.7s both;
+}
+.animate-step-bubble-3 {
+  animation: stepBubblePopIn 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) 1.3s both;
+}
+.animate-step-bubble-4 {
+  animation: stepBubblePopIn 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) 1.9s both;
+}
+
+/* ─── Connecting Arrow Draw-In Animation ───────────────────────── */
+@keyframes arrowDrawIn {
+  0% {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+.animate-arrow-draw-1 {
+  transform-origin: left center;
+  animation: arrowDrawIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both;
+}
+.animate-arrow-draw-2 {
+  transform-origin: left center;
+  animation: arrowDrawIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 1.0s both;
+}
+.animate-arrow-draw-3 {
+  transform-origin: left center;
+  animation: arrowDrawIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 1.6s both;
+}
+
+/* ─── Universal Staggered Scroll Reveal Animations (Slow & Smooth) ─── */
+.reveal-init {
+  opacity: 0;
+  transform: translateY(36px);
+  transition: opacity 1.15s cubic-bezier(0.16, 1, 0.3, 1), transform 1.15s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.reveal-visible {
+  opacity: 1 !important;
+  transform: translateY(0) scale(1) !important;
+}
+
+/* Stagger delay utilities (Spaced for distinctly slow, smooth 1-by-1 cascade) */
+.stagger-1 { transition-delay: 0.12s; }
+.stagger-2 { transition-delay: 0.28s; }
+.stagger-3 { transition-delay: 0.44s; }
+.stagger-4 { transition-delay: 0.60s; }
+.stagger-5 { transition-delay: 0.76s; }
+.stagger-6 { transition-delay: 0.92s; }
+.stagger-7 { transition-delay: 1.08s; }
+.stagger-8 { transition-delay: 1.24s; }
+
+
+
+
 
 
 
