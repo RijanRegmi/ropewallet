@@ -1,4 +1,6 @@
-import React from "react";
+'use client';
+
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -14,13 +16,96 @@ import {
 import FloatingNavbar from "@/components/FloatingNavbar";
 import Footer from "@/components/Footer";
 
-export const metadata = {
-  title: "Download RopeWallet App for Android | Direct APK Download",
-  description:
-    "Download the official RopeWallet Android app (APK). Instant card deposits, biometric security, and 256-bit encrypted digital wallet.",
-};
-
 export default function DownloadPage() {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [stepsVisible, setStepsVisible] = useState<number[]>([]);
+  const [whyChooseVisible, setWhyChooseVisible] = useState<number[]>([]);
+  const [bannerVisible, setBannerVisible] = useState(false);
+
+  useEffect(() => {
+    // Smooth initial load for hero elements
+    const timer = setTimeout(() => {
+      setIsLoaded(true);
+    }, 150);
+
+    // 1. Setup Steps 1-by-1 Sequential Cascade Observer (Slow & Smooth)
+    const stepsSection = document.getElementById('setup-steps');
+    let stepsObserver: IntersectionObserver | null = null;
+    if (stepsSection) {
+      stepsObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              setStepsVisible((prev) => {
+                if (prev.length === 0) {
+                  setTimeout(() => setStepsVisible((p) => (p.includes(1) ? p : [...p, 1])), 420);
+                  setTimeout(() => setStepsVisible((p) => (p.includes(2) ? p : [...p, 2])), 840);
+                  setTimeout(() => setStepsVisible((p) => (p.includes(3) ? p : [...p, 3])), 1260);
+                  return [0];
+                }
+                return prev;
+              });
+              stepsObserver?.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.15 }
+      );
+      stepsObserver.observe(stepsSection);
+    }
+
+    // 2. Why Choose 1-by-1 Sequential Cascade Observer (Slow & Smooth)
+    const whyChooseSection = document.getElementById('why-choose');
+    let whyChooseObserver: IntersectionObserver | null = null;
+    if (whyChooseSection) {
+      whyChooseObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              setWhyChooseVisible((prev) => {
+                if (prev.length === 0) {
+                  setTimeout(() => setWhyChooseVisible((p) => (p.includes(1) ? p : [...p, 1])), 420);
+                  setTimeout(() => setWhyChooseVisible((p) => (p.includes(2) ? p : [...p, 2])), 840);
+                  setTimeout(() => setWhyChooseVisible((p) => (p.includes(3) ? p : [...p, 3])), 1260);
+                  return [0];
+                }
+                return prev;
+              });
+              whyChooseObserver?.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.15 }
+      );
+      whyChooseObserver.observe(whyChooseSection);
+    }
+
+    // 3. Bottom Banner Observer
+    const bannerSection = document.getElementById('download-banner');
+    let bannerObserver: IntersectionObserver | null = null;
+    if (bannerSection) {
+      bannerObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              setBannerVisible(true);
+              bannerObserver?.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.2 }
+      );
+      bannerObserver.observe(bannerSection);
+    }
+
+    return () => {
+      clearTimeout(timer);
+      if (stepsObserver) stepsObserver.disconnect();
+      if (whyChooseObserver) whyChooseObserver.disconnect();
+      if (bannerObserver) bannerObserver.disconnect();
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-emerald-400 selection:text-slate-950">
       {/* Floating White Glass Navbar */}
@@ -37,7 +122,7 @@ export default function DownloadPage() {
         ]}
       />
 
-      {/* SECTION 1 (WHITE): Hero Section with Mobile Mockup and Green Download Button */}
+      {/* SECTION 1 (WHITE): Hero Section with Slow Smooth Fade-In */}
       <section className="bg-white text-slate-900 pt-16 pb-24 relative overflow-hidden">
         {/* Subtle Background Pattern & Glow */}
         <div className="absolute inset-0 bg-[radial-gradient(#059669_1px,transparent_1px)] [background-size:24px_24px] opacity-[0.04] pointer-events-none" />
@@ -46,8 +131,14 @@ export default function DownloadPage() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Left Content */}
-            <div className="lg:col-span-7 space-y-8 text-center lg:text-left">
+            {/* Left Content (Slow entrance) */}
+            <div
+              className={`lg:col-span-7 space-y-8 text-center lg:text-left transition-all duration-[1200ms] ease-out ${
+                isLoaded
+                  ? 'opacity-100 translate-y-0'
+                  : 'opacity-0 translate-y-8'
+              }`}
+            >
               {/* Badge */}
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-black tracking-wide shadow-xs">
                 <ShieldCheck className="w-4 h-4 text-emerald-600" />
@@ -114,8 +205,14 @@ export default function DownloadPage() {
               </div>
             </div>
 
-            {/* Right Mobile Phone Device Mockup Column */}
-            <div className="lg:col-span-5 relative flex justify-center items-center mt-10 lg:mt-0">
+            {/* Right Mobile Phone Device Mockup Column (Slow entrance) */}
+            <div
+              className={`lg:col-span-5 relative flex justify-center items-center mt-10 lg:mt-0 transition-all duration-[1400ms] ease-out delay-150 ${
+                isLoaded
+                  ? 'opacity-100 translate-y-0 scale-100'
+                  : 'opacity-0 translate-y-12 scale-95'
+              }`}
+            >
               <div className="relative animate-float">
                 {/* Background Glow */}
                 <div className="absolute -inset-4 bg-gradient-to-tr from-emerald-200/50 via-teal-200/30 to-emerald-300/40 rounded-[60px] blur-2xl pointer-events-none" />
@@ -166,7 +263,7 @@ export default function DownloadPage() {
       </section>
 
       {/* SECTION 2 (WHITE): Quick Setup Guide */}
-      <section className="py-24 bg-slate-50/60 text-slate-900 border-t border-b border-slate-200/80">
+      <section id="setup-steps" className="py-24 bg-slate-50/60 text-slate-900 border-t border-b border-slate-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <span className="text-xs font-black text-emerald-600 uppercase tracking-widest block mb-3">
@@ -182,47 +279,77 @@ export default function DownloadPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Step 1 */}
-            <div className="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black text-xl mb-6 shadow-md shadow-emerald-600/20">
-                1
+            <div
+              className={`bg-white border border-slate-200 p-8 rounded-3xl shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all duration-1000 ease-out flex flex-col justify-between cursor-pointer ${
+                stepsVisible.includes(0)
+                  ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
+                  : 'opacity-0 translate-y-16 scale-95 pointer-events-none'
+              }`}
+            >
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black text-xl mb-6 shadow-md shadow-emerald-600/20">
+                  1
+                </div>
+                <h3 className="text-xl font-bold text-slate-950 mb-3">
+                  Download APK
+                </h3>
+                <p className="text-slate-600 text-sm leading-relaxed font-medium">
+                  Tap the <strong>"Download APK Now"</strong> button above to save the <code>RopeWallet.apk</code> installer file directly to your device.
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-slate-950 mb-3">
-                Download APK
-              </h3>
-              <p className="text-slate-600 text-sm leading-relaxed font-medium">
-                Tap the <strong>"Download APK Now"</strong> button above to save the <code>RopeWallet.apk</code> installer file directly to your device.
-              </p>
             </div>
 
             {/* Step 2 */}
-            <div className="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black text-xl mb-6 shadow-md shadow-emerald-600/20">
-                2
+            <div
+              className={`bg-white border border-slate-200 p-8 rounded-3xl shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all duration-1000 ease-out flex flex-col justify-between cursor-pointer ${
+                stepsVisible.includes(1)
+                  ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
+                  : 'opacity-0 translate-y-16 scale-95 pointer-events-none'
+              }`}
+            >
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black text-xl mb-6 shadow-md shadow-emerald-600/20">
+                  2
+                </div>
+                <h3 className="text-xl font-bold text-slate-950 mb-3">
+                  Allow Permission
+                </h3>
+                <p className="text-slate-600 text-sm leading-relaxed font-medium">
+                  Open your phone downloads and tap the APK file. If Android prompts, tap <em>Settings</em> and toggle <strong>"Allow from this source"</strong>.
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-slate-950 mb-3">
-                Allow Permission
-              </h3>
-              <p className="text-slate-600 text-sm leading-relaxed font-medium">
-                Open your phone downloads and tap the APK file. If Android prompts, tap <em>Settings</em> and toggle <strong>"Allow from this source"</strong>.
-              </p>
             </div>
 
             {/* Step 3 */}
-            <div className="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black text-xl mb-6 shadow-md shadow-emerald-600/20">
-                3
+            <div
+              className={`bg-white border border-slate-200 p-8 rounded-3xl shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all duration-1000 ease-out flex flex-col justify-between cursor-pointer ${
+                stepsVisible.includes(2)
+                  ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
+                  : 'opacity-0 translate-y-16 scale-95 pointer-events-none'
+              }`}
+            >
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black text-xl mb-6 shadow-md shadow-emerald-600/20">
+                  3
+                </div>
+                <h3 className="text-xl font-bold text-slate-950 mb-3">
+                  Install &amp; Open
+                </h3>
+                <p className="text-slate-600 text-sm leading-relaxed font-medium">
+                  Tap <strong>Install</strong>. Once completed, open RopeWallet, log in or create your new account, and enjoy instant digital wallet settlements!
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-slate-950 mb-3">
-                Install &amp; Open
-              </h3>
-              <p className="text-slate-600 text-sm leading-relaxed font-medium">
-                Tap <strong>Install</strong>. Once completed, open RopeWallet, log in or create your new account, and enjoy instant digital wallet settlements!
-              </p>
             </div>
           </div>
 
           {/* Play Protect Tip Note Banner */}
-          <div className="mt-10 bg-emerald-50/80 border border-emerald-200 p-6 sm:p-8 rounded-3xl flex items-start gap-5 shadow-sm">
+          <div
+            className={`mt-10 bg-emerald-50/80 border border-emerald-200 p-6 sm:p-8 rounded-3xl flex items-start gap-5 shadow-sm transition-all duration-1000 ease-out ${
+              stepsVisible.includes(3)
+                ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
+                : 'opacity-0 translate-y-16 scale-95 pointer-events-none'
+            }`}
+          >
             <div className="w-12 h-12 rounded-2xl bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-700/20 mt-0.5">
               <ShieldCheck className="w-6 h-6 text-white" />
             </div>
@@ -244,7 +371,7 @@ export default function DownloadPage() {
       </section>
 
       {/* SECTION 3 (GREEN - ONLY THIS SECTION IS GREEN): Key App Features */}
-      <section className="py-24 bg-gradient-to-b from-[#065F46] via-[#047857] to-[#064E3B] text-white border-t border-emerald-600/50 relative overflow-hidden">
+      <section id="why-choose" className="py-24 bg-gradient-to-b from-[#065F46] via-[#047857] to-[#064E3B] text-white border-t border-emerald-600/50 relative overflow-hidden">
         {/* Ambient Glows */}
         <div className="absolute top-1/2 left-1/3 w-[30rem] h-[30rem] bg-emerald-400/20 rounded-full blur-3xl pointer-events-none" />
 
@@ -263,7 +390,13 @@ export default function DownloadPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Card 1: Instant Card Deposits */}
-            <div className="bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 p-8 rounded-3xl hover:bg-white/85 hover:border-white hover:shadow-2xl hover:shadow-emerald-950/20 transition-all duration-300 shadow-xl shadow-slate-900/10 group hover:-translate-y-1.5 flex flex-col justify-between">
+            <div
+              className={`bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 p-8 rounded-3xl hover:bg-white hover:border-white hover:shadow-2xl hover:shadow-emerald-950/20 transition-all duration-1000 ease-out hover:scale-[1.025] shadow-xl shadow-slate-900/10 group flex flex-col justify-between cursor-pointer ${
+                whyChooseVisible.includes(0)
+                  ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
+                  : 'opacity-0 translate-y-16 scale-95 pointer-events-none'
+              }`}
+            >
               <div>
                 <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-700 flex items-center justify-center mb-6 border border-emerald-500/25 shadow-xs group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
                   <Zap className="w-6 h-6" />
@@ -278,7 +411,13 @@ export default function DownloadPage() {
             </div>
 
             {/* Card 2: Verified Card Gateways */}
-            <div className="bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 p-8 rounded-3xl hover:bg-white/85 hover:border-white hover:shadow-2xl hover:shadow-emerald-950/20 transition-all duration-300 shadow-xl shadow-slate-900/10 group hover:-translate-y-1.5 flex flex-col justify-between">
+            <div
+              className={`bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 p-8 rounded-3xl hover:bg-white hover:border-white hover:shadow-2xl hover:shadow-emerald-950/20 transition-all duration-1000 ease-out hover:scale-[1.025] shadow-xl shadow-slate-900/10 group flex flex-col justify-between cursor-pointer ${
+                whyChooseVisible.includes(1)
+                  ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
+                  : 'opacity-0 translate-y-16 scale-95 pointer-events-none'
+              }`}
+            >
               <div>
                 <div className="w-12 h-12 rounded-2xl bg-teal-500/15 text-teal-700 flex items-center justify-center mb-6 border border-teal-500/25 shadow-xs group-hover:scale-110 group-hover:bg-teal-600 group-hover:text-white transition-all duration-300">
                   <CreditCard className="w-6 h-6" />
@@ -293,7 +432,13 @@ export default function DownloadPage() {
             </div>
 
             {/* Card 3: Biometric Protection */}
-            <div className="bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 p-8 rounded-3xl hover:bg-white/85 hover:border-white hover:shadow-2xl hover:shadow-emerald-950/20 transition-all duration-300 shadow-xl shadow-slate-900/10 group hover:-translate-y-1.5 flex flex-col justify-between">
+            <div
+              className={`bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 p-8 rounded-3xl hover:bg-white hover:border-white hover:shadow-2xl hover:shadow-emerald-950/20 transition-all duration-1000 ease-out hover:scale-[1.025] shadow-xl shadow-slate-900/10 group flex flex-col justify-between cursor-pointer ${
+                whyChooseVisible.includes(2)
+                  ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
+                  : 'opacity-0 translate-y-16 scale-95 pointer-events-none'
+              }`}
+            >
               <div>
                 <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-700 flex items-center justify-center mb-6 border border-emerald-500/25 shadow-xs group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
                   <Lock className="w-6 h-6" />
@@ -308,7 +453,13 @@ export default function DownloadPage() {
             </div>
 
             {/* Card 4: Real-Time Alerts */}
-            <div className="bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 p-8 rounded-3xl hover:bg-white/85 hover:border-white hover:shadow-2xl hover:shadow-emerald-950/20 transition-all duration-300 shadow-xl shadow-slate-900/10 group hover:-translate-y-1.5 flex flex-col justify-between">
+            <div
+              className={`bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 p-8 rounded-3xl hover:bg-white hover:border-white hover:shadow-2xl hover:shadow-emerald-950/20 transition-all duration-1000 ease-out hover:scale-[1.025] shadow-xl shadow-slate-900/10 group flex flex-col justify-between cursor-pointer ${
+                whyChooseVisible.includes(3)
+                  ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
+                  : 'opacity-0 translate-y-16 scale-95 pointer-events-none'
+              }`}
+            >
               <div>
                 <div className="w-12 h-12 rounded-2xl bg-teal-500/15 text-teal-700 flex items-center justify-center mb-6 border border-teal-500/25 shadow-xs group-hover:scale-110 group-hover:bg-teal-600 group-hover:text-white transition-all duration-300">
                   <Bell className="w-6 h-6" />
@@ -326,9 +477,15 @@ export default function DownloadPage() {
       </section>
 
       {/* SECTION 4 (WHITE): Bottom Callout Banner */}
-      <section className="py-20 bg-slate-50 border-t border-slate-200">
+      <section id="download-banner" className="py-20 bg-slate-50 border-t border-slate-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white border border-slate-200 rounded-3xl p-8 sm:p-14 text-center shadow-xl">
+          <div
+            className={`bg-white border border-slate-200 rounded-3xl p-8 sm:p-14 text-center shadow-xl transition-all duration-1000 ease-out ${
+              bannerVisible
+                ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
+                : 'opacity-0 translate-y-16 scale-95 pointer-events-none'
+            }`}
+          >
             <h2 className="text-3xl sm:text-5xl font-black text-slate-950 tracking-tight leading-tight mb-4">
               Ready to experience modern digital banking?
             </h2>

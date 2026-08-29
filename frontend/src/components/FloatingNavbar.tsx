@@ -282,9 +282,9 @@ export default function FloatingNavbar({
               className="flex items-center group cursor-pointer select-none shrink-0 pl-1 sm:pl-2"
               title="RopeWallet Home"
             >
-              {/* 3D Animated Logo Icon (Clean, no dark smudge shadow) */}
+              {/* 3D Animated Logo Icon */}
               <div
-                className={`relative z-10 w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-slate-900 flex items-center justify-center text-white shrink-0 border border-slate-800/80 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:rotate-1 ${isScrolled
+                className={`relative z-10 w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-transparent flex items-center justify-center shrink-0 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 group-hover:rotate-1 ${isScrolled
                   ? 'scale-95'
                   : 'scale-105'
                   }`}
@@ -294,7 +294,9 @@ export default function FloatingNavbar({
                   alt="RopeWallet Logo"
                   width={44}
                   height={44}
-                  className="w-full h-full object-cover rounded-2xl"
+                  priority
+                  unoptimized
+                  className="w-full h-full object-contain rounded-2xl"
                 />
               </div>
 

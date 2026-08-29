@@ -39,6 +39,7 @@ export default function ProfessionalWhiteLandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [clickedStep, setClickedStep] = useState<number | null>(null);
   const [howItWorksInView, setHowItWorksInView] = useState(false);
+  const [securityCardsVisible, setSecurityCardsVisible] = useState<number[]>([]);
 
   useEffect(() => {
     // Trigger smooth initial load split-out animation after 150ms mount delay
@@ -74,7 +75,7 @@ export default function ProfessionalWhiteLandingPage() {
       observer.observe(howItWorksSection);
     }
 
-    // Universal IntersectionObserver for Staggered Scroll-Reveal Animations on Every Section
+    // Universal IntersectionObserver for Staggered Scroll-Reveal Animations on generic sections
     const revealElements = document.querySelectorAll('.reveal-init');
     let revealObserver: IntersectionObserver | null = null;
 
@@ -88,10 +89,37 @@ export default function ProfessionalWhiteLandingPage() {
             }
           });
         },
-        { threshold: 0.08, rootMargin: '0px 0px -30px 0px' }
+        { threshold: 0.1 }
       );
 
       revealElements.forEach((el) => revealObserver?.observe(el));
+    }
+
+    // Dedicated 1-by-1 Sequential Cascade Observer for "Built For Complete Peace of Mind & Safety"
+    const securitySection = document.getElementById('security');
+    let securityObserver: IntersectionObserver | null = null;
+
+    if (securitySection) {
+      securityObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              setSecurityCardsVisible((prev) => {
+                if (prev.length === 0) {
+                  setTimeout(() => setSecurityCardsVisible((p) => (p.includes(1) ? p : [...p, 1])), 380);
+                  setTimeout(() => setSecurityCardsVisible((p) => (p.includes(2) ? p : [...p, 2])), 760);
+                  setTimeout(() => setSecurityCardsVisible((p) => (p.includes(3) ? p : [...p, 3])), 1140);
+                  return [0];
+                }
+                return prev;
+              });
+              securityObserver?.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.15 }
+      );
+      securityObserver.observe(securitySection);
     }
 
     return () => {
@@ -99,6 +127,7 @@ export default function ProfessionalWhiteLandingPage() {
       window.removeEventListener('scroll', handleScroll);
       if (observer) observer.disconnect();
       if (revealObserver) revealObserver.disconnect();
+      if (securityObserver) securityObserver.disconnect();
     };
   }, []);
 
@@ -614,13 +643,13 @@ export default function ProfessionalWhiteLandingPage() {
           </div>
         </section>
 
-        {/* Infinite Rotating Stats Marquee Section */}
-        <section className="py-8 bg-gradient-to-r from-[#064E3B] via-[#047857] to-[#064E3B] text-white border-t border-b border-emerald-600/40 relative overflow-hidden reveal-init stagger-1">
+        {/* Infinite Rotating Stats Marquee Section (100% Full-Width with Tiny Gap) */}
+        <section className="mt-2 sm:mt-2.5 py-6 sm:py-7 bg-gradient-to-r from-[#064E3B] via-[#047857] to-[#064E3B] text-white border-t border-b border-emerald-600/40 relative overflow-hidden w-full">
           {/* Subtle Side Fade Overlays for seamless infinite appearance */}
           <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#064E3B] to-transparent z-10 pointer-events-none" />
           <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#064E3B] to-transparent z-10 pointer-events-none" />
 
-          <div className="animate-marquee flex items-center gap-6">
+          <div className="animate-marquee flex items-center gap-8 sm:gap-10">
             {[
               { value: "$10M+", label: "Processed Volume", tag: "FINANCIALS" },
               { value: "99.99%", label: "System Uptime", tag: "RELIABILITY" },
@@ -646,11 +675,11 @@ export default function ProfessionalWhiteLandingPage() {
             ].map((stat, i) => (
               <div
                 key={i}
-                className="flex items-center gap-3.5 px-6 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 transition-all shrink-0 shadow-lg group cursor-pointer"
+                className="flex items-center gap-3.5 px-6 py-3.5 rounded-2xl bg-black/50 hover:bg-black/75 hover:scale-[1.03] hover:border-emerald-400/40 backdrop-blur-xl border border-white/20 transition-all duration-1000 ease-in-out shrink-0 shadow-lg group cursor-pointer"
               >
                 <div className="text-left">
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl sm:text-3xl font-black text-white group-hover:text-emerald-200 transition-colors tracking-tight">
+                    <span className="text-2xl sm:text-3xl font-black text-white group-hover:text-emerald-200 transition-colors duration-700 ease-in-out tracking-tight">
                       {stat.value}
                     </span>
                     <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-200 border border-emerald-400/30">
@@ -867,7 +896,13 @@ export default function ProfessionalWhiteLandingPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Card 1: 100% Zero-Fraud Guarantee */}
-              <div className="group bg-white/75 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 rounded-3xl p-5 hover:border-white hover:bg-white/85 hover:shadow-2xl hover:shadow-emerald-950/20 hover:-translate-y-1.5 transition-all duration-300 shadow-xl shadow-slate-900/10 flex flex-col justify-between reveal-init stagger-2">
+              <div
+                className={`group bg-white/80 hover:bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 hover:border-white rounded-3xl p-5 hover:shadow-2xl hover:shadow-slate-950/25 shadow-xl shadow-slate-900/10 flex flex-col justify-between cursor-pointer transition-all duration-700 ease-out hover:scale-[1.025] ${
+                  securityCardsVisible.includes(0)
+                    ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
+                    : 'opacity-0 translate-y-16 scale-90 pointer-events-none'
+                }`}
+              >
                 <div>
                   <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/60 shadow-md">
                     <Image
@@ -875,22 +910,30 @@ export default function ProfessionalWhiteLandingPage() {
                       alt="Secure Contactless Mobile Payment in Real Life"
                       fill
                       unoptimized
-                      className="object-cover group-hover:scale-105 transition-transform duration-700"
+                      className="object-cover group-hover:scale-108 group-hover:brightness-105 transition-transform duration-700 ease-out"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
-                    <span className="absolute top-3 right-3 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-950/85 text-emerald-300 border border-emerald-400/40 backdrop-blur-md">
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent transition-opacity duration-700 ease-out group-hover:opacity-85" />
+                    <span className="absolute top-3 right-3 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-950/85 text-emerald-300 border border-emerald-400/40 backdrop-blur-md transition-all duration-700 ease-out group-hover:scale-105 group-hover:border-emerald-300 group-hover:shadow-md">
                       100% Safe
                     </span>
                   </div>
-                  <h3 className="font-black text-slate-900 text-lg mb-2 group-hover:text-emerald-700 transition-colors">Instant Fraud Shield</h3>
-                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                  <h3 className="font-black text-slate-900 text-lg mb-2 group-hover:text-emerald-600 transition-colors duration-700 ease-out">
+                    Instant Fraud Shield
+                  </h3>
+                  <p className="text-xs text-slate-600 group-hover:text-slate-800 leading-relaxed font-medium transition-colors duration-700 ease-out">
                     Every transaction is protected with end-to-end encryption and real-time fraud monitoring so your money is always 100% safe.
                   </p>
                 </div>
               </div>
 
               {/* Card 2: Lightning-Fast Auto-Verification */}
-              <div className="group bg-white/75 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 rounded-3xl p-5 hover:border-white hover:bg-white/85 hover:shadow-2xl hover:shadow-emerald-950/20 hover:-translate-y-1.5 transition-all duration-300 shadow-xl shadow-slate-900/10 flex flex-col justify-between reveal-init stagger-3">
+              <div
+                className={`group bg-white/80 hover:bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 hover:border-white rounded-3xl p-5 hover:shadow-2xl hover:shadow-slate-950/25 shadow-xl shadow-slate-900/10 flex flex-col justify-between cursor-pointer transition-all duration-700 ease-out hover:scale-[1.025] ${
+                  securityCardsVisible.includes(1)
+                    ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
+                    : 'opacity-0 translate-y-16 scale-90 pointer-events-none'
+                }`}
+              >
                 <div>
                   <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/60 shadow-md">
                     <Image
@@ -898,22 +941,30 @@ export default function ProfessionalWhiteLandingPage() {
                       alt="Instant Digital Payment Confirmation on Smartphone"
                       fill
                       unoptimized
-                      className="object-cover group-hover:scale-105 transition-transform duration-700"
+                      className="object-cover group-hover:scale-108 group-hover:brightness-105 transition-transform duration-700 ease-out"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
-                    <span className="absolute top-3 right-3 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-950/85 text-emerald-300 border border-emerald-400/40 backdrop-blur-md">
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent transition-opacity duration-700 ease-out group-hover:opacity-85" />
+                    <span className="absolute top-3 right-3 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-950/85 text-emerald-300 border border-emerald-400/40 backdrop-blur-md transition-all duration-700 ease-out group-hover:scale-105 group-hover:border-emerald-300 group-hover:shadow-md">
                       &lt; 3s Speed
                     </span>
                   </div>
-                  <h3 className="font-black text-slate-900 text-lg mb-2 group-hover:text-emerald-700 transition-colors">Instant Receipt Confirmation</h3>
-                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                  <h3 className="font-black text-slate-900 text-lg mb-2 group-hover:text-emerald-600 transition-colors duration-700 ease-out">
+                    Instant Receipt Confirmation
+                  </h3>
+                  <p className="text-xs text-slate-600 group-hover:text-slate-800 leading-relaxed font-medium transition-colors duration-700 ease-out">
                     No waiting or manual approvals. Payments and receipts are automatically matched and credited directly to your balance in under 3 seconds.
                   </p>
                 </div>
               </div>
 
               {/* Card 3: Universal Payment Hub */}
-              <div className="group bg-white/75 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 rounded-3xl p-5 hover:border-white hover:bg-white/85 hover:shadow-2xl hover:shadow-emerald-950/20 hover:-translate-y-1.5 transition-all duration-300 shadow-xl shadow-slate-900/10 flex flex-col justify-between reveal-init stagger-4">
+              <div
+                className={`group bg-white/80 hover:bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 hover:border-white rounded-3xl p-5 hover:shadow-2xl hover:shadow-slate-950/25 shadow-xl shadow-slate-900/10 flex flex-col justify-between cursor-pointer transition-all duration-700 ease-out hover:scale-[1.025] ${
+                  securityCardsVisible.includes(2)
+                    ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
+                    : 'opacity-0 translate-y-16 scale-90 pointer-events-none'
+                }`}
+              >
                 <div>
                   <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/60 shadow-md">
                     <Image
@@ -921,22 +972,30 @@ export default function ProfessionalWhiteLandingPage() {
                       alt="Multi-Channel Card and Wallet Payment Gateway"
                       fill
                       unoptimized
-                      className="object-cover group-hover:scale-105 transition-transform duration-700"
+                      className="object-cover group-hover:scale-108 group-hover:brightness-105 transition-transform duration-700 ease-out"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
-                    <span className="absolute top-3 right-3 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-950/85 text-emerald-300 border border-emerald-400/40 backdrop-blur-md">
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent transition-opacity duration-700 ease-out group-hover:opacity-85" />
+                    <span className="absolute top-3 right-3 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-950/85 text-emerald-300 border border-emerald-400/40 backdrop-blur-md transition-all duration-700 ease-out group-hover:scale-105 group-hover:border-emerald-300 group-hover:shadow-md">
                       Card Gateways
                     </span>
                   </div>
-                  <h3 className="font-black text-slate-900 text-lg mb-2 group-hover:text-emerald-700 transition-colors">All-in-One Card Hub</h3>
-                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                  <h3 className="font-black text-slate-900 text-lg mb-2 group-hover:text-emerald-600 transition-colors duration-700 ease-out">
+                    All-in-One Card Hub
+                  </h3>
+                  <p className="text-xs text-slate-600 group-hover:text-slate-800 leading-relaxed font-medium transition-colors duration-700 ease-out">
                     Deposit and manage funds effortlessly using Debit, Credit, and Virtual Cards with instant verification and zero transaction delays.
                   </p>
                 </div>
               </div>
 
               {/* Card 4: Automated 24/7 Host Earnings */}
-              <div className="group bg-white/75 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 rounded-3xl p-5 hover:border-white hover:bg-white/85 hover:shadow-2xl hover:shadow-emerald-950/20 hover:-translate-y-1.5 transition-all duration-300 shadow-xl shadow-slate-900/10 flex flex-col justify-between reveal-init stagger-5">
+              <div
+                className={`group bg-white/80 hover:bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 hover:border-white rounded-3xl p-5 hover:shadow-2xl hover:shadow-slate-950/25 shadow-xl shadow-slate-900/10 flex flex-col justify-between cursor-pointer transition-all duration-700 ease-out hover:scale-[1.025] ${
+                  securityCardsVisible.includes(3)
+                    ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
+                    : 'opacity-0 translate-y-16 scale-90 pointer-events-none'
+                }`}
+              >
                 <div>
                   <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/60 shadow-md">
                     <Image
@@ -944,15 +1003,17 @@ export default function ProfessionalWhiteLandingPage() {
                       alt="Happy Entrepreneur Managing Financial Growth and Payouts"
                       fill
                       unoptimized
-                      className="object-cover group-hover:scale-105 transition-transform duration-700"
+                      className="object-cover group-hover:scale-108 group-hover:brightness-105 transition-transform duration-700 ease-out"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
-                    <span className="absolute top-3 right-3 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-950/85 text-emerald-300 border border-emerald-400/40 backdrop-blur-md">
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent transition-opacity duration-700 ease-out group-hover:opacity-85" />
+                    <span className="absolute top-3 right-3 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-950/85 text-emerald-300 border border-emerald-400/40 backdrop-blur-md transition-all duration-700 ease-out group-hover:scale-105 group-hover:border-emerald-300 group-hover:shadow-md">
                       24/7 Payouts
                     </span>
                   </div>
-                  <h3 className="font-black text-slate-900 text-lg mb-2 group-hover:text-emerald-700 transition-colors">Automated Host Settlements</h3>
-                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                  <h3 className="font-black text-slate-900 text-lg mb-2 group-hover:text-emerald-600 transition-colors duration-700 ease-out">
+                    Automated Host Settlements
+                  </h3>
+                  <p className="text-xs text-slate-600 group-hover:text-slate-800 leading-relaxed font-medium transition-colors duration-700 ease-out">
                     Transparent 80/20 earnings split with zero hidden fees. Withdraw your funds instantly to your linked bank account anytime, day or night.
                   </p>
                 </div>
