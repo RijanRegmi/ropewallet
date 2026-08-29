@@ -867,9 +867,9 @@ export default function ProfessionalWhiteLandingPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Card 1: 100% Zero-Fraud Guarantee */}
-              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 hover:border-emerald-300 hover:bg-white/15 transition-all duration-300 shadow-2xl flex flex-col justify-between reveal-init stagger-2">
+              <div className="group bg-white/75 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 rounded-3xl p-5 hover:border-white hover:bg-white/85 hover:shadow-2xl hover:shadow-emerald-950/20 hover:-translate-y-1.5 transition-all duration-300 shadow-xl shadow-slate-900/10 flex flex-col justify-between reveal-init stagger-2">
                 <div>
-                  <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/20 shadow-md">
+                  <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/60 shadow-md">
                     <Image
                       src="https://images.unsplash.com/photo-1563013544-824ae1b704d3?auto=format&fit=crop&w=800&q=80"
                       alt="Secure Contactless Mobile Payment in Real Life"
@@ -882,17 +882,17 @@ export default function ProfessionalWhiteLandingPage() {
                       100% Safe
                     </span>
                   </div>
-                  <h3 className="font-black text-white text-lg mb-2">Instant Fraud Shield</h3>
-                  <p className="text-xs text-emerald-100/90 leading-relaxed font-medium">
+                  <h3 className="font-black text-slate-900 text-lg mb-2 group-hover:text-emerald-700 transition-colors">Instant Fraud Shield</h3>
+                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
                     Every transaction is protected with end-to-end encryption and real-time fraud monitoring so your money is always 100% safe.
                   </p>
                 </div>
               </div>
 
               {/* Card 2: Lightning-Fast Auto-Verification */}
-              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 hover:border-emerald-300 hover:bg-white/15 transition-all duration-300 shadow-2xl flex flex-col justify-between reveal-init stagger-3">
+              <div className="group bg-white/75 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 rounded-3xl p-5 hover:border-white hover:bg-white/85 hover:shadow-2xl hover:shadow-emerald-950/20 hover:-translate-y-1.5 transition-all duration-300 shadow-xl shadow-slate-900/10 flex flex-col justify-between reveal-init stagger-3">
                 <div>
-                  <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/20 shadow-md">
+                  <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/60 shadow-md">
                     <Image
                       src="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=800&q=80"
                       alt="Instant Digital Payment Confirmation on Smartphone"
@@ -905,17 +905,17 @@ export default function ProfessionalWhiteLandingPage() {
                       &lt; 3s Speed
                     </span>
                   </div>
-                  <h3 className="font-black text-white text-lg mb-2">Instant Receipt Confirmation</h3>
-                  <p className="text-xs text-emerald-100/90 leading-relaxed font-medium">
+                  <h3 className="font-black text-slate-900 text-lg mb-2 group-hover:text-emerald-700 transition-colors">Instant Receipt Confirmation</h3>
+                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
                     No waiting or manual approvals. Payments and receipts are automatically matched and credited directly to your balance in under 3 seconds.
                   </p>
                 </div>
               </div>
 
               {/* Card 3: Universal Payment Hub */}
-              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 hover:border-emerald-300 hover:bg-white/15 transition-all duration-300 shadow-2xl flex flex-col justify-between reveal-init stagger-4">
+              <div className="group bg-white/75 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 rounded-3xl p-5 hover:border-white hover:bg-white/85 hover:shadow-2xl hover:shadow-emerald-950/20 hover:-translate-y-1.5 transition-all duration-300 shadow-xl shadow-slate-900/10 flex flex-col justify-between reveal-init stagger-4">
                 <div>
-                  <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/20 shadow-md">
+                  <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/60 shadow-md">
                     <Image
                       src="https://images.unsplash.com/photo-1559526324-593bc073d938?auto=format&fit=crop&w=800&q=80"
                       alt="Multi-Channel Card and Wallet Payment Gateway"
@@ -928,17 +928,17 @@ export default function ProfessionalWhiteLandingPage() {
                       Card Gateways
                     </span>
                   </div>
-                  <h3 className="font-black text-white text-lg mb-2">All-in-One Card Hub</h3>
-                  <p className="text-xs text-emerald-100/90 leading-relaxed font-medium">
+                  <h3 className="font-black text-slate-900 text-lg mb-2 group-hover:text-emerald-700 transition-colors">All-in-One Card Hub</h3>
+                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
                     Deposit and manage funds effortlessly using Debit, Credit, and Virtual Cards with instant verification and zero transaction delays.
                   </p>
                 </div>
               </div>
 
               {/* Card 4: Automated 24/7 Host Earnings */}
-              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-5 hover:border-emerald-300 hover:bg-white/15 transition-all duration-300 shadow-2xl flex flex-col justify-between reveal-init stagger-5">
+              <div className="group bg-white/75 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 rounded-3xl p-5 hover:border-white hover:bg-white/85 hover:shadow-2xl hover:shadow-emerald-950/20 hover:-translate-y-1.5 transition-all duration-300 shadow-xl shadow-slate-900/10 flex flex-col justify-between reveal-init stagger-5">
                 <div>
-                  <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/20 shadow-md">
+                  <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/60 shadow-md">
                     <Image
                       src="https://images.unsplash.com/photo-1553729459-efe14ef6055d?auto=format&fit=crop&w=800&q=80"
                       alt="Happy Entrepreneur Managing Financial Growth and Payouts"
@@ -951,8 +951,8 @@ export default function ProfessionalWhiteLandingPage() {
                       24/7 Payouts
                     </span>
                   </div>
-                  <h3 className="font-black text-white text-lg mb-2">Automated Host Settlements</h3>
-                  <p className="text-xs text-emerald-100/90 leading-relaxed font-medium">
+                  <h3 className="font-black text-slate-900 text-lg mb-2 group-hover:text-emerald-700 transition-colors">Automated Host Settlements</h3>
+                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
                     Transparent 80/20 earnings split with zero hidden fees. Withdraw your funds instantly to your linked bank account anytime, day or night.
                   </p>
                 </div>

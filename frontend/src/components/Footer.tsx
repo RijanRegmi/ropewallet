@@ -19,13 +19,11 @@ export default function Footer({ className = '', reveal = true }: FooterProps) {
           {/* Logo & Tagline */}
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-10 h-10 rounded-2xl overflow-hidden flex items-center justify-center bg-white shadow-md border border-slate-100 group-hover:scale-105 transition-transform">
-              <img
+              <Image
                 src="/ropewallet.png"
                 alt="RopeWallet Logo"
                 width={40}
                 height={40}
-                loading="lazy"
-                decoding="async"
                 className="w-full h-full object-contain"
               />
             </div>
@@ -82,13 +80,11 @@ export default function Footer({ className = '', reveal = true }: FooterProps) {
           <div className="flex items-center gap-2">
             <span className="text-slate-500 font-semibold">Engineered by</span>
             <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-300 shadow-xs flex items-center justify-center overflow-hidden p-0.5">
-              <img
+              <Image
                 src="/RJN.png"
                 alt="RJN Logo"
                 width={32}
                 height={32}
-                loading="lazy"
-                decoding="async"
                 className="w-full h-full object-cover rounded-full"
               />
             </div>

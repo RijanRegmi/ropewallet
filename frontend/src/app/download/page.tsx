@@ -262,52 +262,64 @@ export default function DownloadPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-3xl hover:bg-white/15 hover:border-emerald-300 transition-all duration-300 shadow-2xl group hover:-translate-y-1">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-400/20 text-emerald-300 flex items-center justify-center mb-6 border border-emerald-400/30 group-hover:scale-110 transition-transform">
-                <Zap className="w-6 h-6" />
+            {/* Card 1: Instant Card Deposits */}
+            <div className="bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 p-8 rounded-3xl hover:bg-white/85 hover:border-white hover:shadow-2xl hover:shadow-emerald-950/20 transition-all duration-300 shadow-xl shadow-slate-900/10 group hover:-translate-y-1.5 flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-700 flex items-center justify-center mb-6 border border-emerald-500/25 shadow-xs group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
+                  <Zap className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-black text-slate-900 mb-2 group-hover:text-emerald-700 transition-colors">
+                  Instant Card Deposits
+                </h3>
+                <p className="text-slate-600 text-xs leading-relaxed font-medium">
+                  Deposit funds instantly using Debit, Credit, or Virtual Cards with zero transaction delays.
+                </p>
               </div>
-              <h3 className="text-lg font-black text-white mb-2">
-                Instant Card Deposits
-              </h3>
-              <p className="text-emerald-100/90 text-xs leading-relaxed font-medium">
-                Deposit funds instantly using Debit, Credit, or Virtual Cards with zero transaction delays.
-              </p>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-3xl hover:bg-white/15 hover:border-emerald-300 transition-all duration-300 shadow-2xl group hover:-translate-y-1">
-              <div className="w-12 h-12 rounded-2xl bg-teal-400/20 text-teal-300 flex items-center justify-center mb-6 border border-teal-400/30 group-hover:scale-110 transition-transform">
-                <CreditCard className="w-6 h-6" />
+            {/* Card 2: Verified Card Gateways */}
+            <div className="bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 p-8 rounded-3xl hover:bg-white/85 hover:border-white hover:shadow-2xl hover:shadow-emerald-950/20 transition-all duration-300 shadow-xl shadow-slate-900/10 group hover:-translate-y-1.5 flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-teal-500/15 text-teal-700 flex items-center justify-center mb-6 border border-teal-500/25 shadow-xs group-hover:scale-110 group-hover:bg-teal-600 group-hover:text-white transition-all duration-300">
+                  <CreditCard className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-black text-slate-900 mb-2 group-hover:text-teal-700 transition-colors">
+                  Verified Card Gateways
+                </h3>
+                <p className="text-slate-600 text-xs leading-relaxed font-medium">
+                  Supports all major Debit &amp; Credit Cards, Apple Pay, and linked accounts with bank-grade security.
+                </p>
               </div>
-              <h3 className="text-lg font-black text-white mb-2">
-                Verified Card Gateways
-              </h3>
-              <p className="text-emerald-100/90 text-xs leading-relaxed font-medium">
-                Supports all major Debit &amp; Credit Cards, Apple Pay, and linked accounts with bank-grade security.
-              </p>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-3xl hover:bg-white/15 hover:border-emerald-300 transition-all duration-300 shadow-2xl group hover:-translate-y-1">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-400/20 text-emerald-300 flex items-center justify-center mb-6 border border-emerald-400/30 group-hover:scale-110 transition-transform">
-                <Lock className="w-6 h-6" />
+            {/* Card 3: Biometric Protection */}
+            <div className="bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 p-8 rounded-3xl hover:bg-white/85 hover:border-white hover:shadow-2xl hover:shadow-emerald-950/20 transition-all duration-300 shadow-xl shadow-slate-900/10 group hover:-translate-y-1.5 flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-700 flex items-center justify-center mb-6 border border-emerald-500/25 shadow-xs group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
+                  <Lock className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-black text-slate-900 mb-2 group-hover:text-emerald-700 transition-colors">
+                  Biometric Protection
+                </h3>
+                <p className="text-slate-600 text-xs leading-relaxed font-medium">
+                  Lock wallet access and sensitive actions securely with Fingerprint ID or Face Recognition.
+                </p>
               </div>
-              <h3 className="text-lg font-black text-white mb-2">
-                Biometric Protection
-              </h3>
-              <p className="text-emerald-100/90 text-xs leading-relaxed font-medium">
-                Lock wallet access and sensitive actions securely with Fingerprint ID or Face Recognition.
-              </p>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-3xl hover:bg-white/15 hover:border-emerald-300 transition-all duration-300 shadow-2xl group hover:-translate-y-1">
-              <div className="w-12 h-12 rounded-2xl bg-teal-400/20 text-teal-300 flex items-center justify-center mb-6 border border-teal-400/30 group-hover:scale-110 transition-transform">
-                <Bell className="w-6 h-6" />
+            {/* Card 4: Real-Time Alerts */}
+            <div className="bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 p-8 rounded-3xl hover:bg-white/85 hover:border-white hover:shadow-2xl hover:shadow-emerald-950/20 transition-all duration-300 shadow-xl shadow-slate-900/10 group hover:-translate-y-1.5 flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-teal-500/15 text-teal-700 flex items-center justify-center mb-6 border border-teal-500/25 shadow-xs group-hover:scale-110 group-hover:bg-teal-600 group-hover:text-white transition-all duration-300">
+                  <Bell className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-black text-slate-900 mb-2 group-hover:text-teal-700 transition-colors">
+                  Real-Time Alerts
+                </h3>
+                <p className="text-slate-600 text-xs leading-relaxed font-medium">
+                  Receive instant push notifications for every deposit, transfer, and payout settlement.
+                </p>
               </div>
-              <h3 className="text-lg font-black text-white mb-2">
-                Real-Time Alerts
-              </h3>
-              <p className="text-emerald-100/90 text-xs leading-relaxed font-medium">
-                Receive instant push notifications for every deposit, transfer, and payout settlement.
-              </p>
             </div>
           </div>
         </div>
