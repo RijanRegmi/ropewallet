@@ -18,17 +18,16 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.ropewallet.com"),
   title: {
-    default: "RopeWallet – Enterprise Digital Wallet & Settlement Platform",
+    default: "RopeWallet – Digital Wallet & Settlement Platform",
     template: "%s | RopeWallet",
   },
   description:
-    "RopeWallet is an ultra-secure enterprise digital wallet platform for instant deposit settlements, withdrawals, and 256-bit encrypted card payments.",
+    "RopeWallet is an ultra-secure digital wallet platform for instant deposit settlements, withdrawals, and 256-bit encrypted card payments.",
   keywords: [
     "RopeWallet",
     "rope wallet",
     "rope wallet app",
     "digital wallet",
-    "enterprise wallet",
     "payment gateway",
     "instant settlement",
     "secure wallet",
@@ -39,7 +38,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "RopeWallet Team", url: "https://www.ropewallet.com" }],
   creator: "RJN",
-  publisher: "RopeWallet Enterprise",
+  publisher: "RopeWallet",
   category: "Finance & Fintech",
   alternates: {
     canonical: "/",
@@ -66,9 +65,9 @@ export const metadata: Metadata = {
     shortcut: "/ropewallet.png",
   },
   openGraph: {
-    title: "RopeWallet – Enterprise Digital Wallet & Settlement Platform",
+    title: "RopeWallet – Digital Wallet & Settlement Platform",
     description:
-      "Manage your money securely with RopeWallet. Ultra-fast deposit settlements, instant payment gateways, and enterprise-grade 256-bit encryption.",
+      "Manage your money securely with RopeWallet. Ultra-fast deposit settlements, instant payment gateways, and bank-grade 256-bit encryption.",
     url: "https://www.ropewallet.com",
     siteName: "RopeWallet",
     locale: "en_US",
@@ -78,15 +77,15 @@ export const metadata: Metadata = {
         url: "/ropewallet.png",
         width: 1200,
         height: 630,
-        alt: "RopeWallet Enterprise Logo & Digital Wallet Banner",
+        alt: "RopeWallet Logo & Digital Wallet Banner",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "RopeWallet – Enterprise Digital Wallet & Settlement Platform",
+    title: "RopeWallet – Digital Wallet & Settlement Platform",
     description:
-      "Ultra-secure digital wallet platform for automated deposits, real-time balance tracking, and enterprise security.",
+      "Ultra-secure digital wallet platform for automated deposits, real-time balance tracking, and bank-grade security.",
     images: ["/ropewallet.png"],
     creator: "@ropewallet",
   },
@@ -112,7 +111,7 @@ export default function RootLayout({
           "https://facebook.com",
           "https://instagram.com"
         ],
-        "description": "RopeWallet provides ultra-secure enterprise digital wallet solutions, instant payment settlement, and mobile app integration."
+        "description": "RopeWallet provides ultra-secure digital wallet solutions, instant payment settlement, and mobile app integration."
       },
       {
         "@type": "WebSite",

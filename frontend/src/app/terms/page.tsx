@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import FloatingNavbar from "@/components/FloatingNavbar";
+import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "Terms & Conditions",
-  description: "Read the Terms and Conditions for using RopeWallet, the enterprise digital wallet platform for secure deposits, card payments, and instant payouts.",
+  description: "Read the Terms and Conditions for using RopeWallet, the digital wallet platform for secure deposits, card payments, and instant payouts.",
   alternates: { canonical: "/terms" },
 };
 
@@ -243,37 +244,8 @@ export default function TermsPage() {
         </div>
       </section>
 
-      {/* SECTION 4 (FOOTER - DARK FOREST GREEN) */}
-      <footer className="border-t border-emerald-800/60 bg-[#022c22] py-12 text-sm text-emerald-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/ropewallet.png"
-              alt="RopeWallet"
-              width={24}
-              height={24}
-              className="rounded-md"
-            />
-            <span className="font-black text-white">
-              RopeWallet Enterprise &bull; RJN Tech
-            </span>
-          </div>
-          <div className="flex items-center gap-6 text-emerald-100 font-bold">
-            <Link href="/" className="hover:text-white transition-colors">
-              Home
-            </Link>
-            <Link href="/download" className="hover:text-white transition-colors">
-              Download APK
-            </Link>
-            <a href="https://ropewallet.com" className="hover:text-white transition-colors">
-              Official Site
-            </a>
-          </div>
-          <p className="text-xs text-emerald-300/80 font-medium">
-            &copy; 2026 RopeWallet &amp; RJN Tech. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      {/* SECTION 4 (FOOTER) */}
+      <Footer reveal={false} />
     </div>
   );
 }

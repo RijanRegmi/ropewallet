@@ -12,6 +12,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import FloatingNavbar from "@/components/FloatingNavbar";
+import Footer from "@/components/Footer";
 
 export const metadata = {
   title: "Download RopeWallet App for Android | Direct APK Download",
@@ -88,7 +89,7 @@ export default function DownloadPage() {
                 <div className="bg-slate-50 border border-slate-200/90 p-4 rounded-2xl shadow-xs">
                   <div className="text-xs text-slate-500 font-bold">Version</div>
                   <div className="text-sm font-black text-slate-900 mt-0.5">
-                    v1.0.0 (Build 2)
+                    v1.0.0
                   </div>
                 </div>
                 <div className="bg-slate-50 border border-slate-200/90 p-4 rounded-2xl shadow-xs">
@@ -256,7 +257,7 @@ export default function DownloadPage() {
               Why Choose RopeWallet?
             </h2>
             <p className="text-emerald-100 text-base sm:text-lg font-medium">
-              Engineered for instantaneous transaction speed, robust enterprise security, and seamless financial control.
+              Engineered for instantaneous transaction speed, robust digital security, and seamless financial control.
             </p>
           </div>
 
@@ -336,37 +337,8 @@ export default function DownloadPage() {
         </div>
       </section>
 
-      {/* SECTION 5 (FOOTER - DARK FOREST GREEN) */}
-      <footer className="border-t border-emerald-800/60 bg-[#022c22] py-12 text-sm text-emerald-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/ropewallet.png"
-              alt="RopeWallet"
-              width={24}
-              height={24}
-              className="rounded-md"
-            />
-            <span className="font-black text-white">
-              RopeWallet Enterprise &bull; RJN Tech
-            </span>
-          </div>
-          <div className="flex items-center gap-6 text-emerald-100 font-bold">
-            <Link href="/" className="hover:text-white transition-colors">
-              Home
-            </Link>
-            <Link href="/download" className="hover:text-white transition-colors">
-              Download APK
-            </Link>
-            <a href="https://ropewallet.com" className="hover:text-white transition-colors">
-              Official Site
-            </a>
-          </div>
-          <p className="text-xs text-emerald-300/80 font-medium">
-            &copy; 2026 RopeWallet &amp; RJN Tech. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      {/* SECTION 5 (FOOTER) */}
+      <Footer reveal={false} />
     </div>
   );
 }
