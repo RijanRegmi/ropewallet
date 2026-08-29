@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ChevronRight, UserPlus, Download } from 'lucide-react';
 
@@ -51,7 +52,38 @@ export default function FloatingNavbar({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
-  const lastClickTimeRef = React.useRef<number>(0);
+  const lastClickTimeRef = useRef<number>(0);
+  const navContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close mobile menu on outside click or escape key
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (
+        mobileMenuOpen &&
+        navContainerRef.current &&
+        !navContainerRef.current.contains(event.target as Node)
+      ) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    if (mobileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     if (!pathname || pathname !== '/') {
@@ -234,7 +266,8 @@ export default function FloatingNavbar({
     <header className="sticky top-2.5 sm:top-4 z-50 w-full px-2 sm:px-4 md:px-6 pointer-events-none transition-all duration-500">
       {/* Centered spacious container */}
       <div
-        className={`mx-auto flex flex-col items-center pointer-events-auto transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isScrolled ? 'max-w-[1240px] w-full' : 'max-w-[1380px] w-full'
+        ref={navContainerRef}
+        className={`relative mx-auto flex flex-col items-center pointer-events-auto transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isScrolled ? 'max-w-[1240px] w-full' : 'max-w-[1380px] w-full'
           }`}
       >
         {/* Transparent Frosted Glass Floating Pill Container */}
@@ -256,12 +289,11 @@ export default function FloatingNavbar({
                   : 'scale-105'
                   }`}
               >
-                <img
+                <Image
                   src={logoImg}
                   alt="RopeWallet Logo"
                   width={44}
                   height={44}
-                  decoding="async"
                   className="w-full h-full object-cover rounded-2xl"
                 />
               </div>
@@ -411,64 +443,56 @@ export default function FloatingNavbar({
         </div>
       </div>
 
-        {/* 4. Responsive Mobile Glassmorphic Drawer (Slow, cinematic downward slide animation) */}
+        {/* 4. Responsive Mobile Glassmorphic Drawer (Cinematic ultra-slow pop floating overlay) */}
         <div
-          className={`lg:hidden w-full grid transition-[grid-template-rows,opacity,margin] duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${mobileMenuOpen
-            ? 'grid-rows-[1fr] opacity-100 mt-3 pointer-events-auto'
-            : 'grid-rows-[0fr] opacity-0 mt-0 pointer-events-none'
-            }`}
+          className={`lg:hidden absolute top-full left-0 right-0 w-full transition-all duration-[1100ms] ease-[cubic-bezier(0.16,1,0.3,1)] origin-top z-50 ${
+            mobileMenuOpen
+              ? 'opacity-100 scale-100 translate-y-2.5 pointer-events-auto visible'
+              : 'opacity-0 scale-90 -translate-y-6 pointer-events-none invisible'
+          }`}
         >
-          <div className="overflow-hidden">
-            <div
-              className={`transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${mobileMenuOpen
-                ? 'translate-y-0 opacity-100'
-                : '-translate-y-8 opacity-0'
-                }`}
-            >
-              <div className="bg-white/95 backdrop-blur-3xl border border-slate-200/80 rounded-3xl p-5 space-y-1">
-                {navItems.map((item, index) => (
-                  <div key={item.label}>
-                    {item.href.startsWith('/') && !item.href.includes('#') ? (
-                      <Link
-                        href={item.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center justify-between px-4 py-3 rounded-2xl text-[15px] font-medium text-slate-800 hover:text-slate-950 hover:bg-emerald-500/15 transition-all whitespace-nowrap"
-                      >
-                        <span>{item.label}</span>
-                        {item.badge && (
-                          <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border ${themeStyles.badge}`}>
-                            {item.badge}
-                          </span>
-                        )}
-                      </Link>
-                    ) : (
-                      <a
-                        href={item.href}
-                        onClick={(e) => handleNavClick(e, item.href)}
-                        className="flex items-center justify-between px-4 py-3 rounded-2xl text-[15px] font-medium text-slate-800 hover:text-slate-950 hover:bg-emerald-500/15 transition-all cursor-pointer whitespace-nowrap"
-                      >
-                        <span>{item.label}</span>
-                        {item.badge && (
-                          <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border ${themeStyles.badge}`}>
-                            {item.badge}
-                          </span>
-                        )}
-                      </a>
-                    )}
-                  </div>
-                ))}
-
-                <div className="pt-3 mt-2 border-t border-slate-200/70">
-                  <a
-                    href={ctaHref}
-                    onClick={(e) => handleNavClick(e, ctaHref)}
-                    className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm text-white transition-all whitespace-nowrap cursor-pointer ${themeStyles.ctaBtn}`}
+          <div className="bg-white/95 backdrop-blur-3xl border border-slate-200/90 rounded-3xl p-5 space-y-1 shadow-2xl shadow-slate-900/20">
+            {navItems.map((item, index) => (
+              <div key={item.label}>
+                {item.href.startsWith('/') && !item.href.includes('#') ? (
+                  <Link
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center justify-between px-4 py-3 rounded-2xl text-[15px] font-medium text-slate-800 hover:text-slate-950 hover:bg-emerald-500/15 transition-all whitespace-nowrap"
                   >
-                    <UserPlus className="w-4 h-4 shrink-0 text-white" />
-                    <span className="text-white font-semibold">{ctaLabel}</span>
+                    <span>{item.label}</span>
+                    {item.badge && (
+                      <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border ${themeStyles.badge}`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+                ) : (
+                  <a
+                    href={item.href}
+                    onClick={(e) => handleNavClick(e, item.href)}
+                    className="flex items-center justify-between px-4 py-3 rounded-2xl text-[15px] font-medium text-slate-800 hover:text-slate-950 hover:bg-emerald-500/15 transition-all cursor-pointer whitespace-nowrap"
+                  >
+                    <span>{item.label}</span>
+                    {item.badge && (
+                      <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border ${themeStyles.badge}`}>
+                        {item.badge}
+                      </span>
+                    )}
                   </a>
-                </div>
+                )}
               </div>
+            ))}
+
+            <div className="pt-3 mt-2 border-t border-slate-200/70">
+              <a
+                href={ctaHref}
+                onClick={(e) => handleNavClick(e, ctaHref)}
+                className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm text-white transition-all whitespace-nowrap cursor-pointer shadow-md ${themeStyles.ctaBtn}`}
+              >
+                <UserPlus className="w-4 h-4 shrink-0 text-white" />
+                <span className="text-white font-semibold">{ctaLabel}</span>
+              </a>
             </div>
           </div>
         </div>
