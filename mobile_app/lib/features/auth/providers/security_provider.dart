@@ -2,14 +2,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/security/secure_storage_service.dart';
 import '../presentation/widgets/pin_code_dialog.dart';
 
 class SecurityProvider with ChangeNotifier {
   final ApiClient _apiClient = ApiClient();
   final LocalAuthentication _localAuth = LocalAuthentication();
-  static const _secureStorage = FlutterSecureStorage();
+  final _secureStorage = SecureStorageService.instance;
 
   bool _isBiometricSupported = false;
   bool _useBiometricsForLogin = false;

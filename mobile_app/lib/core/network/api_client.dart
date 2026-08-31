@@ -1,15 +1,15 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants/api_constants.dart';
 import '../security/device_security_service.dart';
+import '../security/secure_storage_service.dart';
 
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
   factory ApiClient() => _instance;
   ApiClient._internal();
 
-  static const _secureStorage = FlutterSecureStorage();
+  final _secureStorage = SecureStorageService.instance;
 
   Future<Map<String, String>> _getHeaders() async {
     final token = await _secureStorage.read(key: 'auth_token');

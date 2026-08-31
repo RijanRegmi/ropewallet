@@ -1,16 +1,16 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
+import '../../../core/security/secure_storage_service.dart';
 import '../../home/providers/wallet_provider.dart';
 import 'security_provider.dart';
 import '../presentation/pages/login_page.dart';
 
 class AuthProvider with ChangeNotifier {
   final ApiClient _apiClient = ApiClient();
-  static const _secureStorage = FlutterSecureStorage();
+  final _secureStorage = SecureStorageService.instance;
   
   Map<String, dynamic>? _user;
   String? _token;

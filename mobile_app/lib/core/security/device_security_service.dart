@@ -1,5 +1,5 @@
 import 'dart:math';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'secure_storage_service.dart';
 
 class DeviceSecurityService {
   static final DeviceSecurityService _instance = DeviceSecurityService._internal();
@@ -7,7 +7,7 @@ class DeviceSecurityService {
   DeviceSecurityService._internal();
 
   static const String _deviceIdKey = 'ropewallet_secure_device_id';
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final SecureStorageService _storage = SecureStorageService.instance;
   String? _cachedDeviceId;
 
   /// Get persistent unique device ID for this physical device / app installation

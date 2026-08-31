@@ -5,7 +5,7 @@ import '../../providers/security_provider.dart';
 import '../../../home/providers/wallet_provider.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import 'set_pin_page.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../../../core/security/secure_storage_service.dart';
 import 'device_verification_page.dart';
 import 'forgot_password_page.dart';
 import 'signup_page.dart';
@@ -58,7 +58,7 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       if (loginResult['success'] == true) {
-        const storage = FlutterSecureStorage();
+        final storage = SecureStorageService.instance;
         await storage.write(key: 'saved_email', value: _emailController.text.trim());
         await storage.write(key: 'saved_password', value: _passwordController.text);
 
@@ -171,7 +171,7 @@ class _LoginPageState extends State<LoginPage> {
     final authenticated = await securityProvider.authenticateBiometrically();
     if (authenticated && mounted) {
       // Read stored credentials
-      const storage = FlutterSecureStorage();
+      final storage = SecureStorageService.instance;
       final savedEmail = await storage.read(key: 'saved_email');
       final savedPassword = await storage.read(key: 'saved_password');
 
