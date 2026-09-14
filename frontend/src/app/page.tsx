@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
 import {
   ShieldCheck,
@@ -10,18 +9,10 @@ import {
   Sparkles,
   ChevronRight,
   TrendingUp,
-  Layers,
-  Globe,
   Clock,
-  Activity,
   Smartphone,
-  Download,
-  Apple,
-  Play,
   CheckCircle2,
   UserPlus,
-  X,
-  Menu,
   Send,
   MessageSquare,
   User,
@@ -34,29 +25,11 @@ import FloatingNavbar from '@/components/FloatingNavbar';
 import Footer from '@/components/Footer';
 
 export default function ProfessionalWhiteLandingPage() {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [clickedStep, setClickedStep] = useState<number | null>(null);
   const [howItWorksInView, setHowItWorksInView] = useState(false);
   const [securityCardsVisible, setSecurityCardsVisible] = useState<number[]>([]);
 
   useEffect(() => {
-    // Trigger smooth initial load split-out animation after 150ms mount delay
-    const timer = setTimeout(() => {
-      setIsLoaded(true);
-    }, 150);
-
-    const handleScroll = () => {
-      if (window.scrollY > 50) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
-    };
-    handleScroll();
-    window.addEventListener('scroll', handleScroll, { passive: true });
-
     // IntersectionObserver to trigger sequential 1 -> Arrow -> 2 -> Arrow -> 3 -> Arrow -> 4 animation when in view
     const howItWorksSection = document.getElementById('how-it-works');
     let observer: IntersectionObserver | null = null;
@@ -123,8 +96,6 @@ export default function ProfessionalWhiteLandingPage() {
     }
 
     return () => {
-      clearTimeout(timer);
-      window.removeEventListener('scroll', handleScroll);
       if (observer) observer.disconnect();
       if (revealObserver) revealObserver.disconnect();
       if (securityObserver) securityObserver.disconnect();
@@ -160,7 +131,7 @@ export default function ProfessionalWhiteLandingPage() {
     setIsSubmitting(true);
     setSubmitError('');
 
-    const res = await apiRequest<any>('/pay/become-host-request', 'POST', hostForm);
+    const res = await apiRequest<{ message?: string }>('/pay/become-host-request', 'POST', hostForm);
     setIsSubmitting(false);
 
     if (res.success) {

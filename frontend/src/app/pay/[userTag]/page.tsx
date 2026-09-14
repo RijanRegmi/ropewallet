@@ -1,16 +1,27 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
-import { Shield, Sparkles, CreditCard, ArrowRight, Smartphone, AlertCircle } from 'lucide-react';
+import { Shield, Sparkles, ArrowRight, AlertCircle } from 'lucide-react';
+
+interface HostInfoData {
+  id: string;
+  name: string;
+  userTag: string;
+  activePlatforms?: string[];
+}
+
+interface OrderCreateResponse {
+  orderId: string;
+}
 
 export default function HostPayPage() {
   const params = useParams();
   const router = useRouter();
   const userTag = (params?.userTag as string) || '';
 
-  const [hostInfo, setHostInfo] = useState<{ id: string; name: string; userTag: string; activePlatforms?: string[] } | null>(null);
+  const [hostInfo, setHostInfo] = useState<HostInfoData | null>(null);
   const [loadingHost, setLoadingHost] = useState(true);
   const [hostError, setHostError] = useState('');
 
@@ -32,20 +43,16 @@ export default function HostPayPage() {
     applepay: { name: 'Apple Pay', logo: 'https://img.icons8.com/color/96/apple-pay.png', color: 'purple' },
   };
 
-  useEffect(() => {
-    if (userTag) {
-      fetchHostInfo(userTag);
-    }
-  }, [userTag]);
-
-  const fetchHostInfo = async (tag: string) => {
+  const fetchHostInfo = useCallback(async (tag: string) => {
     setLoadingHost(true);
     setHostError('');
     let cleanTag = tag;
     try {
       cleanTag = decodeURIComponent(tag).trim();
-    } catch (_) {}
-    const res = await apiRequest<any>(`/pay/host/${encodeURIComponent(cleanTag)}`);
+    } catch {
+      // ignore decode error
+    }
+    const res = await apiRequest<HostInfoData>(`/pay/host/${encodeURIComponent(cleanTag)}`);
     setLoadingHost(false);
 
     if (res.success && res.data) {
@@ -56,7 +63,13 @@ export default function HostPayPage() {
     } else {
       setHostError(res.error || 'Host account not found');
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (userTag) {
+      fetchHostInfo(userTag);
+    }
+  }, [userTag, fetchHostInfo]);
 
   const handleGenerateLink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,10 +84,12 @@ export default function HostPayPage() {
     let cleanTag = userTag;
     try {
       cleanTag = decodeURIComponent(userTag).trim();
-    } catch (_) {}
+    } catch {
+      // ignore decode error
+    }
 
     setCreatingOrder(true);
-    const res = await apiRequest<any>('/pay/create-order', 'POST', {
+    const res = await apiRequest<OrderCreateResponse>('/pay/create-order', 'POST', {
       userTag: cleanTag,
       gameUserId,
       payerTag,

@@ -1,18 +1,39 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 import { Clock, Copy, CheckCircle2, ExternalLink, ShieldCheck, AlertTriangle, Sparkles } from 'lucide-react';
+
+interface OrderData {
+  orderNo: string;
+  amount: number | string;
+  hostName: string;
+  gameUserId?: string;
+  status: string;
+  remainingSeconds?: number;
+  assignedHandle: string;
+  paymentMethod: string;
+  directPayUrl?: string;
+}
 
 export default function OrderGatewayHubPage() {
   const params = useParams();
   const orderId = (params?.orderId as string) || '';
 
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [timerText, setTimerText] = useState('20:00');
+
+  const fetchOrderDetails = useCallback(async () => {
+    if (!orderId) return;
+    const res = await apiRequest<OrderData>(`/pay/order/${orderId}`);
+    setLoading(false);
+    if (res.success && res.data) {
+      setOrder(res.data);
+    }
+  }, [orderId]);
 
   useEffect(() => {
     if (orderId) {
@@ -20,7 +41,7 @@ export default function OrderGatewayHubPage() {
       const interval = setInterval(fetchOrderDetails, 3000);
       return () => clearInterval(interval);
     }
-  }, [orderId]);
+  }, [orderId, fetchOrderDetails]);
 
   useEffect(() => {
     if (order?.remainingSeconds !== undefined) {
@@ -39,14 +60,6 @@ export default function OrderGatewayHubPage() {
       return () => clearInterval(timerInterval);
     }
   }, [order?.remainingSeconds]);
-
-  const fetchOrderDetails = async () => {
-    const res = await apiRequest<any>(`/pay/order/${orderId}`);
-    setLoading(false);
-    if (res.success && res.data) {
-      setOrder(res.data);
-    }
-  };
 
   const handleCopyHandle = () => {
     if (order?.assignedHandle) {

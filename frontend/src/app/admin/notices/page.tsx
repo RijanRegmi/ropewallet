@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '@/lib/api';
 import Toast from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -9,15 +9,11 @@ import {
   Send, 
   Trash2, 
   Users, 
-  UserCheck, 
   Info, 
   AlertCircle, 
   Sparkles, 
   Search, 
-  CheckCircle2, 
   ShieldAlert, 
-  Filter, 
-  Building2, 
   X, 
   Check 
 } from 'lucide-react';
@@ -61,19 +57,14 @@ export default function NoticeAdminPage() {
   const [toastMsg, setToastMsg] = useState({ text: '', type: 'success' as 'success' | 'error' });
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null }>({ isOpen: false, id: null });
 
-  useEffect(() => {
-    fetchNotices();
-    fetchUsers('');
-  }, []);
-
-  const fetchNotices = async () => {
+  const fetchNotices = useCallback(async () => {
     setLoading(true);
     const res = await apiRequest<NoticeItem[]>('/admin/notices');
     if (res.success && res.data) setNotices(res.data);
     setLoading(false);
-  };
+  }, []);
 
-  const fetchUsers = async (search: string) => {
+  const fetchUsers = useCallback(async (search: string) => {
     setLoadingUsers(true);
     const res = await apiRequest<{ users: UserOption[]; admins?: UserOption[] }>(`/admin/users?limit=100&search=${encodeURIComponent(search)}`);
     if (res.success && res.data) {
@@ -81,7 +72,12 @@ export default function NoticeAdminPage() {
       setUserList(all);
     }
     setLoadingUsers(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchNotices();
+    fetchUsers('');
+  }, [fetchNotices, fetchUsers]);
 
   const handleSearchChange = (val: string) => {
     setUserSearch(val);
@@ -115,7 +111,7 @@ export default function NoticeAdminPage() {
     setSubmitting(true);
     const selectedUserIds = selectedUserObjects.map((u) => u._id);
 
-    const res = await apiRequest<any>('/admin/notices', 'POST', {
+    const res = await apiRequest<{ notice: NoticeItem }>('/admin/notices', 'POST', {
       title,
       content,
       category,
@@ -162,7 +158,7 @@ export default function NoticeAdminPage() {
     }
   };
 
-  const getTargetBadge = (type: string, users?: any[]) => {
+  const getTargetBadge = (type: string, users?: Array<{ _id: string; fullName?: string; userTag?: string; email?: string; role?: string }>) => {
     switch (type) {
       case 'customers':
         return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 font-semibold border border-indigo-500/20">👥 Customers Only</span>;
@@ -232,7 +228,7 @@ export default function NoticeAdminPage() {
               </label>
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value as any)}
+                onChange={(e) => setCategory(e.target.value as 'info' | 'alert' | 'urgent' | 'promo')}
                 className="w-full rounded-xl px-4 py-3 text-sm bg-slate-800/80 border border-slate-700/80 text-white focus:outline-none focus:border-indigo-500 transition-all cursor-pointer"
               >
                 <option value="info">General Info (Blue)</option>

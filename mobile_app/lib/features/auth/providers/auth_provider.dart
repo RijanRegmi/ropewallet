@@ -36,6 +36,28 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  String _extractError(dynamic responseData, String fallback) {
+    if (responseData == null) return fallback;
+    if (responseData is Map) {
+      final err = responseData['error'];
+      if (err is String && err.isNotEmpty) return err;
+      if (err is Map) {
+        if (err['message'] is String && (err['message'] as String).isNotEmpty) {
+          return err['message'];
+        }
+        if (err['error'] is String && (err['error'] as String).isNotEmpty) {
+          return err['error'];
+        }
+        if (err['code'] is String && (err['code'] as String).isNotEmpty) {
+          return err['code'];
+        }
+      }
+      final msg = responseData['message'];
+      if (msg is String && msg.isNotEmpty) return msg;
+    }
+    return fallback;
+  }
+
   void markPinAsSet() {
     if (_user != null) {
       _user!['hasPin'] = true;
@@ -156,7 +178,7 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return {'success': true, 'requiresDeviceVerification': false};
       } else {
-        _errorMessage = responseData['error'] ?? 'Failed to login';
+        _errorMessage = _extractError(responseData, 'Failed to login');
         notifyListeners();
         return {'success': false, 'error': _errorMessage};
       }
@@ -198,7 +220,7 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = responseData['error'] ?? 'Invalid verification code';
+        _errorMessage = _extractError(responseData, 'Invalid verification code');
         notifyListeners();
         return false;
       }
@@ -230,7 +252,7 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = responseData['error'] ?? 'Failed to resend code';
+        _errorMessage = _extractError(responseData, 'Failed to resend code');
         notifyListeners();
         return false;
       }
@@ -295,7 +317,7 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = responseData['error'] ?? 'Failed to send OTP';
+        _errorMessage = _extractError(responseData, 'Failed to send OTP');
         notifyListeners();
         return false;
       }
@@ -329,7 +351,7 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = responseData['error'] ?? 'Invalid or expired verification code';
+        _errorMessage = _extractError(responseData, 'Invalid or expired verification code');
         notifyListeners();
         return false;
       }
@@ -385,7 +407,7 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = responseData['error'] ?? 'Failed to register';
+        _errorMessage = _extractError(responseData, 'Failed to register');
         _isLoading = false;
         notifyListeners();
         return false;
@@ -419,7 +441,7 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = responseData['error'] ?? 'Failed to send OTP';
+        _errorMessage = _extractError(responseData, 'Failed to send OTP');
         notifyListeners();
         return false;
       }
@@ -456,7 +478,7 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = responseData['error'] ?? 'Invalid verification code';
+        _errorMessage = _extractError(responseData, 'Invalid verification code');
         notifyListeners();
         return false;
       }
@@ -495,7 +517,7 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = responseData['error'] ?? 'Failed to reset password';
+        _errorMessage = _extractError(responseData, 'Failed to reset password');
         notifyListeners();
         return false;
       }
@@ -531,7 +553,7 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = responseData['error'] ?? 'Failed to update profile image';
+        _errorMessage = _extractError(responseData, 'Failed to update profile image');
         notifyListeners();
         return false;
       }
@@ -559,7 +581,7 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = responseData['error'] ?? 'Failed to send OTP code';
+        _errorMessage = _extractError(responseData, 'Failed to send OTP code');
         notifyListeners();
         return false;
       }
@@ -595,7 +617,7 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = responseData['error'] ?? 'Failed to change password';
+        _errorMessage = _extractError(responseData, 'Failed to change password');
         notifyListeners();
         return false;
       }
@@ -634,7 +656,7 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = responseData['error'] ?? 'Failed to change PIN';
+        _errorMessage = _extractError(responseData, 'Failed to change PIN');
         notifyListeners();
         return false;
       }
@@ -685,7 +707,7 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = responseData['error'] ?? 'Failed to save card';
+        _errorMessage = _extractError(responseData, 'Failed to save card');
         notifyListeners();
         return false;
       }
@@ -717,7 +739,7 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = responseData['error'] ?? 'Failed to delete card';
+        _errorMessage = _extractError(responseData, 'Failed to delete card');
         notifyListeners();
         return false;
       }

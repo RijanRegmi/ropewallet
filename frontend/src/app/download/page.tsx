@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import {
   Download,
   ShieldCheck,
@@ -11,7 +10,6 @@ import {
   Lock,
   CreditCard,
   Bell,
-  HelpCircle,
 } from "lucide-react";
 import FloatingNavbar from "@/components/FloatingNavbar";
 import Footer from "@/components/Footer";
@@ -294,7 +292,7 @@ export default function DownloadPage() {
                   Download APK
                 </h3>
                 <p className="text-slate-600 text-sm leading-relaxed font-medium">
-                  Tap the <strong>"Download APK Now"</strong> button above to save the <code>RopeWallet.apk</code> installer file directly to your device.
+                  Tap the <strong>&quot;Download APK Now&quot;</strong> button above to save the <code>RopeWallet.apk</code> installer file directly to your device.
                 </p>
               </div>
             </div>
@@ -315,7 +313,7 @@ export default function DownloadPage() {
                   Allow Permission
                 </h3>
                 <p className="text-slate-600 text-sm leading-relaxed font-medium">
-                  Open your phone downloads and tap the APK file. If Android prompts, tap <em>Settings</em> and toggle <strong>"Allow from this source"</strong>.
+                  Open your phone downloads and tap the APK file. If Android prompts, tap <em>Settings</em> and toggle <strong>&quot;Allow from this source&quot;</strong>.
                 </p>
               </div>
             </div>
@@ -363,7 +361,7 @@ export default function DownloadPage() {
                 </span>
               </div>
               <p className="text-sm text-slate-700 leading-relaxed font-medium">
-                If Android displays a <em>"Google Play Protect"</em> notice when opening the APK, tap <strong>"Install anyway"</strong>. RopeWallet is 100% virus-scanned, 256-bit encrypted, and completely safe.
+                If Android displays a <em>&quot;Google Play Protect&quot;</em> notice when opening the APK, tap <strong>&quot;Install anyway&quot;</strong>. RopeWallet is 100% virus-scanned, 256-bit encrypted, and completely safe.
               </p>
             </div>
           </div>

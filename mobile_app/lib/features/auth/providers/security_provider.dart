@@ -137,6 +137,28 @@ class SecurityProvider with ChangeNotifier {
   }
 
   // Set 6-Digit Transaction PIN on backend
+  String _extractError(dynamic responseData, String fallback) {
+    if (responseData == null) return fallback;
+    if (responseData is Map) {
+      final err = responseData['error'];
+      if (err is String && err.isNotEmpty) return err;
+      if (err is Map) {
+        if (err['message'] is String && (err['message'] as String).isNotEmpty) {
+          return err['message'];
+        }
+        if (err['error'] is String && (err['error'] as String).isNotEmpty) {
+          return err['error'];
+        }
+        if (err['code'] is String && (err['code'] as String).isNotEmpty) {
+          return err['code'];
+        }
+      }
+      final msg = responseData['message'];
+      if (msg is String && msg.isNotEmpty) return msg;
+    }
+    return fallback;
+  }
+
   Future<bool> setTransactionPin(String pin) async {
     _isLoading = true;
     _errorMessage = null;
@@ -156,7 +178,7 @@ class SecurityProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = responseData['error'] ?? 'Failed to set transaction PIN';
+        _errorMessage = _extractError(responseData, 'Failed to set transaction PIN');
         notifyListeners();
         return false;
       }
@@ -191,7 +213,7 @@ class SecurityProvider with ChangeNotifier {
         notifyListeners();
         return isValid;
       } else {
-        _errorMessage = responseData['error'] ?? 'PIN verification failed';
+        _errorMessage = _extractError(responseData, 'PIN verification failed');
         notifyListeners();
         return false;
       }
