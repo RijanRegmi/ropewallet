@@ -26,7 +26,7 @@ export default function ExportData() {
         <div className="max-w-2xl bg-dark-surface border border-dark-border rounded-2xl p-8 shadow-lg">
           <h3 className="font-bold text-lg mb-2">Financial Records</h3>
           <p className="text-xs text-dark-text-secondary mb-6 leading-relaxed">
-            Generate a full audit log of all system transactions, including completed P2P payments, automated Stripe deposits, and administrative cash adjustments. Downloads as a standard CSV spreadsheet file.
+            Generate a full audit log of all system transactions, including completed direct transfers, automated card deposits, and administrative adjustments. Downloads as a standard CSV spreadsheet file.
           </p>
 
           <button

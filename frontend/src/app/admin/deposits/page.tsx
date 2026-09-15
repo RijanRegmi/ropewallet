@@ -102,7 +102,7 @@ export default function DepositsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-white">Pending Deposits</h2>
-          <p className="text-sm mt-1" style={{ color: '#5C7C89' }}>Review, approve, or decline P2P user deposit submissions</p>
+          <p className="text-sm mt-1" style={{ color: '#5C7C89' }}>Review, approve, or decline user deposit submissions</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -230,7 +230,7 @@ export default function DepositsPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="px-2.5 py-1 text-xs font-semibold rounded-lg capitalize" style={{ background: 'rgba(92,124,137,0.15)', border: '1px solid rgba(92,124,137,0.28)', color: '#a8c4cc' }}>
-                        {d.paymentMethod || d.payerInfo?.platform || 'P2P'}
+                        {d.paymentMethod || d.payerInfo?.platform || 'Direct'}
                       </span>
                     </td>
                     <td className="px-6 py-4 font-extrabold text-white text-base">

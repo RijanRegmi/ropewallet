@@ -216,7 +216,7 @@ export default function HostPayPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  Your {paymentMethod === 'chime' ? 'Chime' : paymentMethod === 'cashapp' ? 'Cash App' : 'P2P'} Tag / Name
+                  Your {paymentMethod === 'chime' ? 'Chime' : paymentMethod === 'cashapp' ? 'Cash App' : 'Payment'} Tag / Name
                 </label>
                 <input
                   type="text"
@@ -292,7 +292,7 @@ export default function HostPayPage() {
         {/* Footer Security Badge */}
         <div className="flex items-center justify-center gap-2 text-xs text-gray-500 mt-6">
           <Shield className="w-4 h-4 text-emerald-400" />
-          <span>Protected by 256-bit Encrypted P2P Payment Gateway</span>
+          <span>Protected by 256-bit Encrypted Payment Gateway</span>
         </div>
       </div>
     </div>

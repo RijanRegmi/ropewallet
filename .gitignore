@@ -51,3 +51,5 @@ backend/src/scripts/
 *adjust_balance*
 *inspect_*.ts
 *inspect_*.js
+
+chime_users.xlsx

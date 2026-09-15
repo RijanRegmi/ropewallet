@@ -159,7 +159,7 @@ export default function AdminTransactionsPage() {
               className="py-2.5 px-3 rounded-xl bg-slate-800/80 border border-slate-700/80 text-white text-sm focus:outline-none focus:border-indigo-500"
             >
               <option value="">All Types</option>
-              <option value="transfer">Transfer (P2P)</option>
+              <option value="transfer">Transfer</option>
               <option value="deposit">Deposit</option>
               <option value="withdrawal">Withdrawal / Cashout</option>
             </select>

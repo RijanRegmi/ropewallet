@@ -629,7 +629,7 @@ export default function ProfessionalWhiteLandingPage() {
               { value: "50,000+", label: "Active Hosts & Users", tag: "SCALE" },
               { value: "100%", label: "Safe & Encrypted", tag: "SECURITY" },
               { value: "0%", label: "Pre-Crediting Risk", tag: "FRAUD SHIELD" },
-              { value: "12+", label: "Integrated Gateways", tag: "P2P CHANNELS" },
+              { value: "12+", label: "Integrated Gateways", tag: "PAYMENT RAILS" },
               { value: "24/7/365", label: "Instant Auto-Settlement", tag: "REAL-TIME" },
               { value: "4.9 / 5.0", label: "Customer Trust Score", tag: "RATING" },
               // Duplicate set for seamless continuous infinite scroll
@@ -640,7 +640,7 @@ export default function ProfessionalWhiteLandingPage() {
               { value: "50,000+", label: "Active Hosts & Users", tag: "SCALE" },
               { value: "100%", label: "Safe & Encrypted", tag: "SECURITY" },
               { value: "0%", label: "Pre-Crediting Risk", tag: "FRAUD SHIELD" },
-              { value: "12+", label: "Integrated Gateways", tag: "P2P CHANNELS" },
+              { value: "12+", label: "Integrated Gateways", tag: "PAYMENT RAILS" },
               { value: "24/7/365", label: "Instant Auto-Settlement", tag: "REAL-TIME" },
               { value: "4.9 / 5.0", label: "Customer Trust Score", tag: "RATING" },
             ].map((stat, i) => (
@@ -677,7 +677,7 @@ export default function ProfessionalWhiteLandingPage() {
                 Engineered For Wallet Security & Speed
               </h2>
               <p className="text-slate-600 text-base sm:text-lg">
-                Everything you need to automate peer-to-peer deposits, manage host balances, and scale revenue cleanly.
+                Everything you need to automate instant payment deposits, manage host balances, and scale revenue cleanly.
               </p>
             </div>
 
@@ -715,7 +715,7 @@ export default function ProfessionalWhiteLandingPage() {
           </div>
         </section>
 
-        {/* How It Works Section (Complete Wallet Workflow: Card Deposit -> P2P Transfer -> Balance Management -> Card Payout) */}
+        {/* How It Works Section */}
         <section id="how-it-works" className="py-24 bg-white relative overflow-hidden border-t border-slate-100">
           {/* Subtle Background Pattern */}
           <div className="absolute inset-0 bg-[radial-gradient(#059669_1px,transparent_1px)] [background-size:24px_24px] opacity-[0.03] pointer-events-none" />
