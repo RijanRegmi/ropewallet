@@ -334,7 +334,7 @@ export default function DownloadPage() {
                   Install &amp; Open
                 </h3>
                 <p className="text-slate-600 text-sm leading-relaxed font-medium">
-                  Tap <strong>Install</strong>. Once completed, open RopeWallet, log in or create your new account, and enjoy instant digital wallet settlements!
+                  Tap <strong>Install</strong>. Once completed, open RopeWallet, log in or create your new account, and enjoy instant payment settlements!
                 </p>
               </div>
             </div>

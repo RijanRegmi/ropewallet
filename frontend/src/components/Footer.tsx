@@ -32,7 +32,7 @@ export default function Footer({ className = '', reveal = true }: FooterProps) {
                 RopeWallet
               </span>
               <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">
-                Digital Wallet & Gateway
+                Payment Platform
               </span>
             </div>
           </Link>
@@ -91,7 +91,7 @@ export default function Footer({ className = '', reveal = true }: FooterProps) {
             <span className="font-bold text-slate-800">RJN Tech</span>
           </div>
 
-          <p>© 2026 RopeWallet Digital Wallet & Payment Gateway. All rights reserved.</p>
+          <p>© 2026 RopeWallet Payment Platform. All rights reserved.</p>
         </div>
 
         {/* Legal Links */}

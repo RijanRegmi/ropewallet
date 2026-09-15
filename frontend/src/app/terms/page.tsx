@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "Terms & Conditions",
-  description: "Read the Terms and Conditions for using RopeWallet, the digital wallet platform for secure deposits, card payments, and instant payouts.",
+  description: "Read the Terms and Conditions for using RopeWallet, the payment facilitation platform for secure card payments, host settlements, and instant payouts.",
   alternates: { canonical: "/terms" },
 };
 
@@ -43,14 +43,14 @@ We reserve the right to suspend or terminate accounts that violate these Terms o
   },
   {
     id: "wallet",
-    title: "4. Wallet & Payment Services",
-    content: `RopeWallet provides a digital wallet platform that allows users to:
+    title: "4. Payment Services",
+    content: `RopeWallet provides a payment facilitation platform that allows authorized hosts and customers to:
 
-• Deposit funds via credit, debit, or virtual card.
-• Process verified card payments and manage host balances.
-• Withdraw funds to a linked bank account or debit card.
+• Submit card payments via credit, debit, or virtual card through RopeWallet's hosted payment page.
+• Receive automated payment receipt verification and real-time earnings settlement.
+• Withdraw host earnings to a linked bank account or debit card.
 
-All transactions are final once confirmed. You are responsible for ensuring the accuracy of recipient information before initiating any transfer. Funds in your RopeWallet balance are not FDIC-insured and do not earn interest. RopeWallet is not a bank.`,
+All transactions are final once confirmed. You are responsible for ensuring the accuracy of payment information before submitting any transaction. RopeWallet is not a bank and does not hold consumer deposits. Host earnings are settled on a per-transaction basis.`,
   },
   {
     id: "fees",

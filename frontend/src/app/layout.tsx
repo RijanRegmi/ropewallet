@@ -18,20 +18,20 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.ropewallet.com"),
   title: {
-    default: "RopeWallet – Digital Wallet & Settlement Platform",
+    default: "RopeWallet – Payment Platform & Instant Settlement Software",
     template: "%s | RopeWallet",
   },
   description:
-    "RopeWallet is an ultra-secure digital wallet platform for instant deposit settlements, withdrawals, and 256-bit encrypted card payments.",
+    "RopeWallet is a payment facilitation platform that automates instant card payment verification, real-time host settlements, and 256-bit encrypted transaction auditing.",
   keywords: [
     "RopeWallet",
     "rope wallet",
     "rope wallet app",
-    "digital wallet",
+    "payment platform",
     "payment gateway",
     "instant settlement",
-    "secure wallet",
-    "mobile wallet app",
+    "payment facilitation software",
+    "host payment system",
     "RJN Tech",
     "fintech platform",
     "online payment gateway",
@@ -65,9 +65,9 @@ export const metadata: Metadata = {
     shortcut: "/ropewallet.png",
   },
   openGraph: {
-    title: "RopeWallet – Digital Wallet & Settlement Platform",
+    title: "RopeWallet – Payment Platform & Instant Settlement Software",
     description:
-      "Manage your money securely with RopeWallet. Ultra-fast deposit settlements, instant payment gateways, and bank-grade 256-bit encryption.",
+      "RopeWallet automates card payment verification, real-time host settlements, and audit-grade transaction security for authorized payment hosts.",
     url: "https://www.ropewallet.com",
     siteName: "RopeWallet",
     locale: "en_US",
@@ -77,15 +77,15 @@ export const metadata: Metadata = {
         url: "/ropewallet.png",
         width: 1200,
         height: 630,
-        alt: "RopeWallet Logo & Digital Wallet Banner",
+        alt: "RopeWallet Payment Platform Banner",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "RopeWallet – Digital Wallet & Settlement Platform",
+    title: "RopeWallet – Payment Platform & Instant Settlement Software",
     description:
-      "Ultra-secure digital wallet platform for automated deposits, real-time balance tracking, and bank-grade security.",
+      "Automated card payment verification, real-time host settlements, and 256-bit audit security — powered by RopeWallet's payment platform.",
     images: ["/ropewallet.png"],
     creator: "@ropewallet",
   },
@@ -111,7 +111,7 @@ export default function RootLayout({
           "https://facebook.com",
           "https://instagram.com"
         ],
-        "description": "RopeWallet provides ultra-secure digital wallet solutions, instant payment settlement, and mobile app integration."
+        "description": "RopeWallet provides payment facilitation software with instant card payment verification, automated host settlements, and mobile app integration."
       },
       {
         "@type": "WebSite",

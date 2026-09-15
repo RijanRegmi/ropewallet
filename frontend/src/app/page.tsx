@@ -171,7 +171,7 @@ export default function ProfessionalWhiteLandingPage() {
       <FloatingNavbar
         brandNameFirst="Rope"
         brandNameSecond="Wallet"
-        subTitle="DIGITAL WALLET"
+        subTitle="PAYMENT PLATFORM"
         logoImg="/ropewallet.png"
         accentColor="emerald"
         ctaLabel="Become a Host"
@@ -201,14 +201,14 @@ export default function ProfessionalWhiteLandingPage() {
 
                 {/* Headline */}
                 <h1 className="reveal-init stagger-2 text-4xl sm:text-6xl lg:text-6xl font-black tracking-tight text-slate-900 leading-[1.08] mb-6">
-                  The Secure Payment Gateway &{' '}
+                  The Secure Payment Platform &{' '}
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600">
-                    Digital Wallet
+                    Instant Settlement Engine
                   </span>
                 </h1>
 
                 <p className="reveal-init stagger-3 text-base sm:text-lg text-slate-600 max-w-2xl mb-10 leading-relaxed font-normal">
-                  As an <strong>Secure Payment Gateway</strong> and <strong>Digital Wallet</strong>, RopeWallet processes instant Card deposits with 100% automated receipt verification, real-time balance settlement, and 256-bit encrypted audit security.
+                  RopeWallet is a <strong>payment facilitation platform</strong> that processes instant card-to-card payments with 100% automated receipt verification, real-time earnings settlement, and 256-bit encrypted audit security.
                 </p>
 
                 {/* CTA Action Buttons */}
@@ -674,10 +674,10 @@ export default function ProfessionalWhiteLandingPage() {
                 Why RopeWallet?
               </span>
               <h2 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4">
-                Engineered For Wallet Security & Speed
+                Engineered For Payment Security &amp; Speed
               </h2>
               <p className="text-slate-600 text-base sm:text-lg">
-                Everything you need to automate instant payment deposits, manage host balances, and scale revenue cleanly.
+                Everything you need to automate instant payment processing, track host earnings, and scale revenue cleanly.
               </p>
             </div>
 
@@ -698,7 +698,7 @@ export default function ProfessionalWhiteLandingPage() {
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 mb-3">100% Verified Transactions</h3>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  Zero pre-crediting risk. Host wallet balances are credited automatically only after official payment confirmation is fully verified.
+                  Zero pre-crediting risk. Host earnings are credited automatically only after official payment confirmation is fully verified.
                 </p>
               </div>
 
@@ -706,9 +706,9 @@ export default function ProfessionalWhiteLandingPage() {
                 <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mb-6 font-bold">
                   <TrendingUp className="w-6 h-6" />
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-3">Automated 20% Host Split</h3>
+                <h3 className="text-xl font-bold text-slate-900 mb-3">Automated 80% Revenue Split</h3>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  Built-in accounting automatically deducts 20% platform commission fee ($20 per $100) and credits 80% net balance ($80) to the host.
+                  Built-in accounting automatically deducts a 20% platform software fee and pays out 80% of net earnings directly to the authorized host.
                 </p>
               </div>
             </div>
@@ -731,7 +731,7 @@ export default function ProfessionalWhiteLandingPage() {
                 How RopeWallet Works
               </h2>
               <p className="text-slate-600 text-base sm:text-lg font-medium">
-                Deposit funds directly from your card, transfer instantly with customers and hosts within RopeWallet, and withdraw payouts to your card.
+                Pay via card, get instant receipt confirmation, and hosts receive automated settlements — all powered by RopeWallet's platform software.
               </p>
             </div>
 
@@ -740,26 +740,26 @@ export default function ProfessionalWhiteLandingPage() {
               {[
                 {
                   step: 1,
-                  title: 'Deposit via Card',
-                  description: 'Deposit funds directly into your RopeWallet balance using Debit, Credit, or Virtual Cards with instant verification.',
+                  title: 'Pay via Card',
+                  description: 'Customers pay using Debit, Credit, or Virtual Cards through RopeWallet\'s secure hosted payment page with instant confirmation.',
                   image: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?auto=format&fit=crop&w=400&q=80',
                 },
                 {
                   step: 2,
-                  title: 'Transfer with Users & Hosts',
-                  description: 'Transfer funds seamlessly between customers and hosts within RopeWallet in real-time with zero network delay.',
+                  title: 'Instant Receipt Verified',
+                  description: 'Our platform auto-verifies each payment receipt in under 3 seconds — no manual approval or waiting required.',
                   image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=400&q=80',
                 },
                 {
                   step: 3,
-                  title: 'Hold & Manage Balance',
-                  description: 'Track live available balances, host earnings, split profits, and complete transaction history inside the mobile app.',
+                  title: 'Track Earnings & Reports',
+                  description: 'Hosts view real-time earnings, split reports, and full transaction audit history directly inside the mobile app.',
                   image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=400&q=80',
                 },
                 {
                   step: 4,
-                  title: 'Payout to Your Card',
-                  description: 'Withdraw available wallet funds directly back to your connected debit or credit card anytime with instant settlement.',
+                  title: 'Receive Settlement Payout',
+                  description: 'Hosts receive their 80% earnings payout directly to their linked debit or credit card with instant automated settlement.',
                   image: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&w=400&q=80',
                 },
               ].map((item, index) => {
@@ -1004,7 +1004,7 @@ export default function ProfessionalWhiteLandingPage() {
                 Frequently Asked Questions
               </h2>
               <p className="text-slate-600 text-base sm:text-lg">
-                Find answers to common questions about host onboarding, deposit verifications, and digital wallet settlements.
+                Find answers to common questions about host onboarding, payment processing, and automated settlements.
               </p>
             </div>
 
