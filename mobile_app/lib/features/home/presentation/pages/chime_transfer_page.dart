@@ -162,12 +162,23 @@ class _ChimeTransferPageState extends State<ChimeTransferPage> with SingleTicker
           ),
         );
       }
+    } on StripeException catch (e) {
+      if (mounted) {
+        final msg = e.error.localizedMessage ?? e.error.message ?? 'Payment failed';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            content: Text('Payment failed: $msg'),
+          ),
+        );
+      }
+      return;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFFEF4444),
-            content: Text('Payment failed: ${e.toString()}'),
+            content: Text('Payment failed: ${e.toString().replaceAll('Exception: ', '')}'),
           ),
         );
       }

@@ -19,6 +19,15 @@ const cleanUserTagString = (input: string): string => {
 };
 
 export class PaymentController {
+  // ─── Get Active Stripe Publishable Key ───
+  // Returns the active Stripe publishable key dynamically to the mobile app/clients
+  static async getStripeConfig(req: Request, res: Response): Promise<void> {
+    res.json({
+      success: true,
+      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
+    });
+  }
+
   // ─── Create a Stripe PaymentIntent for client-side confirmation ───
   // The mobile app calls this first, then uses the clientSecret with
   // flutter_stripe's confirmPayment() to tokenize card data client-side.
@@ -142,6 +151,7 @@ export class PaymentController {
         success: true,
         clientSecret: paymentIntent.client_secret,
         paymentIntentId: paymentIntent.id,
+        publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
         // Send card info for display if saved card is being used
         savedCardInfo: user.savedCard?.stripePaymentMethodId ? {
           last4: user.savedCard.last4,

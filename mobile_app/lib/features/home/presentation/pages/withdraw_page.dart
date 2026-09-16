@@ -217,6 +217,21 @@ class _WithdrawPageState extends State<WithdrawPage> {
             }
             return;
           }
+        } on StripeException catch (e) {
+          loadingOverlay.remove();
+          setState(() {
+            _isSavingCard = false;
+          });
+          if (mounted) {
+            final msg = e.error.localizedMessage ?? e.error.message ?? 'Card verification failed';
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: const Color(0xFFEF4444),
+                content: Text('Card error: $msg'),
+              ),
+            );
+          }
+          return;
         } catch (e) {
           loadingOverlay.remove();
           setState(() {
@@ -226,7 +241,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 backgroundColor: const Color(0xFFEF4444),
-                content: Text('Card error: ${e.toString()}'),
+                content: Text('Card error: ${e.toString().replaceAll('Exception: ', '')}'),
               ),
             );
           }

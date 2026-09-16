@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -87,12 +88,17 @@ class WalletProvider with ChangeNotifier {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200 && responseData['success'] == true) {
+        final serverPk = responseData['publishableKey'] as String?;
+        if (serverPk != null && serverPk.isNotEmpty && Stripe.publishableKey != serverPk) {
+          Stripe.publishableKey = serverPk;
+        }
         _isLoading = false;
         notifyListeners();
         return {
           'clientSecret': responseData['clientSecret'],
           'paymentIntentId': responseData['paymentIntentId'],
           'savedCardInfo': responseData['savedCardInfo'],
+          'publishableKey': serverPk,
         };
       } else {
         _errorMessage = responseData['error'] ?? 'Failed to create payment intent';
@@ -106,6 +112,20 @@ class WalletProvider with ChangeNotifier {
       notifyListeners();
       return null;
     }
+  }
+
+  // Dynamically sync Stripe publishable key with backend configuration
+  Future<void> syncStripeConfig() async {
+    try {
+      final response = await _apiClient.get(ApiConstants.stripeConfig);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final serverPk = data['publishableKey'] as String?;
+        if (serverPk != null && serverPk.isNotEmpty && Stripe.publishableKey != serverPk) {
+          Stripe.publishableKey = serverPk;
+        }
+      }
+    } catch (_) {}
   }
 
   // Step 2: After client-side Stripe confirmation, tell backend to credit wallet

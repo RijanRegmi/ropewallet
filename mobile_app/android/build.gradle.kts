@@ -7,6 +7,17 @@ allprojects {
         google()
         mavenCentral()
     }
+    configurations.all {
+        resolutionStrategy {
+            force("com.google.mlkit:barcode-scanning:17.3.0")
+            force("androidx.camera:camera-core:1.4.1")
+            force("androidx.camera:camera-camera2:1.4.1")
+            force("androidx.camera:camera-lifecycle:1.4.1")
+            force("androidx.camera:camera-video:1.4.1")
+            force("androidx.camera:camera-view:1.4.1")
+            force("androidx.camera:camera-extensions:1.4.1")
+        }
+    }
 }
 
 val newBuildDir: Directory =

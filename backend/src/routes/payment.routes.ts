@@ -4,7 +4,10 @@ import { protect } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
-// Protect all routes
+// Public Stripe configuration (provides active publishable key to mobile app)
+router.get('/stripe-config', PaymentController.getStripeConfig);
+
+// Protect all routes below
 router.use(protect);
 
 router.post('/deposit', PaymentController.deposit);

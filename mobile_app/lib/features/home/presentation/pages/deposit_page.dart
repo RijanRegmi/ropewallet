@@ -64,6 +64,14 @@ class _DepositPageState extends State<DepositPage> {
   final _cardFormController = CardFormEditController();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<WalletProvider>(context, listen: false).syncStripeConfig();
+    });
+  }
+
+  @override
   void dispose() {
     _amountController.dispose();
     _cardNumberController.dispose();
@@ -343,13 +351,24 @@ class _DepositPageState extends State<DepositPage> {
           );
         }
       }
+    } on StripeException catch (e) {
+      loadingOverlay?.remove();
+      if (mounted) {
+        final msg = e.error.localizedMessage ?? e.error.message ?? 'Card transaction failed';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFEF4444),
+            content: Text('Payment error: $msg'),
+          ),
+        );
+      }
     } catch (e) {
       loadingOverlay?.remove();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFFEF4444),
-            content: Text('Payment error: ${e.toString()}'),
+            content: Text('Payment error: ${e.toString().replaceAll('Exception: ', '')}'),
           ),
         );
       }

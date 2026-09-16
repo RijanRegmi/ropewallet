@@ -14,7 +14,8 @@ class ApiConstants {
   static const bool isTestingOnPhysicalDevice = true;
   static const String localComputerIp = '192.168.1.7'; // Change to your local IP address
   static const String ngrokUrl = 'https://your-ngrok-tunnel-url.ngrok-free.app'; // Change to your ngrok URL
-  static const String stripePublishableKey = 'pk_live_51TsQ96EAXnJUFOnkpg5J6wq4ZNg79gk3lxsdhFDKXk0CPPTS24OYkDf4E4xPnNLc9epU3YA0eoi5cSKXi0iQ5n5900ZKKnbUvY';
+  static const String stripePublishableKey = 'pk_live_51TxebtIG7TvswpDTd5JDwyqrzghKhOypsjk12fvlD0HQevoRLfssWH0G9X5pFOLZtFUq6sf8QHWfh18R8Lqv7PuK00rVAK3IAI';
+  static const String stripeConfig = '/payments/stripe-config';
   
   // ================= FEATURE FLAGS =================
   // Toggle enableP2P to true/false to enable or disable all P2P features app-wide.

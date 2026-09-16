@@ -236,13 +236,23 @@ class _SavedCardPageState extends State<SavedCardPage> {
           );
         }
       }
+    } on StripeException catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+        final msg = e.error.localizedMessage ?? e.error.message ?? 'Card verification failed';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Card error: $msg')),
+        );
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isSaving = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Card error: ${e.toString()}')),
+          SnackBar(content: Text('Card error: ${e.toString().replaceAll('Exception: ', '')}')),
         );
       }
     }
