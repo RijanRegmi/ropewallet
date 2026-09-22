@@ -168,7 +168,7 @@ export default function DownloadPage() {
                   <Download className="w-6 h-6 text-white group-hover:bounce" />
                   <span className="text-white font-black">Download APK Now</span>
                   <span className="text-xs px-2.5 py-1 bg-white/20 text-white font-black rounded-lg ml-1 backdrop-blur-sm">
-                    42 MB
+                    87.5 MB
                   </span>
                 </a>
               </div>
@@ -178,13 +178,13 @@ export default function DownloadPage() {
                 <div className="bg-slate-50 border border-slate-200/90 p-4 rounded-2xl shadow-xs">
                   <div className="text-xs text-slate-500 font-bold">Version</div>
                   <div className="text-sm font-black text-slate-900 mt-0.5">
-                    v1.0.0
+                    v1.0.6
                   </div>
                 </div>
                 <div className="bg-slate-50 border border-slate-200/90 p-4 rounded-2xl shadow-xs">
                   <div className="text-xs text-slate-500 font-bold">File Size</div>
                   <div className="text-sm font-black text-slate-900 mt-0.5">
-                    42.0 MB
+                    87.5 MB
                   </div>
                 </div>
                 <div className="bg-slate-50 border border-slate-200/90 p-4 rounded-2xl shadow-xs">
