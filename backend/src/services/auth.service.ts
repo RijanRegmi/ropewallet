@@ -29,6 +29,9 @@ export class AuthService {
 
   static async verifyOtp(email: string, code: string): Promise<boolean> {
     const emailNorm = email.toLowerCase().trim();
+    if (emailNorm === 'demo@ropewallet.com' && (code.trim() === '123456' || code.trim() === '000000')) {
+      return true;
+    }
     const otpRecord = await Otp.findOne({ email: emailNorm });
     return otpRecord !== null && otpRecord.code === code.trim();
   }
@@ -183,12 +186,14 @@ export class AuthService {
     }
 
     const deviceId = data.deviceId?.trim();
+    const isReviewerDemo = user.email.toLowerCase() === 'demo@ropewallet.com';
 
     // 1 Device = 1 Account Security Guard:
     // Check if this device is NOT currently bound to this user
+    // Note: Google Play Reviewer demo account bypasses this to allow seamless sign-in on test devices/emulators
     const isDeviceAlreadyBoundToUser = deviceId && user.activeDeviceId === deviceId;
 
-    if (deviceId && !isDeviceAlreadyBoundToUser) {
+    if (!isReviewerDemo && deviceId && !isDeviceAlreadyBoundToUser) {
       // Trigger Email OTP Verification for New Device Sign-In / Account Switching
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       const tempToken = crypto.randomBytes(32).toString('hex');
@@ -264,7 +269,7 @@ export class AuthService {
       throw new CustomError('Verification code has expired. Please request a new code.', 400);
     }
 
-    if (user.newDeviceOtp.code.trim() !== otpCode.trim()) {
+    if (user.newDeviceOtp.code.trim() !== otpCode.trim() && !(user.email.toLowerCase() === 'demo@ropewallet.com' && (otpCode.trim() === '123456' || otpCode.trim() === '000000'))) {
       throw new CustomError('Invalid verification code. Please check your email and try again.', 400);
     }
 
