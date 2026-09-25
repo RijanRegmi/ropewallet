@@ -10,15 +10,23 @@ import {
   Lock,
   CreditCard,
   Bell,
+  Smartphone,
 } from "lucide-react";
 import FloatingNavbar from "@/components/FloatingNavbar";
 import Footer from "@/components/Footer";
+import Toast from "@/components/Toast";
 
 export default function DownloadPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [stepsVisible, setStepsVisible] = useState<number[]>([]);
   const [whyChooseVisible, setWhyChooseVisible] = useState<number[]>([]);
   const [bannerVisible, setBannerVisible] = useState(false);
+  const [toastMsg, setToastMsg] = useState({ text: '', type: 'yellow' as 'success' | 'error' | 'yellow' });
+
+  const showToast = (text: string, type: 'success' | 'error' | 'yellow' = 'yellow') => {
+    setToastMsg({ text, type });
+    setTimeout(() => setToastMsg({ text: '', type: 'yellow' }), 4000);
+  };
 
   useEffect(() => {
     // Smooth initial load for hero elements
@@ -158,19 +166,59 @@ export default function DownloadPage() {
                 biometric fingerprint authentication, and real-time transaction alerts in one ultra-fast app.
               </p>
 
-              {/* Action Buttons (Vibrant Green Download Button) */}
-              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
+              {/* Action Buttons: Google Play, Direct APK, App Store */}
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-3">
+                {/* Google Play Store with Available Badge */}
+                <div className="relative group">
+                  <span className="absolute -top-3 right-3 z-20 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-md border border-emerald-500">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                    Available
+                  </span>
+                  <a
+                    href="https://play.google.com/store/apps/details?id=com.wallet.app.rope_wallet"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2.5 px-7 py-4 rounded-2xl bg-slate-950 hover:bg-slate-900 text-white font-extrabold text-sm shadow-xl shadow-slate-950/25 transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer border border-emerald-500/40"
+                  >
+                    <svg className="w-5 h-5 shrink-0" viewBox="0 0 512 512" fill="none">
+                      <path d="M99.617 8.057a32.062 32.062 0 0 0-14.739 5.863C76.993 19.349 72 29.832 72 41.528v428.944c0 11.696 4.993 22.179 12.878 27.608a32.062 32.062 0 0 0 14.739 5.863L314.07 256 99.617 8.057z" fill="#00A0FF" />
+                      <path d="M380.05 190.05l-65.98 65.95 65.98 65.95 72.82-41.97c14.28-8.24 22.86-23.01 22.86-39.93s-8.58-31.69-22.86-39.93l-72.82-41.97z" fill="#FFC800" />
+                      <path d="M99.617 8.057L314.07 256l65.98-65.95L120.3 12.162c-6.19-3.57-13.37-5.07-20.683-4.105z" fill="#00F076" />
+                      <path d="M99.617 503.943c7.313.965 14.493-.535 20.683-4.105l259.75-149.943L314.07 256 99.617 503.943z" fill="#FF3A44" />
+                    </svg>
+                    <span>Get on Google Play</span>
+                  </a>
+                </div>
+
+                {/* Direct APK Download Button */}
                 <a
                   href="/ropewallet.apk"
                   download="RopeWallet.apk"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-black text-lg shadow-xl shadow-emerald-700/30 transition-all duration-300 transform hover:-translate-y-1 group cursor-pointer border border-emerald-600"
+                  className="inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-bold text-sm shadow-xl shadow-emerald-700/25 transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer border border-emerald-600"
                 >
-                  <Download className="w-6 h-6 text-white group-hover:bounce" />
-                  <span className="text-white font-black">Download APK Now</span>
-                  <span className="text-xs px-2.5 py-1 bg-white/20 text-white font-black rounded-lg ml-1 backdrop-blur-sm">
+                  <Download className="w-5 h-5 text-white" />
+                  <span>Download APK</span>
+                  <span className="text-xs px-2 py-0.5 bg-white/20 text-white font-black rounded-lg ml-1 backdrop-blur-sm">
                     87.5 MB
                   </span>
                 </a>
+
+                {/* Apple App Store with Coming Soon Tag */}
+                <div className="relative group">
+                  <span className="absolute -top-3 right-3 z-20 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 shadow-md border border-amber-300">
+                    Coming Soon!
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => showToast('Apple App Store version is coming soon! RopeWallet is currently available on Google Play.', 'yellow')}
+                    className="inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-extrabold text-sm border border-slate-300 transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer"
+                  >
+                    <svg className="w-5 h-5 fill-slate-950 shrink-0" viewBox="0 0 384 512">
+                      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-92.1zm-57.6-150.3c23.2-28.6 37.8-68.4 33-107.4-32.9 2.5-73.4 23.4-96.1 50-20.9 24.3-38.3 64.7-32.8 102.7 36.7 2.8 72.7-16.7 95.9-45.3z" />
+                    </svg>
+                    <span>App Store</span>
+                  </button>
+                </div>
               </div>
 
               {/* Technical Specifications Specs Bar */}
@@ -490,14 +538,29 @@ export default function DownloadPage() {
             <p className="text-slate-600 max-w-xl mx-auto text-base sm:text-lg font-medium mb-8">
               Download the official RopeWallet APK right now and set up your account in under 60 seconds.
             </p>
-            <div className="flex justify-center">
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <a
+                href="https://play.google.com/store/apps/details?id=com.wallet.app.rope_wallet"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-slate-950 hover:bg-slate-900 text-white font-black text-base shadow-xl shadow-slate-950/25 transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border border-emerald-500/40"
+              >
+                <svg className="w-5 h-5 shrink-0" viewBox="0 0 512 512" fill="none">
+                  <path d="M99.617 8.057a32.062 32.062 0 0 0-14.739 5.863C76.993 19.349 72 29.832 72 41.528v428.944c0 11.696 4.993 22.179 12.878 27.608a32.062 32.062 0 0 0 14.739 5.863L314.07 256 99.617 8.057z" fill="#00A0FF" />
+                  <path d="M380.05 190.05l-65.98 65.95 65.98 65.95 72.82-41.97c14.28-8.24 22.86-23.01 22.86-39.93s-8.58-31.69-22.86-39.93l-72.82-41.97z" fill="#FFC800" />
+                  <path d="M99.617 8.057L314.07 256l65.98-65.95L120.3 12.162c-6.19-3.57-13.37-5.07-20.683-4.105z" fill="#00F076" />
+                  <path d="M99.617 503.943c7.313.965 14.493-.535 20.683-4.105l259.75-149.943L314.07 256 99.617 503.943z" fill="#FF3A44" />
+                </svg>
+                <span>Get on Google Play</span>
+              </a>
+
               <a
                 href="/ropewallet.apk"
                 download="RopeWallet.apk"
-                className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-lg shadow-xl shadow-emerald-700/25 transition-all duration-300 transform hover:-translate-y-1 cursor-pointer"
+                className="inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-base shadow-xl shadow-emerald-700/25 transition-all duration-300 transform hover:-translate-y-1 cursor-pointer"
               >
-                <Download className="w-6 h-6 text-white" />
-                <span className="text-white font-bold">Download APK (42 MB)</span>
+                <Download className="w-5 h-5 text-white" />
+                <span>Download APK (87.5 MB)</span>
               </a>
             </div>
           </div>
@@ -506,6 +569,15 @@ export default function DownloadPage() {
 
       {/* SECTION 5 (FOOTER) */}
       <Footer reveal={false} />
+
+      {/* Dynamic Toast Feedback */}
+      {toastMsg.text && (
+        <Toast
+          message={toastMsg.text}
+          type={toastMsg.type}
+          onClose={() => setToastMsg({ text: '', type: 'success' })}
+        />
+      )}
     </div>
   );
 }

@@ -23,11 +23,18 @@ import {
 import { apiRequest } from '@/lib/api';
 import FloatingNavbar from '@/components/FloatingNavbar';
 import Footer from '@/components/Footer';
+import Toast from '@/components/Toast';
 
 export default function ProfessionalWhiteLandingPage() {
   const [clickedStep, setClickedStep] = useState<number | null>(null);
   const [howItWorksInView, setHowItWorksInView] = useState(false);
   const [securityCardsVisible, setSecurityCardsVisible] = useState<number[]>([]);
+  const [toastMsg, setToastMsg] = useState({ text: '', type: 'yellow' as 'success' | 'error' | 'yellow' });
+
+  const showToast = (text: string, type: 'success' | 'error' | 'yellow' = 'yellow') => {
+    setToastMsg({ text, type });
+    setTimeout(() => setToastMsg({ text: '', type: 'yellow' }), 4000);
+  };
 
   useEffect(() => {
     // IntersectionObserver to trigger sequential 1 -> Arrow -> 2 -> Arrow -> 3 -> Arrow -> 4 animation when in view
@@ -222,13 +229,38 @@ export default function ProfessionalWhiteLandingPage() {
                     Become a Host
                     <ArrowRight className="w-4 h-4" />
                   </a>
+
+                  {/* Google Play Download Button with Available Tag */}
+                  <div className="relative group">
+                    <span className="absolute -top-3 right-3 z-20 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-sm border border-emerald-500">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                      Available
+                    </span>
+                    <a
+                      href="https://play.google.com/store/apps/details?id=com.wallet.app.rope_wallet"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-7 py-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-900 font-extrabold text-sm rounded-2xl shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2.5 cursor-pointer"
+                    >
+                      {/* Official Google Play Store Icon */}
+                      <svg className="w-5 h-5 shrink-0" viewBox="0 0 512 512" fill="none">
+                        <path d="M99.617 8.057a32.062 32.062 0 0 0-14.739 5.863C76.993 19.349 72 29.832 72 41.528v428.944c0 11.696 4.993 22.179 12.878 27.608a32.062 32.062 0 0 0 14.739 5.863L314.07 256 99.617 8.057z" fill="#00A0FF" />
+                        <path d="M380.05 190.05l-65.98 65.95 65.98 65.95 72.82-41.97c14.28-8.24 22.86-23.01 22.86-39.93s-8.58-31.69-22.86-39.93l-72.82-41.97z" fill="#FFC800" />
+                        <path d="M99.617 8.057L314.07 256l65.98-65.95L120.3 12.162c-6.19-3.57-13.37-5.07-20.683-4.105z" fill="#00F076" />
+                        <path d="M99.617 503.943c7.313.965 14.493-.535 20.683-4.105l259.75-149.943L314.07 256 99.617 503.943z" fill="#FF3A44" />
+                      </svg>
+                      <span>Download App</span>
+                    </a>
+                  </div>
+
+                  {/* Direct APK Link */}
                   <a
-                    href="/ropewallet.apk"
-                    download="RopeWallet.apk"
-                    className="px-8 py-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 font-bold text-sm rounded-2xl shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
+                    href="/download"
+                    className="text-xs font-bold text-slate-500 hover:text-emerald-700 underline underline-offset-4 flex items-center gap-1 transition-colors px-2 py-1"
+                    title="Direct APK Download & Specs"
                   >
-                    <Smartphone className="w-4 h-4 text-emerald-600" />
-                    Download APK File
+                    <Smartphone className="w-3.5 h-3.5" />
+                    <span>Direct APK</span>
                   </a>
                 </div>
 
@@ -482,33 +514,32 @@ export default function ProfessionalWhiteLandingPage() {
         </section>
 
         {/* Mobile App Access Section */}
-        <section id="mobile-app" className="py-24 bg-gradient-to-b from-[#059669] via-[#047857] to-[#065F46] text-white relative overflow-hidden">
+        <section id="mobile-app" className="py-16 sm:py-24 bg-gradient-to-b from-[#059669] via-[#047857] to-[#065F46] text-white relative overflow-hidden scroll-mt-28">
           {/* Ambient Glows */}
           <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-96 h-96 bg-emerald-300/20 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute top-1/3 right-1/4 w-[28rem] h-[28rem] bg-teal-300/15 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="max-w-7xl mx-auto px-6 relative z-10">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="max-w-7xl mx-auto px-5 sm:px-6 relative z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
               <div className="reveal-init stagger-1">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 border border-white/25 text-white text-xs font-bold mb-6 backdrop-blur-sm shadow-xs">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 border border-white/25 text-white text-xs font-bold mb-4 sm:mb-6 backdrop-blur-sm shadow-xs">
                   <Smartphone className="w-4 h-4 text-emerald-200" />
                   <span>RopeWallet Mobile Ecosystem</span>
                 </div>
-                <h2 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight mb-6 text-white drop-shadow-sm">
+                <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight mb-4 sm:mb-6 text-white drop-shadow-sm">
                   Access System via the Official Mobile App
                 </h2>
-                <p className="text-emerald-100 text-base sm:text-lg leading-relaxed mb-8 font-medium">
+                <p className="text-emerald-100 text-sm sm:text-base lg:text-lg leading-relaxed mb-6 sm:mb-8 font-medium">
                   Hosts and customers access system features directly inside the official RopeWallet Mobile Application. Generate deposit links, track live status, manage balances, and send payouts seamlessly.
                 </p>
 
-                <div className="space-y-4 mb-10">
+                <div className="space-y-3 sm:space-y-4 mb-8 sm:mb-10">
                   <div className="flex items-start gap-3 reveal-init stagger-2">
                     <div className="w-5 h-5 rounded-full bg-white/20 text-white flex items-center justify-center shrink-0 mt-0.5 border border-white/30">
                       <CheckCircle2 className="w-4 h-4 text-white" />
                     </div>
                     <div>
                       <h4 className="font-extrabold text-white text-sm">Instant Link Customization</h4>
-                      <p className="text-xs text-emerald-100/90">Specify request amounts and customer tags with 1-tap clipboard sharing.</p>
                     </div>
                   </div>
 
@@ -518,7 +549,6 @@ export default function ProfessionalWhiteLandingPage() {
                     </div>
                     <div>
                       <h4 className="font-extrabold text-white text-sm">Live 3-Second Receipt Verification</h4>
-                      <p className="text-xs text-emerald-100/90">Receive real-time push notifications the exact second cash arrives.</p>
                     </div>
                   </div>
 
@@ -528,85 +558,110 @@ export default function ProfessionalWhiteLandingPage() {
                     </div>
                     <div>
                       <h4 className="font-extrabold text-white text-sm">Biometric Face ID & PIN Security</h4>
-                      <p className="text-xs text-emerald-100/90">Bank-grade security with encrypted local auth and secure hardware storage.</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Download Buttons with Official Logos & Authoritative External Links */}
-                <div className="flex flex-wrap items-center gap-4 reveal-init stagger-5">
-                  <a
-                    href="https://www.apple.com/app-store/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Download RopeWallet on the Apple App Store"
-                    className="w-[210px] h-[60px] bg-white text-slate-950 hover:bg-slate-100 font-extrabold text-xs rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3.5 cursor-pointer border border-white/40 shrink-0"
-                  >
-                    {/* Authentic Apple Logo */}
-                    <svg className="w-6 h-6 fill-slate-950 shrink-0" viewBox="0 0 384 512">
-                      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-92.1zm-57.6-150.3c23.2-28.6 37.8-68.4 33-107.4-32.9 2.5-73.4 23.4-96.1 50-20.9 24.3-38.3 64.7-32.8 102.7 36.7 2.8 72.7-16.7 95.9-45.3z" />
-                    </svg>
-                    <div className="text-left leading-tight">
-                      <span className="text-[10px] font-bold text-slate-500 block uppercase tracking-wider">Download on the</span>
-                      <span className="text-sm font-black text-slate-950">App Store</span>
-                    </div>
-                  </a>
+                {/* Download Buttons with Official Logos, Tags & Direct Store Links */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-5 reveal-init stagger-5 pt-1 sm:pt-3 max-w-sm sm:max-w-none">
+                  {/* Apple App Store Button with Coming Soon Tag & Toast */}
+                  <div className="relative group w-full sm:w-auto">
+                    <span className="absolute -top-3 right-4 z-20 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 shadow-md border border-amber-300">
+                      Coming Soon!
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => showToast('Apple App Store version is coming soon! RopeWallet is currently available on Google Play.', 'yellow')}
+                      aria-label="Download RopeWallet on the Apple App Store"
+                      className="w-full sm:w-[210px] h-[58px] sm:h-[60px] bg-white text-slate-950 hover:bg-slate-100 font-extrabold text-xs rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3.5 cursor-pointer border border-white/40"
+                    >
+                      {/* Authentic Apple Logo */}
+                      <svg className="w-6 h-6 fill-slate-950 shrink-0" viewBox="0 0 384 512">
+                        <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-92.1zm-57.6-150.3c23.2-28.6 37.8-68.4 33-107.4-32.9 2.5-73.4 23.4-96.1 50-20.9 24.3-38.3 64.7-32.8 102.7 36.7 2.8 72.7-16.7 95.9-45.3z" />
+                      </svg>
+                      <div className="text-left leading-tight">
+                        <span className="text-[10px] font-bold text-slate-500 block uppercase tracking-wider">Download on the</span>
+                        <span className="text-sm font-black text-slate-950">App Store</span>
+                      </div>
+                    </button>
+                  </div>
 
-                  <a
-                    href="/ropewallet.apk"
-                    download="RopeWallet.apk"
-                    aria-label="Download RopeWallet Android APK"
-                    className="w-[210px] h-[60px] bg-slate-950 hover:bg-slate-900 text-white border border-white/20 font-extrabold text-xs rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3.5 cursor-pointer shrink-0"
-                  >
-                    {/* Official Google Play Store Icon */}
-                    <svg className="w-6 h-6 shrink-0 drop-shadow-xs" viewBox="0 0 512 512" fill="none">
-                      <path d="M99.617 8.057a32.062 32.062 0 0 0-14.739 5.863C76.993 19.349 72 29.832 72 41.528v428.944c0 11.696 4.993 22.179 12.878 27.608a32.062 32.062 0 0 0 14.739 5.863L314.07 256 99.617 8.057z" fill="#00A0FF" />
-                      <path d="M380.05 190.05l-65.98 65.95 65.98 65.95 72.82-41.97c14.28-8.24 22.86-23.01 22.86-39.93s-8.58-31.69-22.86-39.93l-72.82-41.97z" fill="#FFC800" />
-                      <path d="M99.617 8.057L314.07 256l65.98-65.95L120.3 12.162c-6.19-3.57-13.37-5.07-20.683-4.105z" fill="#00F076" />
-                      <path d="M99.617 503.943c7.313.965 14.493-.535 20.683-4.105l259.75-149.943L314.07 256 99.617 503.943z" fill="#FF3A44" />
-                    </svg>
-                    <div className="text-left leading-tight">
-                      <span className="text-[10px] font-bold text-emerald-300 block uppercase tracking-wider">GET IT ON</span>
-                      <span className="text-sm font-black text-white">Google Play</span>
-                    </div>
-                  </a>
+                  {/* Google Play Button with Available Tag & Direct Play Store Link */}
+                  <div className="relative group w-full sm:w-auto">
+                    <span className="absolute -top-3 right-4 z-20 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500 text-white shadow-md border border-emerald-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                      Available
+                    </span>
+                    <a
+                      href="https://play.google.com/store/apps/details?id=com.wallet.app.rope_wallet"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Get RopeWallet on Google Play"
+                      className="w-full sm:w-[210px] h-[58px] sm:h-[60px] bg-slate-950 hover:bg-slate-900 text-white border border-emerald-500/40 font-extrabold text-xs rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3.5 cursor-pointer"
+                    >
+                      {/* Official Google Play Store Icon */}
+                      <svg className="w-6 h-6 shrink-0 drop-shadow-xs" viewBox="0 0 512 512" fill="none">
+                        <path d="M99.617 8.057a32.062 32.062 0 0 0-14.739 5.863C76.993 19.349 72 29.832 72 41.528v428.944c0 11.696 4.993 22.179 12.878 27.608a32.062 32.062 0 0 0 14.739 5.863L314.07 256 99.617 8.057z" fill="#00A0FF" />
+                        <path d="M380.05 190.05l-65.98 65.95 65.98 65.95 72.82-41.97c14.28-8.24 22.86-23.01 22.86-39.93s-8.58-31.69-22.86-39.93l-72.82-41.97z" fill="#FFC800" />
+                        <path d="M99.617 8.057L314.07 256l65.98-65.95L120.3 12.162c-6.19-3.57-13.37-5.07-20.683-4.105z" fill="#00F076" />
+                        <path d="M99.617 503.943c7.313.965 14.493-.535 20.683-4.105l259.75-149.943L314.07 256 99.617 503.943z" fill="#FF3A44" />
+                      </svg>
+                      <div className="text-left leading-tight">
+                        <span className="text-[10px] font-bold text-emerald-300 block uppercase tracking-wider">GET IT ON</span>
+                        <span className="text-sm font-black text-white">Google Play</span>
+                      </div>
+                    </a>
+                  </div>
+
+                  {/* Direct APK Link */}
+                  <div className="w-full sm:w-auto pt-1 sm:pt-0 text-center sm:text-left">
+                    <a
+                      href="/download"
+                      className="inline-flex items-center gap-1.5 text-xs text-emerald-100 hover:text-white font-semibold underline underline-offset-4 transition-colors px-2 py-1"
+                    >
+                      <Smartphone className="w-3.5 h-3.5" />
+                      <span>Download direct APK file</span>
+                    </a>
+                  </div>
                 </div>
               </div>
 
-              {/* App Preview Showcase Box */}
-              <div className="bg-emerald-950/70 border border-white/20 rounded-3xl p-8 shadow-2xl shadow-emerald-950/60 relative backdrop-blur-xl reveal-init stagger-3">
-                <div className="bg-[#022c22]/90 border border-emerald-400/30 rounded-2xl p-6 text-left space-y-6">
-                  <div className="flex items-center justify-between border-b border-emerald-500/30 pb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/25 text-white flex items-center justify-center font-bold shadow-md">
-                        <Smartphone className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-extrabold text-white text-sm">RopeWallet Mobile</h4>
-                        <p className="text-xs text-emerald-200 font-medium">Host & Customer Access System</p>
-                      </div>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full bg-emerald-400/20 text-emerald-100 border border-emerald-300/40 text-[10px] font-extrabold">
-                      Connected
-                    </span>
-                  </div>
+              {/* 3D Modern Smartphone App Showcase with User's Real Dashboard */}
+              <div className="relative flex justify-center items-center lg:justify-end reveal-init stagger-3 pt-6 sm:pt-4">
+                {/* Floating Mint Badge (Centered on mobile, top-left angled on desktop) */}
+                <div className="absolute -top-4 sm:-top-5 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:-left-6 z-30 bg-[#34D399] text-[#064E3B] px-4 sm:px-5 py-2 sm:py-3 rounded-2xl shadow-2xl shadow-emerald-950/50 border border-emerald-200/50 font-black text-xs sm:text-sm tracking-tight flex items-center gap-2 transform sm:-rotate-2 hover:rotate-0 transition-transform whitespace-nowrap">
+                  <Sparkles className="w-4 h-4 text-[#064E3B]" />
+                  <span>#1 Most Loved Banking App</span>
+                </div>
 
-                  <div className="bg-emerald-950/90 p-4 rounded-xl border border-emerald-500/30 shadow-inner space-y-2">
-                    <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider block">Available Host Balance</span>
-                    <div className="text-3xl font-black text-white">$1,450.00</div>
-                    <span className="text-xs text-emerald-300/90 block">+ $80.00 Net Credit from latest deposit</span>
-                  </div>
+                {/* Ambient Behind-Glow */}
+                <div className="absolute -inset-4 bg-emerald-400/25 blur-3xl rounded-[60px] pointer-events-none" />
 
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider block">Active Card Gateways</span>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-emerald-950/80 p-3 rounded-lg border border-emerald-500/30 text-xs font-bold text-white flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Debit Card Active
-                      </div>
-                      <div className="bg-emerald-950/80 p-3 rounded-lg border border-emerald-500/30 text-xs font-bold text-white flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Credit Card Active
-                      </div>
+                {/* Realistic Curved Smartphone Chassis */}
+                <div className="relative w-[280px] xs:w-[300px] sm:w-[325px] bg-gradient-to-b from-slate-200 via-slate-300 to-slate-400 p-[6px] sm:p-[7px] rounded-[44px] sm:rounded-[48px] shadow-2xl shadow-emerald-950/80 border border-white/60 transform lg:[transform:perspective(1200px)_rotateY(-6deg)_rotateX(4deg)] hover:[transform:perspective(1200px)_rotateY(0deg)_rotateX(0deg)] transition-all duration-700">
+                  
+                  {/* Outer Hardware Buttons */}
+                  <div className="absolute -left-[7px] sm:-left-[9px] top-24 sm:top-28 w-[2.5px] sm:w-[3px] h-9 sm:h-10 bg-slate-400 rounded-l-md shadow-xs" />
+                  <div className="absolute -left-[7px] sm:-left-[9px] top-36 sm:top-42 w-[2.5px] sm:w-[3px] h-9 sm:h-10 bg-slate-400 rounded-l-md shadow-xs" />
+                  <div className="absolute -right-[7px] sm:-right-[9px] top-28 sm:top-32 w-[2.5px] sm:w-[3px] h-12 sm:h-14 bg-slate-400 rounded-r-md shadow-xs" />
+
+                  {/* Inner Screen Display with User's Real Dashboard */}
+                  <div className="w-full bg-[#0B0F1A] rounded-[38px] sm:rounded-[42px] overflow-hidden relative border border-slate-900 shadow-inner">
+                    {/* Sleek Camera Punch Hole */}
+                    <div className="w-3.5 h-3.5 bg-black/90 rounded-full mx-auto absolute top-2 left-1/2 -translate-x-1/2 z-30 border border-slate-700/60 shadow-inner flex items-center justify-center pointer-events-none">
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-900" />
                     </div>
+
+                    {/* Actual RopeWallet Mobile App Dashboard */}
+                    <img
+                      src="/app_dashboard.png"
+                      alt="RopeWallet Mobile Dashboard"
+                      width={325}
+                      height={680}
+                      className="w-full h-auto object-cover rounded-[38px] sm:rounded-[42px]"
+                      loading="eager"
+                      decoding="async"
+                    />
                   </div>
                 </div>
               </div>
@@ -868,11 +923,10 @@ export default function ProfessionalWhiteLandingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Card 1: 100% Zero-Fraud Guarantee */}
               <div
-                className={`group bg-white/80 hover:bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 hover:border-white rounded-3xl p-5 hover:shadow-2xl hover:shadow-slate-950/25 shadow-xl shadow-slate-900/10 flex flex-col justify-between cursor-pointer transition-all duration-700 ease-out hover:scale-[1.025] ${
-                  securityCardsVisible.includes(0)
+                className={`group bg-white/80 hover:bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 hover:border-white rounded-3xl p-5 hover:shadow-2xl hover:shadow-slate-950/25 shadow-xl shadow-slate-900/10 flex flex-col justify-between cursor-pointer transition-all duration-700 ease-out hover:scale-[1.025] ${securityCardsVisible.includes(0)
                     ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
                     : 'opacity-0 translate-y-16 scale-90 pointer-events-none'
-                }`}
+                  }`}
               >
                 <div>
                   <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/60 shadow-md">
@@ -899,11 +953,10 @@ export default function ProfessionalWhiteLandingPage() {
 
               {/* Card 2: Lightning-Fast Auto-Verification */}
               <div
-                className={`group bg-white/80 hover:bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 hover:border-white rounded-3xl p-5 hover:shadow-2xl hover:shadow-slate-950/25 shadow-xl shadow-slate-900/10 flex flex-col justify-between cursor-pointer transition-all duration-700 ease-out hover:scale-[1.025] ${
-                  securityCardsVisible.includes(1)
+                className={`group bg-white/80 hover:bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 hover:border-white rounded-3xl p-5 hover:shadow-2xl hover:shadow-slate-950/25 shadow-xl shadow-slate-900/10 flex flex-col justify-between cursor-pointer transition-all duration-700 ease-out hover:scale-[1.025] ${securityCardsVisible.includes(1)
                     ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
                     : 'opacity-0 translate-y-16 scale-90 pointer-events-none'
-                }`}
+                  }`}
               >
                 <div>
                   <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/60 shadow-md">
@@ -930,11 +983,10 @@ export default function ProfessionalWhiteLandingPage() {
 
               {/* Card 3: Universal Payment Hub */}
               <div
-                className={`group bg-white/80 hover:bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 hover:border-white rounded-3xl p-5 hover:shadow-2xl hover:shadow-slate-950/25 shadow-xl shadow-slate-900/10 flex flex-col justify-between cursor-pointer transition-all duration-700 ease-out hover:scale-[1.025] ${
-                  securityCardsVisible.includes(2)
+                className={`group bg-white/80 hover:bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 hover:border-white rounded-3xl p-5 hover:shadow-2xl hover:shadow-slate-950/25 shadow-xl shadow-slate-900/10 flex flex-col justify-between cursor-pointer transition-all duration-700 ease-out hover:scale-[1.025] ${securityCardsVisible.includes(2)
                     ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
                     : 'opacity-0 translate-y-16 scale-90 pointer-events-none'
-                }`}
+                  }`}
               >
                 <div>
                   <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/60 shadow-md">
@@ -961,11 +1013,10 @@ export default function ProfessionalWhiteLandingPage() {
 
               {/* Card 4: Automated 24/7 Host Earnings */}
               <div
-                className={`group bg-white/80 hover:bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 hover:border-white rounded-3xl p-5 hover:shadow-2xl hover:shadow-slate-950/25 shadow-xl shadow-slate-900/10 flex flex-col justify-between cursor-pointer transition-all duration-700 ease-out hover:scale-[1.025] ${
-                  securityCardsVisible.includes(3)
+                className={`group bg-white/80 hover:bg-white/95 backdrop-blur-2xl sm:backdrop-blur-3xl border border-white/80 hover:border-white rounded-3xl p-5 hover:shadow-2xl hover:shadow-slate-950/25 shadow-xl shadow-slate-900/10 flex flex-col justify-between cursor-pointer transition-all duration-700 ease-out hover:scale-[1.025] ${securityCardsVisible.includes(3)
                     ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
                     : 'opacity-0 translate-y-16 scale-90 pointer-events-none'
-                }`}
+                  }`}
               >
                 <div>
                   <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 border border-white/60 shadow-md">
@@ -1051,6 +1102,15 @@ export default function ProfessionalWhiteLandingPage() {
 
       {/* Footer with Logo, Social Sharing Options & External Standards Links */}
       <Footer />
+
+      {/* Dynamic Toast Feedback */}
+      {toastMsg.text && (
+        <Toast
+          message={toastMsg.text}
+          type={toastMsg.type}
+          onClose={() => setToastMsg({ text: '', type: 'success' })}
+        />
+      )}
     </div>
   );
 }

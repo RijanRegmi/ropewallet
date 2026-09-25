@@ -31,7 +31,7 @@ const defaultNavItems: NavItem[] = [
   { label: 'Mobile App', href: '#mobile-app' },
   { label: 'Features', href: '#features' },
   { label: 'How It Works', href: '#how-it-works' },
-  { label: 'Download App', href: '/download', badge: 'APK' },
+  { label: 'Download App', href: '/download', badge: 'Play Store' },
 ];
 
 export default function FloatingNavbar({
