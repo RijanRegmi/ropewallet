@@ -149,7 +149,7 @@ export default function LoginPage() {
                   type="text"
                   required
                   autoComplete="username"
-                  placeholder="admin@ropewallet.com"
+                  placeholder="Enter your email address"
                   value={loginInput}
                   onChange={(e) => setLoginInput(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 rounded-xl text-sm placeholder-[#5C7C89] transition-all"
@@ -188,7 +188,7 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   required
                   autoComplete="current-password"
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-11 py-3 rounded-xl text-sm placeholder-[#5C7C89] transition-all"
@@ -295,7 +295,7 @@ export default function LoginPage() {
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'rgba(168,196,204,0.80)' }}>Email Address</label>
                   <input
-                    type="email" required placeholder="admin@ropewallet.com" value={forgotEmail}
+                    type="email" required placeholder="Enter your email address" value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl text-white text-sm transition-all"
                     style={glassInput}
