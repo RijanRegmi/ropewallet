@@ -654,7 +654,7 @@ export default function ProfessionalWhiteLandingPage() {
 
                     {/* Actual RopeWallet Mobile App Dashboard */}
                     <img
-                      src="/app_dashboard.png"
+                      src="/app_dashboard.png?v=2"
                       alt="RopeWallet Mobile Dashboard"
                       width={325}
                       height={680}
